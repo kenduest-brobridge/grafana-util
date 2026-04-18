@@ -415,7 +415,7 @@ class DashboardInspectionTests(unittest.TestCase):
             )
 
             args = exporter.parse_args(
-                ["inspect-export", "--import-dir", str(import_dir)]
+                ["summary", "--import-dir", str(import_dir)]
             )
             result, output = self.run_inspect(args)
 
@@ -463,11 +463,11 @@ class DashboardInspectionTests(unittest.TestCase):
                     }
                 ],
             )
-            output_file = import_dir / "inspect-export.txt"
+            output_file = import_dir / "summary.txt"
             result, output = self.run_inspect(
                 exporter.parse_args(
                     [
-                        "inspect-export",
+                        "summary",
                         "--import-dir",
                         str(import_dir),
                         "--output-file",
@@ -531,7 +531,7 @@ class DashboardInspectionTests(unittest.TestCase):
             )
 
             args = exporter.parse_args(
-                ["inspect-export", "--import-dir", str(import_dir), "--json"]
+                ["summary", "--import-dir", str(import_dir), "--json"]
             )
             result, output = self.run_inspect(args)
             payload = json.loads(output)
@@ -659,7 +659,7 @@ class DashboardInspectionTests(unittest.TestCase):
             )
 
             args = exporter.parse_args(
-                ["inspect-export", "--import-dir", str(import_dir), "--table"]
+                ["summary", "--import-dir", str(import_dir), "--table"]
             )
             result, output = self.run_inspect(args)
 
@@ -790,7 +790,7 @@ class DashboardInspectionTests(unittest.TestCase):
             )
 
             args = exporter.parse_args(
-                ["inspect-export", "--import-dir", str(import_dir), "--report", "json"]
+                ["summary", "--import-dir", str(import_dir), "--report", "json"]
             )
             result, output = self.run_inspect(args)
             payload = json.loads(output)
@@ -906,7 +906,7 @@ class DashboardInspectionTests(unittest.TestCase):
             )
 
             args = exporter.parse_args(
-                ["inspect-export", "--import-dir", str(import_dir), "--report", "json"]
+                ["summary", "--import-dir", str(import_dir), "--report", "json"]
             )
             result, output = self.run_inspect(args)
             payload = json.loads(output)
@@ -939,7 +939,7 @@ class DashboardInspectionTests(unittest.TestCase):
     def test_dashboard_inspection_parse_args_supports_governance_report_formats(self):
         args = exporter.parse_args(
             [
-                "inspect-export",
+                "summary",
                 "--import-dir",
                 "dashboards/raw",
                 "--report",
@@ -950,7 +950,7 @@ class DashboardInspectionTests(unittest.TestCase):
 
         governance_json_args = exporter.parse_args(
             [
-                "inspect-live",
+                "summary",
                 "--url",
                 "http://localhost:3000",
                 "--basic-user",
@@ -1007,7 +1007,7 @@ class DashboardInspectionTests(unittest.TestCase):
             )
 
             args = exporter.parse_args(
-                ["inspect-export", "--import-dir", str(import_dir), "--report", "json"]
+                ["summary", "--import-dir", str(import_dir), "--report", "json"]
             )
             result, output = self.run_inspect(args)
             payload = json.loads(output)
@@ -1045,7 +1045,7 @@ class DashboardInspectionTests(unittest.TestCase):
             )
 
             args = exporter.parse_args(
-                ["inspect-export", "--import-dir", str(import_dir), "--report"]
+                ["summary", "--import-dir", str(import_dir), "--report"]
             )
             result, output = self.run_inspect(args)
 
@@ -1062,7 +1062,7 @@ class DashboardInspectionTests(unittest.TestCase):
 
             args = exporter.parse_args(
                 [
-                    "inspect-export",
+                    "summary",
                     "--import-dir",
                     str(import_dir),
                     "--report",
@@ -1127,7 +1127,7 @@ class DashboardInspectionTests(unittest.TestCase):
 
             args = exporter.parse_args(
                 [
-                    "inspect-export",
+                    "summary",
                     "--import-dir",
                     str(import_dir),
                     "--report",
@@ -1195,7 +1195,7 @@ class DashboardInspectionTests(unittest.TestCase):
             self.write_report_fixture(import_dir, dashboard)
 
             tree_args = exporter.parse_args(
-                ["inspect-export", "--import-dir", str(import_dir), "--report", "tree"]
+                ["summary", "--import-dir", str(import_dir), "--report", "tree"]
             )
             tree_result, tree_output = self.run_inspect(tree_args)
             self.assertEqual(tree_result, 0)
@@ -1206,7 +1206,7 @@ class DashboardInspectionTests(unittest.TestCase):
 
             table_args = exporter.parse_args(
                 [
-                    "inspect-export",
+                    "summary",
                     "--import-dir",
                     str(import_dir),
                     "--report",
@@ -1258,7 +1258,7 @@ class DashboardInspectionTests(unittest.TestCase):
 
             tree_args = exporter.parse_args(
                 [
-                    "inspect-export",
+                    "summary",
                     "--import-dir",
                     str(import_dir),
                     "--report",
@@ -1273,7 +1273,7 @@ class DashboardInspectionTests(unittest.TestCase):
 
             table_args = exporter.parse_args(
                 [
-                    "inspect-export",
+                    "summary",
                     "--import-dir",
                     str(import_dir),
                     "--report",
@@ -1310,7 +1310,7 @@ class DashboardInspectionTests(unittest.TestCase):
             )
 
             csv_args = exporter.parse_args(
-                ["inspect-export", "--import-dir", str(import_dir), "--report", "csv"]
+                ["summary", "--import-dir", str(import_dir), "--report", "csv"]
             )
             _, csv_output = self.run_inspect(csv_args)
             expected_default_header = ",".join(
@@ -1326,7 +1326,7 @@ class DashboardInspectionTests(unittest.TestCase):
 
             table_args = exporter.parse_args(
                 [
-                    "inspect-export",
+                    "summary",
                     "--import-dir",
                     str(import_dir),
                     "--report",
@@ -1340,7 +1340,7 @@ class DashboardInspectionTests(unittest.TestCase):
 
             csv_columns_args = exporter.parse_args(
                 [
-                    "inspect-export",
+                    "summary",
                     "--import-dir",
                     str(import_dir),
                     "--report",
@@ -1361,7 +1361,7 @@ class DashboardInspectionTests(unittest.TestCase):
 
             all_columns_args = exporter.parse_args(
                 [
-                    "inspect-export",
+                    "summary",
                     "--import-dir",
                     str(import_dir),
                     "--report",
@@ -1413,7 +1413,7 @@ class DashboardInspectionTests(unittest.TestCase):
 
             json_args = exporter.parse_args(
                 [
-                    "inspect-export",
+                    "summary",
                     "--import-dir",
                     str(import_dir),
                     "--report",
@@ -1465,7 +1465,8 @@ class DashboardInspectionTests(unittest.TestCase):
         self,
     ):
         parser = argparse.ArgumentParser()
-        exporter.add_inspect_export_cli_args(parser)
+        parser.set_defaults(import_dir="/tmp/raw")
+        exporter.add_summary_cli_args(parser)
 
         help_text = parser.format_help()
 
@@ -1476,8 +1477,8 @@ class DashboardInspectionTests(unittest.TestCase):
         self.assertIn("uid, type,", help_text)
         self.assertIn("or family exactly matches this value", help_text)
         self.assertIn(
-            "dashboard_uid,datasource_uid,datasource_family,query,file",
-            exporter.INSPECT_EXPORT_HELP_FULL_EXAMPLES,
+            "dashboard_uid,folder_path,folder_full_path,folder_level,folder_uid,parent_folder_uid,file",
+            exporter.SUMMARY_EXPORT_HELP_FULL_EXAMPLES,
         )
 
     def test_dashboard_inspection_inspect_export_filters_query_report_by_datasource_uid_type_or_family(
@@ -1545,7 +1546,7 @@ class DashboardInspectionTests(unittest.TestCase):
             for filter_value, expected_uid, expected_type, expected_family in cases:
                 args = exporter.parse_args(
                     [
-                        "inspect-export",
+                        "summary",
                         "--import-dir",
                         str(import_dir),
                         "--report",
@@ -1608,7 +1609,7 @@ class DashboardInspectionTests(unittest.TestCase):
             ]:
                 args = exporter.parse_args(
                     [
-                        "inspect-export",
+                        "summary",
                         "--import-dir",
                         str(import_dir),
                         "--report",
@@ -1629,7 +1630,8 @@ class DashboardInspectionTests(unittest.TestCase):
         self,
     ):
         parser = argparse.ArgumentParser()
-        exporter.add_inspect_export_cli_args(parser)
+        parser.set_defaults(import_dir="/tmp/raw")
+        exporter.add_summary_cli_args(parser)
 
         help_text = parser.format_help()
 
@@ -1646,7 +1648,7 @@ class DashboardInspectionTests(unittest.TestCase):
         self,
     ):
         parser = argparse.ArgumentParser()
-        exporter.add_inspect_live_cli_args(parser)
+        exporter.add_summary_cli_args(parser)
 
         help_text = parser.format_help()
 
@@ -1713,7 +1715,7 @@ class DashboardInspectionTests(unittest.TestCase):
         )
         args = exporter.parse_args(
             [
-                "inspect-live",
+                "summary",
                 "--url",
                 "http://localhost:3000",
                 "--report",
@@ -1738,12 +1740,12 @@ class DashboardInspectionTests(unittest.TestCase):
     def test_dashboard_inspection_inspect_export_validation_errors(self):
         cases = [
             (
-                ["inspect-export", "--import-dir", "dashboards/raw", "--no-header"],
+                ["summary", "--import-dir", "dashboards/raw", "--no-header"],
                 "--no-header is only supported with --table, table-like --report, or compatible --output-format values",
             ),
             (
                 [
-                    "inspect-export",
+                    "summary",
                     "--import-dir",
                     "dashboards/raw",
                     "--table",
@@ -1753,7 +1755,7 @@ class DashboardInspectionTests(unittest.TestCase):
             ),
             (
                 [
-                    "inspect-export",
+                    "summary",
                     "--import-dir",
                     "dashboards/raw",
                     "--report",
@@ -1763,7 +1765,7 @@ class DashboardInspectionTests(unittest.TestCase):
             ),
             (
                 [
-                    "inspect-export",
+                    "summary",
                     "--import-dir",
                     "dashboards/raw",
                     "--output-format",
@@ -1774,7 +1776,7 @@ class DashboardInspectionTests(unittest.TestCase):
             ),
             (
                 [
-                    "inspect-export",
+                    "summary",
                     "--import-dir",
                     "dashboards/raw",
                     "--report-columns",
@@ -1784,7 +1786,7 @@ class DashboardInspectionTests(unittest.TestCase):
             ),
             (
                 [
-                    "inspect-export",
+                    "summary",
                     "--import-dir",
                     "dashboards/raw",
                     "--report",
@@ -1796,7 +1798,7 @@ class DashboardInspectionTests(unittest.TestCase):
             ),
             (
                 [
-                    "inspect-export",
+                    "summary",
                     "--import-dir",
                     "dashboards/raw",
                     "--report",
@@ -1808,7 +1810,7 @@ class DashboardInspectionTests(unittest.TestCase):
             ),
             (
                 [
-                    "inspect-export",
+                    "summary",
                     "--import-dir",
                     "dashboards/raw",
                     "--report-filter-datasource",
@@ -1818,7 +1820,7 @@ class DashboardInspectionTests(unittest.TestCase):
             ),
             (
                 [
-                    "inspect-export",
+                    "summary",
                     "--import-dir",
                     "dashboards/raw",
                     "--report-filter-panel-id",
@@ -1828,7 +1830,7 @@ class DashboardInspectionTests(unittest.TestCase):
             ),
             (
                 [
-                    "inspect-export",
+                    "summary",
                     "--import-dir",
                     "dashboards/raw",
                     "--report",
@@ -1849,7 +1851,7 @@ class DashboardInspectionTests(unittest.TestCase):
     ):
         args = exporter.parse_args(
             [
-                "inspect-export",
+                "summary",
                 "--import-dir",
                 "dashboards/raw",
                 "--output-format",
@@ -1890,7 +1892,7 @@ class DashboardInspectionTests(unittest.TestCase):
     def test_dashboard_inspection_inspect_export_outputs_dependency_contract_json(self):
         args = exporter.parse_args(
             [
-                "inspect-export",
+                "summary",
                 "--import-dir",
                 "dashboards/raw",
                 "--report",
@@ -1967,7 +1969,7 @@ class DashboardInspectionTests(unittest.TestCase):
             self.write_multi_org_root_fixture(export_root)
 
             args = exporter.parse_args(
-                ["inspect-export", "--import-dir", str(export_root), "--report", "json"]
+                ["summary", "--import-dir", str(export_root), "--report", "json"]
             )
             result, output = self.run_inspect(args)
             payload = json.loads(output)
@@ -1992,7 +1994,7 @@ class DashboardInspectionTests(unittest.TestCase):
             )
 
             summary_args = exporter.parse_args(
-                ["inspect-export", "--import-dir", str(export_root), "--json"]
+                ["summary", "--import-dir", str(export_root), "--json"]
             )
             summary_result, summary_output = self.run_inspect(summary_args)
             summary_payload = json.loads(summary_output)

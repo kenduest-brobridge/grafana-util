@@ -199,7 +199,7 @@ class DashboardIntegrationFlowTests(unittest.TestCase):
             stdout = io.StringIO()
             with redirect_stdout(stdout):
                 result = exporter.main(
-                    ["inspect-export", "--import-dir", str(import_dir), "--json"]
+                    ["summary", "--import-dir", str(import_dir), "--json"]
                 )
 
             self.assertEqual(result, 0)
@@ -319,7 +319,7 @@ class DashboardIntegrationFlowTests(unittest.TestCase):
                 with redirect_stdout(stdout):
                     result = exporter.main(
                         [
-                            "import-dashboard",
+                            "import",
                             "--import-dir",
                             str(import_dir),
                             "--dry-run",

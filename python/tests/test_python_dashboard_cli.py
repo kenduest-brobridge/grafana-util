@@ -756,7 +756,7 @@ class ExporterTests(unittest.TestCase):
 
         with redirect_stdout(stream):
             with self.assertRaises(SystemExit):
-                exporter.parse_args(["export-dashboard", "-h"])
+                exporter.parse_args(["export", "-h"])
 
         help_text = stream.getvalue()
         self.assertIn("Export dashboards from local Grafana with Basic auth", help_text)
@@ -768,7 +768,7 @@ class ExporterTests(unittest.TestCase):
 
         with redirect_stdout(stream):
             with self.assertRaises(SystemExit):
-                exporter.parse_args(["import-dashboard", "-h"])
+                exporter.parse_args(["import", "-h"])
 
         help_text = stream.getvalue()
         self.assertIn("combined", help_text)
@@ -796,11 +796,11 @@ class ExporterTests(unittest.TestCase):
 
         with redirect_stdout(stream):
             with self.assertRaises(SystemExit):
-                exporter.parse_args(["list-dashboard", "-h"])
+                exporter.parse_args(["list", "-h"])
 
         help_text = stream.getvalue()
         self.assertIn("Examples:", help_text)
-        self.assertIn("grafana-util dashboard list-dashboard", help_text)
+        self.assertIn("grafana-util dashboard list", help_text)
         self.assertIn("Input Options", help_text)
         self.assertIn("Target Options", help_text)
         self.assertIn("Output Options", help_text)
@@ -826,11 +826,11 @@ class ExporterTests(unittest.TestCase):
 
         with redirect_stdout(stream):
             with self.assertRaises(SystemExit):
-                exporter.parse_args(["governance-gate", "-h"])
+                exporter.parse_args(["policy", "-h"])
 
         help_text = stream.getvalue()
         self.assertIn("Examples:", help_text)
-        self.assertIn("governance-gate", help_text)
+        self.assertIn("policy", help_text)
         self.assertIn("machine-readable", help_text)
         self.assertIn("policy", help_text)
 
@@ -839,11 +839,11 @@ class ExporterTests(unittest.TestCase):
 
         with redirect_stdout(stream):
             with self.assertRaises(SystemExit):
-                exporter.parse_args(["topology", "-h"])
+                exporter.parse_args(["dependencies", "-h"])
 
         help_text = stream.getvalue()
         self.assertIn("Examples:", help_text)
-        self.assertIn("topology", help_text)
+        self.assertIn("dependencies", help_text)
         self.assertIn(
             "Render the dashboard topology as Mermaid:",
             help_text,
@@ -861,7 +861,7 @@ class ExporterTests(unittest.TestCase):
 
         with redirect_stdout(stream):
             with self.assertRaises(SystemExit):
-                exporter.parse_args(["inspect-export", "-h"])
+                exporter.parse_args(["summary", "-h"])
 
         help_text = stream.getvalue()
         self.assertIn("raw/ export directory explicitly", help_text)
@@ -869,7 +869,7 @@ class ExporterTests(unittest.TestCase):
         self.assertIn("report-tree-table", help_text)
         self.assertIn("dependency", help_text)
         self.assertIn("Examples:", help_text)
-        self.assertIn("grafana-util dashboard inspect-export", help_text)
+        self.assertIn("grafana-util dashboard summary", help_text)
         self.assertIn("--help-full", help_text)
         self.assertIn("datasourceType", help_text)
         self.assertIn("datasourceFamily", help_text)
@@ -887,13 +887,16 @@ class ExporterTests(unittest.TestCase):
 
         with redirect_stdout(stream):
             with self.assertRaises(SystemExit):
-                exporter.parse_args(["inspect-export", "--help-full"])
+                exporter.parse_args(
+                    ["summary", "--import-dir", "./dashboards/raw", "--help-full"]
+                )
 
         help_text = stream.getvalue()
         self.assertIn("raw/ export directory explicitly", help_text)
-        self.assertIn("Extended examples:", help_text)
-        self.assertIn("grafana-util dashboard inspect-export", help_text)
-        self.assertIn("--report tree-table", help_text)
+        self.assertIn("Examples:", help_text)
+        self.assertIn("Show full inspect help with extended report examples:", help_text)
+        self.assertIn("grafana-util dashboard summary", help_text)
+        self.assertIn("--output-format report-tree-table", help_text)
         self.assertIn("--report-filter-datasource prom-main", help_text)
         self.assertIn("--report-filter-panel-id 7", help_text)
         self.assertIn(
@@ -912,14 +915,14 @@ class ExporterTests(unittest.TestCase):
             "--report-columns datasource_name,datasource_org,datasource_org_id,datasource_database,datasource_bucket,datasource_index_pattern,query",
             help_text,
         )
-        self.assertNotIn("grafana-utils inspect-export", help_text)
+        self.assertNotIn("grafana-utils summary", help_text)
 
     def test_dashboard_inspect_live_help_mentions_live_report_flags(self):
         stream = io.StringIO()
 
         with redirect_stdout(stream):
             with self.assertRaises(SystemExit):
-                exporter.parse_args(["inspect-live", "-h"])
+                exporter.parse_args(["summary", "-h"])
 
         help_text = stream.getvalue()
         self.assertIn("--url", help_text)
@@ -930,7 +933,7 @@ class ExporterTests(unittest.TestCase):
         self.assertIn("dependency", help_text)
         self.assertIn("--report-filter-panel-id", help_text)
         self.assertIn("Examples:", help_text)
-        self.assertIn("grafana-util dashboard inspect-live", help_text)
+        self.assertIn("grafana-util dashboard summary", help_text)
         self.assertIn("--help-full", help_text)
         self.assertIn("datasourceType", help_text)
         self.assertIn("datasourceFamily", help_text)
@@ -948,14 +951,15 @@ class ExporterTests(unittest.TestCase):
 
         with redirect_stdout(stream):
             with self.assertRaises(SystemExit):
-                exporter.parse_args(["inspect-live", "--help-full"])
+                exporter.parse_args(["summary", "--help-full"])
 
         help_text = stream.getvalue()
         self.assertIn("--url", help_text)
-        self.assertIn("Extended examples:", help_text)
-        self.assertIn("grafana-util dashboard inspect-live", help_text)
+        self.assertIn("Examples:", help_text)
+        self.assertIn("Show full inspect help with extended report examples:", help_text)
+        self.assertIn("grafana-util dashboard summary", help_text)
         self.assertIn('--token "$GRAFANA_API_TOKEN"', help_text)
-        self.assertIn("--report tree-table", help_text)
+        self.assertIn("--output-format report-tree", help_text)
         self.assertIn("--report-filter-panel-id 7", help_text)
         self.assertIn(
             "--report-columns panel_id,ref_id,datasource_name,metrics,functions,buckets,query",
@@ -973,19 +977,19 @@ class ExporterTests(unittest.TestCase):
             "--report-columns datasource_name,datasource_org,datasource_org_id,datasource_database,datasource_bucket,datasource_index_pattern,query",
             help_text,
         )
-        self.assertNotIn("grafana-utils inspect-live", help_text)
+        self.assertNotIn("grafana-utils summary", help_text)
 
     def test_dashboard_parse_args_supports_import_mode(self):
-        args = exporter.parse_args(["import-dashboard", "--import-dir", "dashboards"])
+        args = exporter.parse_args(["import", "--import-dir", "dashboards"])
 
         self.assertEqual(args.import_dir, "dashboards")
-        self.assertEqual(args.command, "import-dashboard")
+        self.assertEqual(args.command, "import")
 
     def test_dashboard_parse_args_supports_governance_gate_mode(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             args = exporter.parse_args(
                 [
-                    "governance-gate",
+                    "policy",
                     "--policy",
                     f"{tmpdir}/policy.json",
                     "--governance",
@@ -997,14 +1001,14 @@ class ExporterTests(unittest.TestCase):
                 ]
             )
 
-        self.assertEqual(args.command, "governance-gate")
+        self.assertEqual(args.command, "policy")
         self.assertEqual(args.output_format, "json")
 
     def test_dashboard_parse_args_supports_topology_mode(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             args = exporter.parse_args(
                 [
-                    "topology",
+                    "dependencies",
                     "--governance",
                     f"{tmpdir}/governance.json",
                     "--queries",
@@ -1016,7 +1020,7 @@ class ExporterTests(unittest.TestCase):
                 ]
             )
 
-        self.assertEqual(args.command, "topology")
+        self.assertEqual(args.command, "dependencies")
         self.assertEqual(args.governance, f"{tmpdir}/governance.json")
         self.assertEqual(args.queries, f"{tmpdir}/queries.json")
         self.assertEqual(args.alert_contract, f"{tmpdir}/alert-contract.json")
@@ -1024,24 +1028,22 @@ class ExporterTests(unittest.TestCase):
 
     def test_dashboard_parse_args_supports_topology_alias(self):
         with tempfile.TemporaryDirectory() as tmpdir:
-            args = exporter.parse_args(
-                [
-                    "graph",
-                    "--governance",
-                    f"{tmpdir}/governance.json",
-                ]
-            )
-
-        self.assertEqual(args.command, "topology")
-        self.assertEqual(args.governance, f"{tmpdir}/governance.json")
+            with self.assertRaises(SystemExit):
+                exporter.parse_args(
+                    [
+                        "graph",
+                        "--governance",
+                        f"{tmpdir}/governance.json",
+                    ]
+                )
 
     def test_dashboard_parse_args_rejects_topology_without_governance(self):
         with self.assertRaises(SystemExit):
-            exporter.parse_args(["topology"])
+            exporter.parse_args(["dependencies"])
 
     def test_dashboard_parse_args_supports_import_org_id(self):
         args = exporter.parse_args(
-            ["import-dashboard", "--import-dir", "dashboards/raw", "--org-id", "2"]
+            ["import", "--import-dir", "dashboards/raw", "--org-id", "2"]
         )
 
         self.assertEqual(args.org_id, "2")
@@ -1053,7 +1055,7 @@ class ExporterTests(unittest.TestCase):
             ) as mocked:
                 result = exporter.main(
                     [
-                        "governance-gate",
+                        "policy",
                         "--policy",
                         f"{tmpdir}/policy.json",
                         "--governance",
@@ -1065,30 +1067,26 @@ class ExporterTests(unittest.TestCase):
 
         self.assertEqual(result, 13)
         mocked.assert_called_once()
-        self.assertEqual(mocked.call_args.args[0].command, "governance-gate")
+        self.assertEqual(mocked.call_args.args[0].command, "policy")
 
     def test_dashboard_main_dispatches_topology_mode(self):
         with mock.patch.object(exporter, "topology_dashboards", return_value=17) as mocked:
-            result = exporter.main(["topology", "--governance", "./governance.json"])
+            result = exporter.main(["dependencies", "--governance", "./governance.json"])
 
         self.assertEqual(result, 17)
         mocked.assert_called_once()
-        self.assertEqual(mocked.call_args.args[0].command, "topology")
+        self.assertEqual(mocked.call_args.args[0].command, "dependencies")
 
     def test_dashboard_main_dispatches_topology_alias(self):
-        with mock.patch.object(exporter, "topology_dashboards", return_value=18) as mocked:
-            result = exporter.main(["graph", "--governance", "./governance.json"])
-
-        self.assertEqual(result, 18)
-        mocked.assert_called_once()
-        self.assertEqual(mocked.call_args.args[0].command, "topology")
+        with self.assertRaises(SystemExit):
+            exporter.main(["graph", "--governance", "./governance.json"])
 
     def test_dashboard_main_requires_approve_for_live_import(self):
         stream = io.StringIO()
 
         with redirect_stderr(stream):
             result = exporter.main(
-                ["import-dashboard", "--import-dir", "dashboards/raw"]
+                ["import", "--import-dir", "dashboards/raw"]
             )
 
         self.assertEqual(result, 1)
@@ -1097,7 +1095,7 @@ class ExporterTests(unittest.TestCase):
     def test_dashboard_parse_args_supports_require_matching_export_org(self):
         args = exporter.parse_args(
             [
-                "import-dashboard",
+                "import",
                 "--import-dir",
                 "dashboards/raw",
                 "--require-matching-export-org",
@@ -1109,7 +1107,7 @@ class ExporterTests(unittest.TestCase):
     def test_dashboard_parse_args_supports_import_by_export_org_flags(self):
         args = exporter.parse_args(
             [
-                "import-dashboard",
+                "import",
                 "--import-dir",
                 "dashboards",
                 "--use-export-org",
@@ -1128,7 +1126,7 @@ class ExporterTests(unittest.TestCase):
     def test_dashboard_parse_args_rejects_only_org_id_without_use_export_org(self):
         with self.assertRaises(SystemExit):
             exporter.parse_args(
-                ["import-dashboard", "--import-dir", "dashboards", "--only-org-id", "2"]
+                ["import", "--import-dir", "dashboards", "--only-org-id", "2"]
             )
 
     def test_dashboard_parse_args_rejects_create_missing_orgs_without_use_export_org(
@@ -1137,7 +1135,7 @@ class ExporterTests(unittest.TestCase):
         with self.assertRaises(SystemExit):
             exporter.parse_args(
                 [
-                    "import-dashboard",
+                    "import",
                     "--import-dir",
                     "dashboards",
                     "--create-missing-orgs",
@@ -1148,7 +1146,7 @@ class ExporterTests(unittest.TestCase):
         with self.assertRaises(SystemExit):
             exporter.parse_args(
                 [
-                    "import-dashboard",
+                    "import",
                     "--import-dir",
                     "dashboards",
                     "--use-export-org",
@@ -1163,7 +1161,7 @@ class ExporterTests(unittest.TestCase):
         with self.assertRaises(SystemExit):
             exporter.parse_args(
                 [
-                    "import-dashboard",
+                    "import",
                     "--import-dir",
                     "dashboards",
                     "--use-export-org",
@@ -1174,7 +1172,7 @@ class ExporterTests(unittest.TestCase):
     def test_dashboard_parse_args_supports_create_missing_orgs_with_dry_run(self):
         args = exporter.parse_args(
             [
-                "import-dashboard",
+                "import",
                 "--import-dir",
                 "dashboards",
                 "--use-export-org",
@@ -1190,7 +1188,7 @@ class ExporterTests(unittest.TestCase):
     def test_dashboard_parse_args_supports_use_export_org_with_json_output(self):
         args = exporter.parse_args(
             [
-                "import-dashboard",
+                "import",
                 "--import-dir",
                 "dashboards",
                 "--use-export-org",
@@ -1206,7 +1204,7 @@ class ExporterTests(unittest.TestCase):
     def test_dashboard_parse_args_supports_preferred_auth_aliases(self):
         args = exporter.parse_args(
             [
-                "export-dashboard",
+                "export",
                 "--token",
                 "abc123",
                 "--basic-user",
@@ -1224,17 +1222,17 @@ class ExporterTests(unittest.TestCase):
     def test_dashboard_parse_args_rejects_legacy_basic_auth_aliases(self):
         with self.assertRaises(SystemExit):
             exporter.parse_args(
-                ["export-dashboard", "--username", "user", "--basic-password", "pass"]
+                ["export", "--username", "user", "--basic-password", "pass"]
             )
         with self.assertRaises(SystemExit):
             exporter.parse_args(
-                ["export-dashboard", "--basic-user", "user", "--password", "pass"]
+                ["export", "--basic-user", "user", "--password", "pass"]
             )
 
     def test_dashboard_parse_args_supports_prompt_password(self):
         args = exporter.parse_args(
             [
-                "export-dashboard",
+                "export",
                 "--basic-user",
                 "user",
                 "--prompt-password",
@@ -1246,15 +1244,15 @@ class ExporterTests(unittest.TestCase):
         self.assertTrue(args.prompt_password)
 
     def test_dashboard_parse_args_supports_prompt_token(self):
-        args = exporter.parse_args(["export-dashboard", "--prompt-token"])
+        args = exporter.parse_args(["export", "--prompt-token"])
 
         self.assertTrue(args.prompt_token)
         self.assertIsNone(args.api_token)
 
     def test_dashboard_parse_args_supports_list_mode(self):
-        args = exporter.parse_args(["list-dashboard", "--page-size", "25"])
+        args = exporter.parse_args(["list", "--page-size", "25"])
 
-        self.assertEqual(args.command, "list-dashboard")
+        self.assertEqual(args.command, "list")
         self.assertEqual(args.page_size, 25)
         self.assertFalse(args.table)
         self.assertFalse(args.with_sources)
@@ -1353,8 +1351,8 @@ class ExporterTests(unittest.TestCase):
         self.assertIn('"dashboard"', stdout.getvalue())
 
     def test_dashboard_parse_args_supports_list_org_selection(self):
-        org_args = exporter.parse_args(["list-dashboard", "--org-id", "2"])
-        all_args = exporter.parse_args(["list-dashboard", "--all-orgs"])
+        org_args = exporter.parse_args(["list", "--org-id", "2"])
+        all_args = exporter.parse_args(["list", "--all-orgs"])
 
         self.assertEqual(org_args.org_id, "2")
         self.assertFalse(org_args.all_orgs)
@@ -1369,7 +1367,7 @@ class ExporterTests(unittest.TestCase):
             exporter.parse_args(["list-datasources"])
 
     def test_dashboard_parse_args_supports_list_output_format(self):
-        list_args = exporter.parse_args(["list-dashboard", "--output-format", "csv"])
+        list_args = exporter.parse_args(["list", "--output-format", "csv"])
 
         self.assertEqual(list_args.output_format, "csv")
         self.assertTrue(list_args.csv)
@@ -1378,7 +1376,7 @@ class ExporterTests(unittest.TestCase):
     def test_dashboard_parse_args_supports_list_output_columns_and_yaml(self):
         args = exporter.parse_args(
             [
-                "list-dashboard",
+                "list",
                 "--show-sources",
                 "--output-format",
                 "yaml",
@@ -1392,15 +1390,15 @@ class ExporterTests(unittest.TestCase):
         self.assertEqual(args.output_columns, ["uid", "folderUid", "sourceUids"])
 
     def test_dashboard_parse_args_supports_list_columns(self):
-        args = exporter.parse_args(["list-dashboard", "--list-columns"])
+        args = exporter.parse_args(["list", "--list-columns"])
 
         self.assertTrue(args.list_columns)
 
     def test_dashboard_parse_args_supports_list_csv_and_json_modes(self):
-        csv_args = exporter.parse_args(["list-dashboard", "--csv"])
-        json_args = exporter.parse_args(["list-dashboard", "--json"])
-        source_args = exporter.parse_args(["list-dashboard", "--with-sources"])
-        no_header_args = exporter.parse_args(["list-dashboard", "--no-header"])
+        csv_args = exporter.parse_args(["list", "--csv"])
+        json_args = exporter.parse_args(["list", "--json"])
+        source_args = exporter.parse_args(["list", "--with-sources"])
+        no_header_args = exporter.parse_args(["list", "--no-header"])
 
         self.assertTrue(csv_args.csv)
         self.assertFalse(csv_args.table)
@@ -1412,13 +1410,13 @@ class ExporterTests(unittest.TestCase):
         self.assertTrue(no_header_args.no_header)
 
     def test_dashboard_parse_args_supports_export_and_import_progress(self):
-        export_args = exporter.parse_args(["export-dashboard", "--progress"])
+        export_args = exporter.parse_args(["export", "--progress"])
         import_args = exporter.parse_args(
-            ["import-dashboard", "--import-dir", "./dashboards/raw", "--progress"]
+            ["import", "--import-dir", "./dashboards/raw", "--progress"]
         )
-        verbose_export_args = exporter.parse_args(["export-dashboard", "--verbose"])
+        verbose_export_args = exporter.parse_args(["export", "--verbose"])
         verbose_import_args = exporter.parse_args(
-            ["import-dashboard", "--import-dir", "./dashboards/raw", "--verbose"]
+            ["import", "--import-dir", "./dashboards/raw", "--verbose"]
         )
 
         self.assertTrue(export_args.progress)
@@ -1428,18 +1426,18 @@ class ExporterTests(unittest.TestCase):
 
     def test_dashboard_parse_args_rejects_multiple_list_output_modes(self):
         with self.assertRaises(SystemExit):
-            exporter.parse_args(["list-dashboard", "--table", "--csv"])
+            exporter.parse_args(["list", "--table", "--csv"])
 
         with self.assertRaises(SystemExit):
-            exporter.parse_args(["list-dashboard", "--table", "--json"])
+            exporter.parse_args(["list", "--table", "--json"])
 
         with self.assertRaises(SystemExit):
-            exporter.parse_args(["list-dashboard", "--csv", "--json"])
+            exporter.parse_args(["list", "--csv", "--json"])
 
     def test_dashboard_parse_args_rejects_list_output_format_with_legacy_flags(self):
         with self.assertRaises(SystemExit):
             exporter.parse_args(
-                ["list-dashboard", "--output-format", "table", "--json"]
+                ["list", "--output-format", "table", "--json"]
             )
 
     def test_dashboard_parse_args_supports_diff_mode(self):
@@ -1471,24 +1469,24 @@ class ExporterTests(unittest.TestCase):
         help_text = stream.getvalue()
         self.assertIn("raw export directory", help_text)
         self.assertIn("Compare dashboards from this raw export directory", help_text)
-        self.assertIn("use inspect-export", help_text)
+        self.assertIn("use summary", help_text)
         self.assertIn("./dashboards/provisioning", help_text)
         self.assertIn("--input-format provisioning", help_text)
         self.assertIn("Compare raw dashboard exports against Grafana", help_text)
         self.assertIn("Inspect a Grafana file-provisioning tree separately", help_text)
 
     def test_dashboard_parse_args_defaults_export_dir_to_dashboards(self):
-        args = exporter.parse_args(["export-dashboard"])
+        args = exporter.parse_args(["export"])
 
         self.assertEqual(args.export_dir, "dashboards")
-        self.assertEqual(args.command, "export-dashboard")
+        self.assertEqual(args.command, "export")
         self.assertIsNone(args.org_id)
         self.assertFalse(args.all_orgs)
 
     def test_dashboard_parse_args_supports_export_rust_aliases(self):
         args = exporter.parse_args(
             [
-                "export-dashboard",
+                "export",
                 "--output-dir",
                 "out",
                 "--without-raw",
@@ -1519,8 +1517,8 @@ class ExporterTests(unittest.TestCase):
         self.assertEqual(args.provisioning_provider_update_interval_seconds, 60)
 
     def test_dashboard_parse_args_supports_export_org_selection(self):
-        org_args = exporter.parse_args(["export-dashboard", "--org-id", "2"])
-        all_args = exporter.parse_args(["export-dashboard", "--all-orgs"])
+        org_args = exporter.parse_args(["export", "--org-id", "2"])
+        all_args = exporter.parse_args(["export", "--all-orgs"])
 
         self.assertEqual(org_args.org_id, "2")
         self.assertFalse(org_args.all_orgs)
@@ -1528,14 +1526,14 @@ class ExporterTests(unittest.TestCase):
         self.assertIsNone(all_args.org_id)
 
     def test_dashboard_parse_args_defaults_url_to_local_grafana(self):
-        args = exporter.parse_args(["export-dashboard"])
+        args = exporter.parse_args(["export"])
 
         self.assertEqual(args.url, "http://localhost:3000")
 
     def test_dashboard_parse_args_supports_variant_switches(self):
         args = exporter.parse_args(
             [
-                "export-dashboard",
+                "export",
                 "--without-dashboard-raw",
                 "--without-dashboard-prompt",
             ]
@@ -1545,13 +1543,13 @@ class ExporterTests(unittest.TestCase):
         self.assertTrue(args.without_dashboard_prompt)
 
     def test_dashboard_parse_args_supports_export_dry_run(self):
-        args = exporter.parse_args(["export-dashboard", "--dry-run"])
+        args = exporter.parse_args(["export", "--dry-run"])
 
         self.assertTrue(args.dry_run)
 
     def test_dashboard_parse_args_supports_import_dry_run(self):
         args = exporter.parse_args(
-            ["import-dashboard", "--import-dir", "dashboards/raw", "--dry-run"]
+            ["import", "--import-dir", "dashboards/raw", "--dry-run"]
         )
 
         self.assertTrue(args.dry_run)
@@ -1559,7 +1557,7 @@ class ExporterTests(unittest.TestCase):
     def test_dashboard_parse_args_supports_import_rust_aliases(self):
         args = exporter.parse_args(
             [
-                "import-dashboard",
+                "import",
                 "--input-dir",
                 "dashboards/provisioning",
                 "--input-format",
@@ -1577,7 +1575,7 @@ class ExporterTests(unittest.TestCase):
     def test_dashboard_parse_args_supports_import_dry_run_table_flags(self):
         args = exporter.parse_args(
             [
-                "import-dashboard",
+                "import",
                 "--import-dir",
                 "dashboards/raw",
                 "--dry-run",
@@ -1593,7 +1591,7 @@ class ExporterTests(unittest.TestCase):
     def test_dashboard_parse_args_supports_import_dry_run_json(self):
         args = exporter.parse_args(
             [
-                "import-dashboard",
+                "import",
                 "--import-dir",
                 "dashboards/raw",
                 "--dry-run",
@@ -1607,7 +1605,7 @@ class ExporterTests(unittest.TestCase):
     def test_dashboard_parse_args_supports_import_dry_run_output_format(self):
         args = exporter.parse_args(
             [
-                "import-dashboard",
+                "import",
                 "--import-dir",
                 "dashboards/raw",
                 "--dry-run",
@@ -1623,7 +1621,7 @@ class ExporterTests(unittest.TestCase):
     def test_dashboard_parse_args_supports_import_dry_run_output_columns(self):
         args = exporter.parse_args(
             [
-                "import-dashboard",
+                "import",
                 "--import-dir",
                 "dashboards/raw",
                 "--dry-run",
@@ -1648,7 +1646,7 @@ class ExporterTests(unittest.TestCase):
         with self.assertRaises(SystemExit):
             exporter.parse_args(
                 [
-                    "import-dashboard",
+                    "import",
                     "--import-dir",
                     "dashboards/raw",
                     "--output-format",
@@ -1663,7 +1661,7 @@ class ExporterTests(unittest.TestCase):
         with self.assertRaises(SystemExit):
             exporter.parse_args(
                 [
-                    "import-dashboard",
+                    "import",
                     "--import-dir",
                     "dashboards/raw",
                     "--dry-run",
@@ -1675,7 +1673,7 @@ class ExporterTests(unittest.TestCase):
     def test_dashboard_parse_args_supports_update_existing_only(self):
         args = exporter.parse_args(
             [
-                "import-dashboard",
+                "import",
                 "--import-dir",
                 "dashboards/raw",
                 "--update-existing-only",
@@ -1685,16 +1683,16 @@ class ExporterTests(unittest.TestCase):
         self.assertTrue(args.update_existing_only)
 
     def test_dashboard_parse_args_supports_delete_mode(self):
-        args = exporter.parse_args(["delete-dashboard", "--uid", "cpu-main"])
+        args = exporter.parse_args(["delete", "--uid", "cpu-main"])
 
-        self.assertEqual(args.command, "delete-dashboard")
+        self.assertEqual(args.command, "delete")
         self.assertEqual(args.uid, "cpu-main")
         self.assertFalse(args.delete_folders)
         self.assertFalse(args.dry_run)
 
     def test_dashboard_parse_args_supports_delete_output_format(self):
         args = exporter.parse_args(
-            ["delete-dashboard", "--uid", "cpu-main", "--output-format", "json"]
+            ["delete", "--uid", "cpu-main", "--output-format", "json"]
         )
 
         self.assertTrue(args.json)
@@ -1703,7 +1701,7 @@ class ExporterTests(unittest.TestCase):
     def test_dashboard_parse_args_supports_delete_path_and_interactive(self):
         args = exporter.parse_args(
             [
-                "delete-dashboard",
+                "delete",
                 "--path",
                 "Platform / Infra",
                 "--delete-folders",
@@ -1717,16 +1715,16 @@ class ExporterTests(unittest.TestCase):
 
     def test_dashboard_parse_args_supports_inspect_export_json(self):
         args = exporter.parse_args(
-            ["inspect-export", "--import-dir", "dashboards/raw", "--json"]
+            ["summary", "--import-dir", "dashboards/raw", "--json"]
         )
 
-        self.assertEqual(args.command, "inspect-export")
+        self.assertEqual(args.command, "summary")
         self.assertTrue(args.json)
 
     def test_dashboard_parse_args_supports_inspect_export_table(self):
         args = exporter.parse_args(
             [
-                "inspect-export",
+                "summary",
                 "--import-dir",
                 "dashboards/raw",
                 "--table",
@@ -1734,14 +1732,14 @@ class ExporterTests(unittest.TestCase):
             ]
         )
 
-        self.assertEqual(args.command, "inspect-export")
+        self.assertEqual(args.command, "summary")
         self.assertTrue(args.table)
         self.assertTrue(args.no_header)
 
     def test_dashboard_parse_args_supports_inspect_export_output_format(self):
         args = exporter.parse_args(
             [
-                "inspect-export",
+                "summary",
                 "--import-dir",
                 "dashboards/raw",
                 "--output-format",
@@ -1749,7 +1747,7 @@ class ExporterTests(unittest.TestCase):
             ]
         )
 
-        self.assertEqual(args.command, "inspect-export")
+        self.assertEqual(args.command, "summary")
         self.assertEqual(args.output_format, "report-tree-table")
         self.assertIsNone(args.report)
         self.assertFalse(args.json)
@@ -1760,7 +1758,7 @@ class ExporterTests(unittest.TestCase):
     ):
         args = exporter.parse_args(
             [
-                "inspect-export",
+                "summary",
                 "--import-dir",
                 "dashboards/raw",
                 "--output-format",
@@ -1768,7 +1766,7 @@ class ExporterTests(unittest.TestCase):
             ]
         )
 
-        self.assertEqual(args.command, "inspect-export")
+        self.assertEqual(args.command, "summary")
         self.assertEqual(args.output_format, "report-dependency")
         self.assertIsNone(args.report)
         self.assertFalse(args.json)
@@ -1777,7 +1775,7 @@ class ExporterTests(unittest.TestCase):
     def test_dashboard_parse_args_supports_inspect_live_report_json(self):
         args = exporter.parse_args(
             [
-                "inspect-live",
+                "summary",
                 "--url",
                 "http://localhost:3000",
                 "--report",
@@ -1789,7 +1787,7 @@ class ExporterTests(unittest.TestCase):
             ]
         )
 
-        self.assertEqual(args.command, "inspect-live")
+        self.assertEqual(args.command, "summary")
         self.assertEqual(args.url, "http://localhost:3000")
         self.assertEqual(args.report, "json")
         self.assertEqual(args.report_filter_datasource, "prom-main")
@@ -1798,7 +1796,7 @@ class ExporterTests(unittest.TestCase):
     def test_dashboard_parse_args_supports_inspect_live_report_tree_table(self):
         args = exporter.parse_args(
             [
-                "inspect-live",
+                "summary",
                 "--url",
                 "http://localhost:3000",
                 "--report",
@@ -1806,14 +1804,14 @@ class ExporterTests(unittest.TestCase):
             ]
         )
 
-        self.assertEqual(args.command, "inspect-live")
+        self.assertEqual(args.command, "summary")
         self.assertEqual(args.url, "http://localhost:3000")
         self.assertEqual(args.report, "tree-table")
 
     def test_dashboard_parse_args_supports_inspect_live_report_dependency(self):
         args = exporter.parse_args(
             [
-                "inspect-live",
+                "summary",
                 "--url",
                 "http://localhost:3000",
                 "--report",
@@ -1821,14 +1819,14 @@ class ExporterTests(unittest.TestCase):
             ]
         )
 
-        self.assertEqual(args.command, "inspect-live")
+        self.assertEqual(args.command, "summary")
         self.assertEqual(args.url, "http://localhost:3000")
         self.assertEqual(args.report, "dependency")
 
     def test_dashboard_parse_args_supports_inspect_live_output_format(self):
         args = exporter.parse_args(
             [
-                "inspect-live",
+                "summary",
                 "--url",
                 "http://localhost:3000",
                 "--output-format",
@@ -1836,14 +1834,14 @@ class ExporterTests(unittest.TestCase):
             ]
         )
 
-        self.assertEqual(args.command, "inspect-live")
+        self.assertEqual(args.command, "summary")
         self.assertEqual(args.output_format, "governance-json")
         self.assertIsNone(args.report)
 
     def test_dashboard_parse_args_supports_inspect_live_output_format_dependency(self):
         args = exporter.parse_args(
             [
-                "inspect-live",
+                "summary",
                 "--url",
                 "http://localhost:3000",
                 "--output-format",
@@ -1851,46 +1849,46 @@ class ExporterTests(unittest.TestCase):
             ]
         )
 
-        self.assertEqual(args.command, "inspect-live")
+        self.assertEqual(args.command, "summary")
         self.assertEqual(args.output_format, "report-dependency-json")
         self.assertIsNone(args.report)
 
     def test_dashboard_parse_args_supports_inspect_export_report_table(self):
         args = exporter.parse_args(
-            ["inspect-export", "--import-dir", "dashboards/raw", "--report"]
+            ["summary", "--import-dir", "dashboards/raw", "--report"]
         )
 
-        self.assertEqual(args.command, "inspect-export")
+        self.assertEqual(args.command, "summary")
         self.assertEqual(args.report, "table")
 
     def test_dashboard_parse_args_supports_inspect_export_report_json(self):
         args = exporter.parse_args(
-            ["inspect-export", "--import-dir", "dashboards/raw", "--report", "json"]
+            ["summary", "--import-dir", "dashboards/raw", "--report", "json"]
         )
 
-        self.assertEqual(args.command, "inspect-export")
+        self.assertEqual(args.command, "summary")
         self.assertEqual(args.report, "json")
 
     def test_dashboard_parse_args_supports_inspect_export_report_csv(self):
         args = exporter.parse_args(
-            ["inspect-export", "--import-dir", "dashboards/raw", "--report", "csv"]
+            ["summary", "--import-dir", "dashboards/raw", "--report", "csv"]
         )
 
-        self.assertEqual(args.command, "inspect-export")
+        self.assertEqual(args.command, "summary")
         self.assertEqual(args.report, "csv")
 
     def test_dashboard_parse_args_supports_inspect_export_report_tree(self):
         args = exporter.parse_args(
-            ["inspect-export", "--import-dir", "dashboards/raw", "--report", "tree"]
+            ["summary", "--import-dir", "dashboards/raw", "--report", "tree"]
         )
 
-        self.assertEqual(args.command, "inspect-export")
+        self.assertEqual(args.command, "summary")
         self.assertEqual(args.report, "tree")
 
     def test_dashboard_parse_args_supports_inspect_export_report_tree_table(self):
         args = exporter.parse_args(
             [
-                "inspect-export",
+                "summary",
                 "--import-dir",
                 "dashboards/raw",
                 "--report",
@@ -1898,13 +1896,13 @@ class ExporterTests(unittest.TestCase):
             ]
         )
 
-        self.assertEqual(args.command, "inspect-export")
+        self.assertEqual(args.command, "summary")
         self.assertEqual(args.report, "tree-table")
 
     def test_dashboard_parse_args_supports_inspect_export_report_dependency(self):
         args = exporter.parse_args(
             [
-                "inspect-export",
+                "summary",
                 "--import-dir",
                 "dashboards/raw",
                 "--report",
@@ -1912,13 +1910,13 @@ class ExporterTests(unittest.TestCase):
             ]
         )
 
-        self.assertEqual(args.command, "inspect-export")
+        self.assertEqual(args.command, "summary")
         self.assertEqual(args.report, "dependency")
 
     def test_dashboard_parse_args_supports_inspect_export_report_dependency_json(self):
         args = exporter.parse_args(
             [
-                "inspect-export",
+                "summary",
                 "--import-dir",
                 "dashboards/raw",
                 "--report",
@@ -1926,7 +1924,7 @@ class ExporterTests(unittest.TestCase):
             ]
         )
 
-        self.assertEqual(args.command, "inspect-export")
+        self.assertEqual(args.command, "summary")
         self.assertEqual(args.report, "dependency-json")
 
     def test_dashboard_parse_args_supports_inspect_export_report_columns_and_filter(
@@ -1934,7 +1932,7 @@ class ExporterTests(unittest.TestCase):
     ):
         args = exporter.parse_args(
             [
-                "inspect-export",
+                "summary",
                 "--import-dir",
                 "dashboards/raw",
                 "--report",
@@ -1945,14 +1943,14 @@ class ExporterTests(unittest.TestCase):
             ]
         )
 
-        self.assertEqual(args.command, "inspect-export")
+        self.assertEqual(args.command, "summary")
         self.assertEqual(args.report_columns, "dashboardUid,datasource,metrics")
         self.assertEqual(args.report_filter_datasource, "prom-main")
 
     def test_dashboard_parse_args_supports_inspect_export_report_panel_filter(self):
         args = exporter.parse_args(
             [
-                "inspect-export",
+                "summary",
                 "--import-dir",
                 "dashboards/raw",
                 "--report",
@@ -1961,7 +1959,7 @@ class ExporterTests(unittest.TestCase):
             ]
         )
 
-        self.assertEqual(args.command, "inspect-export")
+        self.assertEqual(args.command, "summary")
         self.assertEqual(args.report_filter_panel_id, "7")
 
     def test_dashboard_parse_report_columns_accepts_snake_case_aliases(self):
@@ -2173,7 +2171,7 @@ class ExporterTests(unittest.TestCase):
 
     def test_dashboard_parse_args_supports_ensure_folders(self):
         args = exporter.parse_args(
-            ["import-dashboard", "--import-dir", "dashboards/raw", "--ensure-folders"]
+            ["import", "--import-dir", "dashboards/raw", "--ensure-folders"]
         )
 
         self.assertTrue(args.ensure_folders)
@@ -2181,7 +2179,7 @@ class ExporterTests(unittest.TestCase):
     def test_dashboard_parse_args_supports_require_matching_folder_path(self):
         args = exporter.parse_args(
             [
-                "import-dashboard",
+                "import",
                 "--import-dir",
                 "dashboards/raw",
                 "--require-matching-folder-path",
@@ -2205,18 +2203,18 @@ class ExporterTests(unittest.TestCase):
         )
 
     def test_dashboard_parse_args_disables_ssl_verification_by_default(self):
-        args = exporter.parse_args(["export-dashboard"])
+        args = exporter.parse_args(["export"])
 
         self.assertFalse(args.verify_ssl)
 
     def test_dashboard_parse_args_can_enable_ssl_verification(self):
-        args = exporter.parse_args(["export-dashboard", "--verify-ssl"])
+        args = exporter.parse_args(["export", "--verify-ssl"])
 
         self.assertTrue(args.verify_ssl)
 
     def test_dashboard_parse_args_rejects_old_list_subcommand_name(self):
         with self.assertRaises(SystemExit):
-            exporter.parse_args(["list", "--json"])
+            exporter.parse_args(["list-dashboard"])
 
     def test_dashboard_build_json_http_transport_defaults_to_requests(self):
         transport = exporter.build_json_http_transport(
@@ -2795,7 +2793,7 @@ class ExporterTests(unittest.TestCase):
 
             args = exporter.parse_args(
                 [
-                    "inspect-export",
+                    "summary",
                     "--import-dir",
                     str(import_dir),
                     "--table",
@@ -2817,7 +2815,7 @@ class ExporterTests(unittest.TestCase):
             self._write_minimal_inspection_export(import_dir)
 
             args = exporter.parse_args(
-                ["inspect-export", "--import-dir", str(import_dir), "--json"]
+                ["summary", "--import-dir", str(import_dir), "--json"]
             )
             stdout = io.StringIO()
             with redirect_stdout(stdout):
@@ -2839,7 +2837,7 @@ class ExporterTests(unittest.TestCase):
             self._write_minimal_inspection_export(import_dir)
 
             args = exporter.parse_args(
-                ["inspect-export", "--import-dir", str(import_dir), "--report", "json"]
+                ["summary", "--import-dir", str(import_dir), "--report", "json"]
             )
             stdout = io.StringIO()
             with redirect_stdout(stdout):
@@ -3006,7 +3004,7 @@ class ExporterTests(unittest.TestCase):
             )
 
             args = exporter.parse_args(
-                ["inspect-export", "--import-dir", str(import_dir), "--report", "json"]
+                ["summary", "--import-dir", str(import_dir), "--report", "json"]
             )
             stdout = io.StringIO()
             with redirect_stdout(stdout):
@@ -3118,7 +3116,7 @@ class ExporterTests(unittest.TestCase):
 
             args = exporter.parse_args(
                 [
-                    "inspect-export",
+                    "summary",
                     "--import-dir",
                     str(import_dir),
                     "--report",
@@ -3219,7 +3217,7 @@ class ExporterTests(unittest.TestCase):
 
             args = exporter.parse_args(
                 [
-                    "inspect-export",
+                    "summary",
                     "--import-dir",
                     str(import_dir),
                     "--report",
@@ -3784,7 +3782,7 @@ class ExporterTests(unittest.TestCase):
 
     def test_dashboard_list_dashboards_with_org_id_uses_scoped_client(self):
         args = argparse.Namespace(
-            command="list-dashboard",
+            command="list",
             url="http://127.0.0.1:3000",
             api_token=None,
             username="admin",
@@ -3828,7 +3826,7 @@ class ExporterTests(unittest.TestCase):
 
     def test_dashboard_list_dashboards_with_all_orgs_aggregates_results(self):
         args = argparse.Namespace(
-            command="list-dashboard",
+            command="list",
             url="http://127.0.0.1:3000",
             api_token=None,
             username="admin",
@@ -3876,7 +3874,7 @@ class ExporterTests(unittest.TestCase):
 
     def test_dashboard_list_dashboards_rejects_all_orgs_with_org_id(self):
         args = argparse.Namespace(
-            command="list-dashboard",
+            command="list",
             url="http://127.0.0.1:3000",
             api_token=None,
             username="admin",
@@ -3897,7 +3895,7 @@ class ExporterTests(unittest.TestCase):
 
     def test_dashboard_list_dashboards_rejects_org_switch_with_token_auth(self):
         args = argparse.Namespace(
-            command="list-dashboard",
+            command="list",
             url="http://127.0.0.1:3000",
             api_token="token",
             username=None,
@@ -3991,7 +3989,7 @@ class ExporterTests(unittest.TestCase):
     def test_dashboard_export_dashboards_rejects_disabling_all_variants(self):
         args = exporter.parse_args(
             [
-                "export-dashboard",
+                "export",
                 "--without-dashboard-raw",
                 "--without-dashboard-prompt",
             ]
@@ -4379,7 +4377,7 @@ class ExporterTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             args = exporter.parse_args(
                 [
-                    "export-dashboard",
+                    "export",
                     "--export-dir",
                     tmpdir,
                     "--without-dashboard-prompt",
@@ -4465,7 +4463,7 @@ class ExporterTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             args = exporter.parse_args(
                 [
-                    "export-dashboard",
+                    "export",
                     "--export-dir",
                     tmpdir,
                     "--without-dashboard-prompt",
@@ -4515,7 +4513,7 @@ class ExporterTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             args = exporter.parse_args(
                 [
-                    "export-dashboard",
+                    "export",
                     "--export-dir",
                     tmpdir,
                     "--without-dashboard-prompt",
@@ -4571,7 +4569,7 @@ class ExporterTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             args = exporter.parse_args(
                 [
-                    "export-dashboard",
+                    "export",
                     "--export-dir",
                     tmpdir,
                     "--without-dashboard-prompt",
@@ -4628,7 +4626,7 @@ class ExporterTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             args = exporter.parse_args(
                 [
-                    "export-dashboard",
+                    "export",
                     "--export-dir",
                     tmpdir,
                     "--without-dashboard-prompt",
@@ -4658,7 +4656,7 @@ class ExporterTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             args = exporter.parse_args(
                 [
-                    "export-dashboard",
+                    "export",
                     "--export-dir",
                     tmpdir,
                     "--without-dashboard-prompt",
@@ -4726,7 +4724,7 @@ class ExporterTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             args = exporter.parse_args(
                 [
-                    "export-dashboard",
+                    "export",
                     "--export-dir",
                     tmpdir,
                     "--without-dashboard-prompt",
@@ -4793,7 +4791,7 @@ class ExporterTests(unittest.TestCase):
         client = FakeDashboardWorkflowClient()
         args = exporter.parse_args(
             [
-                "export-dashboard",
+                "export",
                 "--without-dashboard-prompt",
                 "--org-id",
                 "2",
@@ -4809,7 +4807,7 @@ class ExporterTests(unittest.TestCase):
         client = FakeDashboardWorkflowClient(headers={"Authorization": "Bearer token"})
         args = exporter.parse_args(
             [
-                "export-dashboard",
+                "export",
                 "--without-dashboard-prompt",
                 "--org-id",
                 "2",
@@ -4826,7 +4824,7 @@ class ExporterTests(unittest.TestCase):
         client = FakeDashboardWorkflowClient(headers={"Authorization": "Bearer token"})
         args = exporter.parse_args(
             [
-                "import-dashboard",
+                "import",
                 "--import-dir",
                 "dashboards/raw",
                 "--org-id",
@@ -4844,7 +4842,7 @@ class ExporterTests(unittest.TestCase):
         client = FakeDashboardWorkflowClient(headers={"Authorization": "Bearer token"})
         args = exporter.parse_args(
             [
-                "import-dashboard",
+                "import",
                 "--import-dir",
                 "dashboards",
                 "--use-export-org",
@@ -4885,7 +4883,7 @@ class ExporterTests(unittest.TestCase):
             )
             args = exporter.parse_args(
                 [
-                    "import-dashboard",
+                    "import",
                     "--import-dir",
                     str(root_dir),
                     "--use-export-org",
@@ -4946,7 +4944,7 @@ class ExporterTests(unittest.TestCase):
             )
             args = exporter.parse_args(
                 [
-                    "import-dashboard",
+                    "import",
                     "--import-dir",
                     str(root_dir),
                     "--use-export-org",
@@ -5007,7 +5005,7 @@ class ExporterTests(unittest.TestCase):
             )
             args = exporter.parse_args(
                 [
-                    "import-dashboard",
+                    "import",
                     "--import-dir",
                     str(root_dir),
                     "--use-export-org",
@@ -5069,7 +5067,7 @@ class ExporterTests(unittest.TestCase):
             )
             args = exporter.parse_args(
                 [
-                    "import-dashboard",
+                    "import",
                     "--import-dir",
                     str(root_dir),
                     "--use-export-org",
@@ -5120,7 +5118,7 @@ class ExporterTests(unittest.TestCase):
             )
             args = exporter.parse_args(
                 [
-                    "import-dashboard",
+                    "import",
                     "--import-dir",
                     str(root_dir),
                     "--use-export-org",
@@ -5163,7 +5161,7 @@ class ExporterTests(unittest.TestCase):
             )
             args = exporter.parse_args(
                 [
-                    "import-dashboard",
+                    "import",
                     "--import-dir",
                     str(root_dir),
                     "--use-export-org",
@@ -5214,7 +5212,7 @@ class ExporterTests(unittest.TestCase):
             )
             args = exporter.parse_args(
                 [
-                    "import-dashboard",
+                    "import",
                     "--import-dir",
                     str(root_dir),
                     "--use-export-org",
@@ -5273,7 +5271,7 @@ class ExporterTests(unittest.TestCase):
             )
             args = exporter.parse_args(
                 [
-                    "import-dashboard",
+                    "import",
                     "--import-dir",
                     str(import_dir),
                     "--require-matching-export-org",
@@ -5326,7 +5324,7 @@ class ExporterTests(unittest.TestCase):
             )
             args = exporter.parse_args(
                 [
-                    "import-dashboard",
+                    "import",
                     "--import-dir",
                     str(import_dir),
                     "--require-matching-export-org",
@@ -5385,7 +5383,7 @@ class ExporterTests(unittest.TestCase):
             )
             args = exporter.parse_args(
                 [
-                    "import-dashboard",
+                    "import",
                     "--import-dir",
                     str(import_dir),
                     "--org-id",
@@ -5460,7 +5458,7 @@ class ExporterTests(unittest.TestCase):
             )
             args = exporter.parse_args(
                 [
-                    "import-dashboard",
+                    "import",
                     "--import-dir",
                     str(import_dir),
                     "--require-matching-export-org",
@@ -5507,7 +5505,7 @@ class ExporterTests(unittest.TestCase):
             )
             args = exporter.parse_args(
                 [
-                    "import-dashboard",
+                    "import",
                     "--import-dir",
                     str(import_dir),
                     "--org-id",
@@ -5561,7 +5559,7 @@ class ExporterTests(unittest.TestCase):
             )
             args = exporter.parse_args(
                 [
-                    "import-dashboard",
+                    "import",
                     "--import-dir",
                     str(import_dir),
                     "--org-id",
@@ -5584,7 +5582,7 @@ class ExporterTests(unittest.TestCase):
         client = FakeDashboardWorkflowClient()
         args = exporter.parse_args(
             [
-                "import-dashboard",
+                "import",
                 "--input-dir",
                 "dashboards/raw",
                 "--list-columns",
@@ -5611,7 +5609,7 @@ class ExporterTests(unittest.TestCase):
             )
             args = exporter.parse_args(
                 [
-                    "import-dashboard",
+                    "import",
                     "--input-dir",
                     str(import_dir.parent),
                     "--input-format",
@@ -5654,7 +5652,7 @@ class ExporterTests(unittest.TestCase):
             )
             args = exporter.parse_args(
                 [
-                    "import-dashboard",
+                    "import",
                     "--input-dir",
                     str(import_dir),
                     "--interactive",
@@ -5724,7 +5722,7 @@ class ExporterTests(unittest.TestCase):
                 },
             )
             args = exporter.parse_args(
-                ["import-dashboard", "--import-dir", str(import_dir)]
+                ["import", "--import-dir", str(import_dir)]
             )
 
             with mock.patch.object(exporter, "build_client", return_value=client):
@@ -5778,7 +5776,7 @@ class ExporterTests(unittest.TestCase):
                 },
             )
             args = exporter.parse_args(
-                ["import-dashboard", "--import-dir", str(import_dir)]
+                ["import", "--import-dir", str(import_dir)]
             )
 
             with mock.patch.object(exporter, "build_client", return_value=client):
@@ -5835,7 +5833,7 @@ class ExporterTests(unittest.TestCase):
                 },
             )
             args = exporter.parse_args(
-                ["import-dashboard", "--import-dir", str(import_dir)]
+                ["import", "--import-dir", str(import_dir)]
             )
 
             with mock.patch.object(exporter, "build_client", return_value=client):
@@ -5892,7 +5890,7 @@ class ExporterTests(unittest.TestCase):
                 },
             )
             args = exporter.parse_args(
-                ["import-dashboard", "--import-dir", str(import_dir)]
+                ["import", "--import-dir", str(import_dir)]
             )
 
             with mock.patch.object(exporter, "build_client", return_value=client):
@@ -5930,7 +5928,7 @@ class ExporterTests(unittest.TestCase):
                 import_dir / "cpu__abc.json",
             )
             args = exporter.parse_args(
-                ["import-dashboard", "--import-dir", str(import_dir), "--dry-run"]
+                ["import", "--import-dir", str(import_dir), "--dry-run"]
             )
 
             with mock.patch.object(exporter, "build_client", return_value=client):
@@ -5967,7 +5965,7 @@ class ExporterTests(unittest.TestCase):
             )
             args = exporter.parse_args(
                 [
-                    "import-dashboard",
+                    "import",
                     "--import-dir",
                     str(import_dir),
                     "--dry-run",
@@ -6012,7 +6010,7 @@ class ExporterTests(unittest.TestCase):
             )
             args = exporter.parse_args(
                 [
-                    "import-dashboard",
+                    "import",
                     "--import-dir",
                     str(import_dir),
                     "--dry-run",
@@ -6095,7 +6093,7 @@ class ExporterTests(unittest.TestCase):
             )
             args = exporter.parse_args(
                 [
-                    "import-dashboard",
+                    "import",
                     "--import-dir",
                     str(import_dir),
                     "--dry-run",
@@ -6168,7 +6166,7 @@ class ExporterTests(unittest.TestCase):
             )
             args = exporter.parse_args(
                 [
-                    "import-dashboard",
+                    "import",
                     "--import-dir",
                     str(import_dir),
                     "--dry-run",
@@ -6229,7 +6227,7 @@ class ExporterTests(unittest.TestCase):
             )
             args = exporter.parse_args(
                 [
-                    "import-dashboard",
+                    "import",
                     "--import-dir",
                     str(import_dir),
                     "--dry-run",
@@ -6290,7 +6288,7 @@ class ExporterTests(unittest.TestCase):
             )
             args = exporter.parse_args(
                 [
-                    "import-dashboard",
+                    "import",
                     "--import-dir",
                     str(import_dir),
                     "--dry-run",
@@ -6354,7 +6352,7 @@ class ExporterTests(unittest.TestCase):
             )
             args = exporter.parse_args(
                 [
-                    "import-dashboard",
+                    "import",
                     "--import-dir",
                     str(import_dir),
                     "--dry-run",
@@ -6422,7 +6420,7 @@ class ExporterTests(unittest.TestCase):
             )
             args = exporter.parse_args(
                 [
-                    "import-dashboard",
+                    "import",
                     "--import-dir",
                     str(import_dir),
                     "--update-existing-only",
@@ -6490,7 +6488,7 @@ class ExporterTests(unittest.TestCase):
             )
             args = exporter.parse_args(
                 [
-                    "import-dashboard",
+                    "import",
                     "--import-dir",
                     str(import_dir),
                     "--update-existing-only",
@@ -6551,7 +6549,7 @@ class ExporterTests(unittest.TestCase):
             )
             args = exporter.parse_args(
                 [
-                    "import-dashboard",
+                    "import",
                     "--import-dir",
                     str(import_dir),
                     "--replace-existing",
@@ -6609,7 +6607,7 @@ class ExporterTests(unittest.TestCase):
             )
             args = exporter.parse_args(
                 [
-                    "import-dashboard",
+                    "import",
                     "--import-dir",
                     str(import_dir),
                     "--dry-run",
@@ -6685,7 +6683,7 @@ class ExporterTests(unittest.TestCase):
             )
             args = exporter.parse_args(
                 [
-                    "import-dashboard",
+                    "import",
                     "--import-dir",
                     str(import_dir),
                     "--dry-run",
@@ -6766,7 +6764,7 @@ class ExporterTests(unittest.TestCase):
             )
             args = exporter.parse_args(
                 [
-                    "import-dashboard",
+                    "import",
                     "--import-dir",
                     str(import_dir),
                     "--dry-run",
@@ -6798,7 +6796,7 @@ class ExporterTests(unittest.TestCase):
         client = FakeDashboardWorkflowClient()
         args = exporter.parse_args(
             [
-                "import-dashboard",
+                "import",
                 "--import-dir",
                 "dashboards/raw",
                 "--require-matching-folder-path",
@@ -6857,7 +6855,7 @@ class ExporterTests(unittest.TestCase):
             )
             args = exporter.parse_args(
                 [
-                    "import-dashboard",
+                    "import",
                     "--import-dir",
                     str(import_dir),
                     "--dry-run",
@@ -6928,7 +6926,7 @@ class ExporterTests(unittest.TestCase):
             )
             args = exporter.parse_args(
                 [
-                    "import-dashboard",
+                    "import",
                     "--import-dir",
                     str(import_dir),
                     "--replace-existing",
@@ -6958,7 +6956,7 @@ class ExporterTests(unittest.TestCase):
     def test_dashboard_import_dashboards_rejects_table_without_dry_run(self):
         client = FakeDashboardWorkflowClient()
         args = exporter.parse_args(
-            ["import-dashboard", "--import-dir", "dashboards/raw", "--table"]
+            ["import", "--import-dir", "dashboards/raw", "--table"]
         )
 
         with mock.patch.object(exporter, "build_client", return_value=client):
@@ -6970,7 +6968,7 @@ class ExporterTests(unittest.TestCase):
     def test_dashboard_import_dashboards_rejects_json_without_dry_run(self):
         client = FakeDashboardWorkflowClient()
         args = exporter.parse_args(
-            ["import-dashboard", "--import-dir", "dashboards/raw", "--json"]
+            ["import", "--import-dir", "dashboards/raw", "--json"]
         )
 
         with mock.patch.object(exporter, "build_client", return_value=client):
@@ -6983,7 +6981,7 @@ class ExporterTests(unittest.TestCase):
         client = FakeDashboardWorkflowClient()
         args = exporter.parse_args(
             [
-                "import-dashboard",
+                "import",
                 "--import-dir",
                 "dashboards/raw",
                 "--dry-run",
@@ -7002,7 +7000,7 @@ class ExporterTests(unittest.TestCase):
         client = FakeDashboardWorkflowClient()
         args = exporter.parse_args(
             [
-                "import-dashboard",
+                "import",
                 "--import-dir",
                 "dashboards/raw",
                 "--dry-run",
@@ -7068,7 +7066,7 @@ class ExporterTests(unittest.TestCase):
             )
             args = exporter.parse_args(
                 [
-                    "import-dashboard",
+                    "import",
                     "--import-dir",
                     str(import_dir),
                     "--ensure-folders",
@@ -7115,7 +7113,7 @@ class ExporterTests(unittest.TestCase):
             )
             args = exporter.parse_args(
                 [
-                    "import-dashboard",
+                    "import",
                     "--import-dir",
                     str(import_dir),
                     "--ensure-folders",
@@ -7197,7 +7195,7 @@ class ExporterTests(unittest.TestCase):
             )
             args = exporter.parse_args(
                 [
-                    "import-dashboard",
+                    "import",
                     "--import-dir",
                     str(import_dir),
                     "--dry-run",
@@ -7277,7 +7275,7 @@ class ExporterTests(unittest.TestCase):
             )
             args = exporter.parse_args(
                 [
-                    "import-dashboard",
+                    "import",
                     "--import-dir",
                     str(import_dir),
                     "--dry-run",
@@ -7343,7 +7341,7 @@ class ExporterTests(unittest.TestCase):
             )
             args = exporter.parse_args(
                 [
-                    "import-dashboard",
+                    "import",
                     "--import-dir",
                     str(import_dir),
                     "--dry-run",
@@ -7419,7 +7417,7 @@ class ExporterTests(unittest.TestCase):
             )
             args = exporter.parse_args(
                 [
-                    "import-dashboard",
+                    "import",
                     "--import-dir",
                     str(import_dir),
                     "--dry-run",
@@ -7464,7 +7462,7 @@ class ExporterTests(unittest.TestCase):
                 import_dir / "cpu__abc.json",
             )
             args = exporter.parse_args(
-                ["import-dashboard", "--import-dir", str(import_dir), "--progress"]
+                ["import", "--import-dir", str(import_dir), "--progress"]
             )
 
             with mock.patch.object(exporter, "build_client", return_value=client):
@@ -7500,7 +7498,7 @@ class ExporterTests(unittest.TestCase):
                 import_dir / "cpu__abc.json",
             )
             args = exporter.parse_args(
-                ["import-dashboard", "--import-dir", str(import_dir), "--verbose"]
+                ["import", "--import-dir", str(import_dir), "--verbose"]
             )
 
             with mock.patch.object(exporter, "build_client", return_value=client):
@@ -7538,7 +7536,7 @@ class ExporterTests(unittest.TestCase):
             )
             args = exporter.parse_args(
                 [
-                    "import-dashboard",
+                    "import",
                     "--import-dir",
                     str(import_dir),
                     "--progress",
@@ -7582,7 +7580,7 @@ class ExporterTests(unittest.TestCase):
                 import_dir / "cpu__abc.json",
             )
             args = exporter.parse_args(
-                ["import-dashboard", "--import-dir", str(import_dir)]
+                ["import", "--import-dir", str(import_dir)]
             )
 
             with mock.patch.object(exporter, "build_client", return_value=client):
@@ -8285,7 +8283,7 @@ class ExporterTests(unittest.TestCase):
             folders={"infra": {"uid": "infra", "title": "Infra"}},
         )
         args = exporter.parse_args(
-            ["delete-dashboard", "--uid", "cpu-main", "--dry-run", "--json"]
+            ["delete", "--uid", "cpu-main", "--dry-run", "--json"]
         )
 
         with mock.patch.object(exporter, "build_client", return_value=client):
@@ -8301,7 +8299,7 @@ class ExporterTests(unittest.TestCase):
         self.assertEqual(client.deleted_dashboards, [])
 
     def test_dashboard_delete_dashboards_requires_yes_without_dry_run(self):
-        args = exporter.parse_args(["delete-dashboard", "--uid", "cpu-main"])
+        args = exporter.parse_args(["delete", "--uid", "cpu-main"])
 
         with self.assertRaisesRegex(exporter.GrafanaError, "requires --yes"):
             exporter.validate_delete_args(args)
@@ -8340,7 +8338,7 @@ class ExporterTests(unittest.TestCase):
         )
         args = exporter.parse_args(
             [
-                "delete-dashboard",
+                "delete",
                 "--path",
                 "Platform / Infra",
                 "--delete-folders",
@@ -8378,7 +8376,7 @@ class ExporterTests(unittest.TestCase):
                 "platform": {"uid": "platform", "title": "Platform"},
             },
         )
-        args = exporter.parse_args(["delete-dashboard", "--interactive"])
+        args = exporter.parse_args(["delete", "--interactive"])
         responses = iter(["path", "Platform / Infra", "n", "y"])
         deps = exporter._build_delete_workflow_deps()
         deps["build_client"] = lambda _args: client
@@ -8397,7 +8395,7 @@ class ExporterTests(unittest.TestCase):
         )
 
     def test_dashboard_delete_dashboards_interactive_requires_tty(self):
-        args = exporter.parse_args(["delete-dashboard", "--interactive"])
+        args = exporter.parse_args(["delete", "--interactive"])
         deps = exporter._build_delete_workflow_deps()
         deps["build_client"] = lambda _args: FakeDashboardWorkflowClient()
         deps["is_tty"] = lambda: False

@@ -115,9 +115,9 @@ class UnifiedCliTests(unittest.TestCase):
         self.assertIn("browse", help_text)
         self.assertIn("edit-live", help_text)
         self.assertIn("serve", help_text)
-        self.assertIn("list-vars", help_text)
-        self.assertIn("inspect-export", help_text)
-        self.assertIn("inspect-export --input-format provisioning", help_text)
+        self.assertIn("variables", help_text)
+        self.assertIn("summary", help_text)
+        self.assertIn("summary --input-format provisioning", help_text)
 
     def test_unified_parse_args_alert_without_subcommand_prints_alert_help(self):
         stdout = io.StringIO()
@@ -174,7 +174,7 @@ class UnifiedCliTests(unittest.TestCase):
         self.assertEqual(args.entrypoint, "dashboard")
         self.assertEqual(
             args.forwarded_argv,
-            ["export-dashboard", "--export-dir", "dashboards"],
+            ["export", "--export-dir", "dashboards"],
         )
 
     def test_unified_parse_args_supports_dashboard_edit_live_namespace(self):
@@ -211,13 +211,13 @@ class UnifiedCliTests(unittest.TestCase):
 
     def test_unified_parse_args_supports_dashboard_inspect_live_namespace(self):
         args = unified_cli.parse_args(
-            ["dashboard", "inspect-live", "--url", "http://127.0.0.1:3000", "--report"]
+            ["dashboard", "summary", "--url", "http://127.0.0.1:3000", "--report"]
         )
 
         self.assertEqual(args.entrypoint, "dashboard")
         self.assertEqual(
             args.forwarded_argv,
-            ["inspect-live", "--url", "http://127.0.0.1:3000", "--report"],
+            ["summary", "--url", "http://127.0.0.1:3000", "--report"],
         )
 
     def test_unified_parse_args_supports_dashboard_raw_to_prompt_namespace(self):
@@ -237,29 +237,24 @@ class UnifiedCliTests(unittest.TestCase):
         )
 
     def test_unified_parse_args_supports_dashboard_list_vars_namespace(self):
-        args = unified_cli.parse_args(["dashboard", "list-vars", "--dashboard-uid", "cpu-main"])
+        args = unified_cli.parse_args(["dashboard", "variables", "--dashboard-uid", "cpu-main"])
 
         self.assertEqual(args.entrypoint, "dashboard")
         self.assertEqual(
             args.forwarded_argv,
-            ["list-vars", "--dashboard-uid", "cpu-main"],
+            ["variables", "--dashboard-uid", "cpu-main"],
         )
 
-    def test_unified_parse_args_supports_dashboard_inspect_vars_alias(self):
-        args = unified_cli.parse_args(["dashboard", "inspect-vars", "--dashboard-uid", "cpu-main"])
-
-        self.assertEqual(args.entrypoint, "dashboard")
-        self.assertEqual(
-            args.forwarded_argv,
-            ["list-vars", "--dashboard-uid", "cpu-main"],
-        )
+    def test_unified_parse_args_rejects_legacy_dashboard_inspect_vars_alias(self):
+        with self.assertRaises(SystemExit):
+            unified_cli.parse_args(["dashboard", "inspect-vars", "--dashboard-uid", "cpu-main"])
 
     def test_unified_parse_args_supports_dashboard_governance_gate_namespace(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             args = unified_cli.parse_args(
                 [
                     "dashboard",
-                    "governance-gate",
+                    "policy",
                     "--policy",
                     f"{tmpdir}/policy.json",
                     "--governance",
@@ -272,7 +267,7 @@ class UnifiedCliTests(unittest.TestCase):
         self.assertEqual(args.entrypoint, "dashboard")
         self.assertEqual(
             args.forwarded_argv[0],
-            "governance-gate",
+            "policy",
         )
 
     def test_unified_parse_args_supports_dashboard_topology_namespace(self):
@@ -280,7 +275,7 @@ class UnifiedCliTests(unittest.TestCase):
             args = unified_cli.parse_args(
                 [
                     "dashboard",
-                    "topology",
+                    "dependencies",
                     "--governance",
                     f"{tmpdir}/governance.json",
                     "--queries",
@@ -292,7 +287,7 @@ class UnifiedCliTests(unittest.TestCase):
         self.assertEqual(
             args.forwarded_argv,
             [
-                "topology",
+                "dependencies",
                 "--governance",
                 f"{tmpdir}/governance.json",
                 "--queries",
@@ -300,30 +295,19 @@ class UnifiedCliTests(unittest.TestCase):
             ],
         )
 
-    def test_unified_parse_args_supports_dashboard_topology_alias(self):
+    def test_unified_parse_args_rejects_legacy_dashboard_topology_alias(self):
         with tempfile.TemporaryDirectory() as tmpdir:
-            args = unified_cli.parse_args(
-                [
-                    "dashboard",
-                    "graph",
-                    "--governance",
-                    f"{tmpdir}/governance.json",
-                    "--queries",
-                    f"{tmpdir}/queries.json",
-                ]
-            )
-
-        self.assertEqual(args.entrypoint, "dashboard")
-        self.assertEqual(
-            args.forwarded_argv,
-            [
-                "topology",
-                "--governance",
-                f"{tmpdir}/governance.json",
-                "--queries",
-                f"{tmpdir}/queries.json",
-            ],
-        )
+            with self.assertRaises(SystemExit):
+                unified_cli.parse_args(
+                    [
+                        "dashboard",
+                        "graph",
+                        "--governance",
+                        f"{tmpdir}/governance.json",
+                        "--queries",
+                        f"{tmpdir}/queries.json",
+                    ]
+                )
 
     def test_unified_parse_args_supports_alert_namespace(self):
         args = unified_cli.parse_args(["alert", "--url", "http://127.0.0.1:3000"])
@@ -552,7 +536,7 @@ class UnifiedCliTests(unittest.TestCase):
 
     def test_unified_parse_args_rejects_legacy_dashboard_direct_command(self):
         with self.assertRaises(SystemExit):
-            unified_cli.parse_args(["list-dashboard", "--json"])
+            unified_cli.parse_args(["list", "--json"])
 
     def test_unified_parse_args_rejects_legacy_alert_direct_command(self):
         with self.assertRaises(SystemExit):
@@ -565,7 +549,7 @@ class UnifiedCliTests(unittest.TestCase):
             result = unified_cli.main(["dashboard", "list", "--json"])
 
         self.assertEqual(result, 7)
-        mocked.assert_called_once_with(["list-dashboard", "--json"])
+        mocked.assert_called_once_with(["list", "--json"])
 
     def test_unified_main_dispatches_dashboard_browse_namespace(self):
         with mock.patch.object(
@@ -584,7 +568,7 @@ class UnifiedCliTests(unittest.TestCase):
                 result = unified_cli.main(
                     [
                         "dashboard",
-                        "governance-gate",
+                        "policy",
                         "--policy",
                         f"{tmpdir}/policy.json",
                         "--governance",
@@ -597,7 +581,7 @@ class UnifiedCliTests(unittest.TestCase):
         self.assertEqual(result, 9)
         mocked.assert_called_once_with(
             [
-                "governance-gate",
+                "policy",
                 "--policy",
                 f"{tmpdir}/policy.json",
                 "--governance",
@@ -615,7 +599,7 @@ class UnifiedCliTests(unittest.TestCase):
                 result = unified_cli.main(
                     [
                         "dashboard",
-                        "topology",
+                        "dependencies",
                         "--governance",
                         f"{tmpdir}/governance.json",
                         "--queries",
@@ -626,7 +610,7 @@ class UnifiedCliTests(unittest.TestCase):
         self.assertEqual(result, 11)
         mocked.assert_called_once_with(
             [
-                "topology",
+                "dependencies",
                 "--governance",
                 f"{tmpdir}/governance.json",
                 "--queries",
@@ -634,12 +618,10 @@ class UnifiedCliTests(unittest.TestCase):
             ]
         )
 
-    def test_unified_main_dispatches_dashboard_topology_alias(self):
+    def test_unified_main_rejects_legacy_dashboard_topology_alias(self):
         with tempfile.TemporaryDirectory() as tmpdir:
-            with mock.patch.object(
-                unified_cli.dashboard_cli, "main", return_value=12
-            ) as mocked:
-                result = unified_cli.main(
+            with self.assertRaises(SystemExit):
+                unified_cli.main(
                     [
                         "dashboard",
                         "graph",
@@ -649,17 +631,6 @@ class UnifiedCliTests(unittest.TestCase):
                         f"{tmpdir}/queries.json",
                     ]
                 )
-
-        self.assertEqual(result, 12)
-        mocked.assert_called_once_with(
-            [
-                "topology",
-                "--governance",
-                f"{tmpdir}/governance.json",
-                "--queries",
-                f"{tmpdir}/queries.json",
-            ]
-        )
 
     def test_unified_main_dispatches_alert_passthrough(self):
         with mock.patch.object(unified_cli.alert_cli, "main", return_value=3) as mocked:

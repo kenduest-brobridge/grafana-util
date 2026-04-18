@@ -57,7 +57,7 @@ def resolve_inspect_dispatch_args(args, deps, grafana_error):
         raise grafana_error("--report cannot be combined with --table or --json.")
     if table_output and json_output:
         raise grafana_error(
-            "--table and --json are mutually exclusive for inspect-export."
+            "--table and --json are mutually exclusive for summary."
         )
 
     report_columns = deps["parse_report_columns"](

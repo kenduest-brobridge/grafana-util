@@ -41,11 +41,11 @@ from . import (
 )
 
 DASHBOARD_COMMAND_HELP = {
-    "fetch-live": "Fetch one live dashboard into a local draft file.",
-    "clone-live": "Clone one live dashboard into a local draft file.",
+    "get": "Fetch one live dashboard into a local draft file.",
+    "clone": "Clone one live dashboard into a local draft file.",
     "browse": "Browse one local dashboard tree in a preview server.",
     "edit-live": "Edit one live dashboard in an external editor and optionally apply it live.",
-    "patch-file": "Patch one local dashboard JSON file in place or to a new path.",
+    "patch": "Patch one local dashboard JSON file in place or to a new path.",
     "serve": "Run one local dashboard preview server.",
     "review": "Review one local dashboard JSON file without touching Grafana.",
     "publish": "Publish one local dashboard JSON file through the import pipeline.",
@@ -59,22 +59,21 @@ DASHBOARD_COMMAND_HELP = {
     "delete": "Delete live dashboards by UID or folder path.",
     "diff": (
         "Compare exported raw dashboards with the current Grafana state; "
-        "inspect provisioning trees separately with dashboard inspect-export --input-format provisioning."
+        "inspect provisioning trees separately with dashboard summary --input-format provisioning."
     ),
-    "inspect-export": "Analyze a raw dashboard export directory offline.",
-    "inspect-live": "Analyze live Grafana dashboards without writing a persistent export.",
-    "list-vars": "List dashboard templating variables from live Grafana.",
-    "governance-gate": "Evaluate dashboard governance policy against inspect artifacts.",
-    "topology": "Build a deterministic dashboard topology graph from governance artifacts.",
+    "summary": "Analyze live dashboards or export artifacts without writing a persistent export.",
+    "variables": "List dashboard templating variables from live Grafana.",
+    "policy": "Evaluate dashboard governance policy against inspect artifacts.",
+    "dependencies": "Build a deterministic dashboard topology graph from governance artifacts.",
     "impact": "Summarize which dashboards and alerts would be affected by one datasource.",
     "screenshot": "Capture one Grafana dashboard or panel through a browser backend.",
 }
 UNIFIED_DASHBOARD_COMMAND_MAP = {
-    "fetch-live": "fetch-live",
-    "clone-live": "clone-live",
+    "get": "get",
+    "clone": "clone",
     "browse": "browse",
     "edit-live": "edit-live",
-    "patch-file": "patch-file",
+    "patch": "patch",
     "serve": "serve",
     "review": "review",
     "publish": "publish",
@@ -82,19 +81,16 @@ UNIFIED_DASHBOARD_COMMAND_MAP = {
     "analyze": "analyze",
     "validate-export": "validate-export",
     "history": "history",
-    "export": "export-dashboard",
-    "list": "list-dashboard",
-    "import": "import-dashboard",
-    "delete": "delete-dashboard",
+    "export": "export",
+    "list": "list",
+    "import": "import",
+    "delete": "delete",
     "diff": "diff",
-    "inspect-export": "inspect-export",
-    "inspect-live": "inspect-live",
-    "list-vars": "list-vars",
-    "inspect-vars": "list-vars",
-    "governance-gate": "governance-gate",
-    "topology": "topology",
+    "summary": "summary",
+    "variables": "variables",
+    "policy": "policy",
+    "dependencies": "dependencies",
     "impact": "impact",
-    "graph": "topology",
     "screenshot": "screenshot",
 }
 DATASOURCE_COMMAND_HELP = {
@@ -131,11 +127,11 @@ def _print_dashboard_group_help() -> None:
     print(
         "Usage: grafana-util dashboard <COMMAND> [OPTIONS]\n\n"
         "Commands:\n"
-        "  fetch-live         Fetch one live dashboard into a local draft file.\n"
-        "  clone-live         Clone one live dashboard into a local draft file.\n"
+        "  get                Fetch one live dashboard into a local draft file.\n"
+        "  clone              Clone one live dashboard into a local draft file.\n"
         "  browse             Browse one local dashboard tree in a preview server.\n"
         "  edit-live          Edit one live dashboard in an external editor and optionally apply it live.\n"
-        "  patch-file         Patch one local dashboard JSON file in place or to a new path.\n"
+        "  patch              Patch one local dashboard JSON file in place or to a new path.\n"
         "  serve              Run one local dashboard preview server.\n"
         "  review             Review one local dashboard JSON file without touching Grafana.\n"
         "  publish            Publish one local dashboard JSON file through the import pipeline.\n"
@@ -148,12 +144,11 @@ def _print_dashboard_group_help() -> None:
         "  import             Import dashboards from exported raw JSON files.\n"
         "  delete             Delete live dashboards by UID or folder path.\n"
         "  diff               Compare exported raw dashboards with the current Grafana state; "
-        "inspect provisioning trees separately with dashboard inspect-export --input-format provisioning.\n"
-        "  inspect-export     Analyze a raw dashboard export directory offline.\n"
-        "  inspect-live       Analyze live Grafana dashboards without writing a persistent export.\n"
-        "  list-vars          List dashboard templating variables from live Grafana.\n"
-        "  governance-gate    Evaluate dashboard governance policy against inspect artifacts.\n"
-        "  topology (graph)   Build a deterministic dashboard topology graph from JSON artifacts.\n"
+        "inspect provisioning trees separately with dashboard summary --input-format provisioning.\n"
+        "  summary            Analyze a raw dashboard export directory offline or live dashboards.\n"
+        "  variables          List dashboard templating variables from live Grafana.\n"
+        "  policy             Evaluate dashboard governance policy against inspect artifacts.\n"
+        "  dependencies       Build a deterministic dashboard topology graph from JSON artifacts.\n"
         "  impact             Summarize which dashboards and alerts would be affected by one datasource.\n"
         "  screenshot         Capture one Grafana dashboard or panel through a browser backend."
     )
@@ -183,7 +178,7 @@ def build_parser() -> argparse.ArgumentParser:
             "  grafana-util status staged --desired-file ./desired.json\n"
             "  grafana-util snapshot review --input-dir ./snapshot\n"
             "  grafana-util resource kinds\n"
-            "  grafana-util dashboard list-vars --dashboard-uid cpu-main --token \"$GRAFANA_API_TOKEN\"\n"
+            "  grafana-util dashboard variables --dashboard-uid cpu-main --token \"$GRAFANA_API_TOKEN\"\n"
             "  grafana-util workspace plan --desired-file ./desired.json --live-file ./live.json"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,

@@ -18,10 +18,10 @@ dashboard_cli = importlib.import_module("grafana_utils.dashboard_cli")
 class DashboardLatestSurfacesTests(unittest.TestCase):
     def test_dashboard_list_vars_canonical_command_is_normalized(self):
         args = dashboard_cli.parse_args(
-            ["list-vars", "--dashboard-uid", "cpu-main", "--output-format", "json"]
+            ["variables", "--dashboard-uid", "cpu-main", "--output-format", "json"]
         )
 
-        self.assertEqual(args.command, "list-vars")
+        self.assertEqual(args.command, "variables")
         self.assertEqual(args.dashboard_uid, "cpu-main")
         self.assertEqual(args.output_format, "json")
 

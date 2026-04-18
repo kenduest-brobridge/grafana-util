@@ -28,6 +28,7 @@ import getpass
 import json
 import re
 import sys
+import yaml
 from pathlib import Path
 from typing import Any, Callable, Optional
 
@@ -81,7 +82,7 @@ from .http_transport import build_json_http_transport
 DEFAULT_URL = "http://127.0.0.1:3000"
 DEFAULT_TIMEOUT = 30
 DEFAULT_OUTPUT_DIR = "alerts"
-LIST_OUTPUT_FORMAT_CHOICES = ("table", "csv", "json")
+LIST_OUTPUT_FORMAT_CHOICES = ("text", "table", "csv", "json", "yaml")
 HELP_EPILOG = """Examples:
 
   Export alerting resources with an API token:
@@ -297,6 +298,11 @@ def add_list_args(parser: argparse.ArgumentParser) -> None:
     )
     output_group = parser.add_argument_group("Output Options")
     output_group.add_argument(
+        "--text",
+        action="store_true",
+        help="Render list output as plain text.",
+    )
+    output_group.add_argument(
         "--table",
         action="store_true",
         help="Render list output as a table. This is the default.",
@@ -312,18 +318,23 @@ def add_list_args(parser: argparse.ArgumentParser) -> None:
         help="Render list output as JSON.",
     )
     output_group.add_argument(
+        "--yaml",
+        action="store_true",
+        help="Render list output as YAML.",
+    )
+    output_group.add_argument(
         "--no-header",
         action="store_true",
         help="Omit the table header row.",
     )
     output_group.add_argument(
         "--output-format",
-        choices=LIST_OUTPUT_FORMAT_CHOICES,
+        choices=("text", "table", "csv", "json", "yaml"),
         default=None,
         help=(
             "Alternative single-flag output selector for alert list output. "
-            "Use table, csv, or json. This cannot be combined with --table, "
-            "--csv, or --json."
+            "Use text, table, csv, json, or yaml. This cannot be combined with "
+            "--text, --table, --csv, --json, or --yaml."
         ),
     )
 
@@ -510,6 +521,236 @@ def build_parser(prog: Optional[str] = None) -> argparse.ArgumentParser:
     add_import_args(diff_parser, diff_mode=True)
     diff_parser.set_defaults(alert_command="diff")
 
+    plan_parser = subparsers.add_parser(
+        "plan",
+        help="Build a staged alert management plan from desired alert resources.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    add_common_args(plan_parser)
+    plan_parser.add_argument(
+        "--desired-dir",
+        required=True,
+        help="Directory containing the desired alert resource definitions to plan from.",
+    )
+    plan_parser.add_argument(
+        "--prune",
+        action="store_true",
+        help="Mark live-only alert resources as delete candidates in the staged plan.",
+    )
+    plan_parser.add_argument(
+        "--dashboard-uid-map",
+        help="JSON file that maps source dashboard UIDs to target dashboard UIDs for linked alert-rule repair during planning.",
+    )
+    plan_parser.add_argument(
+        "--panel-id-map",
+        help="JSON file that maps source dashboard UID and source panel ID to a target panel ID for linked alert-rule repair during planning.",
+    )
+    plan_parser.add_argument(
+        "--output-format",
+        choices=("text", "json"),
+        default="text",
+        help="Render plan output as text or json.",
+    )
+    plan_parser.set_defaults(alert_command="plan")
+
+    apply_parser = subparsers.add_parser(
+        "apply",
+        help="Apply a reviewed alert management plan.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    add_common_args(apply_parser)
+    apply_parser.add_argument(
+        "--plan-file",
+        required=True,
+        help="JSON file containing the reviewed alert plan document.",
+    )
+    apply_parser.add_argument(
+        "--approve",
+        action="store_true",
+        required=True,
+        help="Explicit acknowledgement required before alert apply execution is allowed.",
+    )
+    apply_parser.add_argument(
+        "--output-format",
+        choices=("text", "json"),
+        default="text",
+        help="Render apply output as text or json.",
+    )
+    apply_parser.set_defaults(alert_command="apply")
+
+    add_rule_parser = subparsers.add_parser(
+        "add-rule",
+        help="Author a staged alert rule from the higher-level authoring surface.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    add_rule_parser.add_argument(
+        "--desired-dir",
+        required=True,
+        help="Directory containing the staged alert desired-state layout.",
+    )
+    add_rule_parser.add_argument("--name", required=True, help="Rule name to author.")
+    add_rule_parser.add_argument(
+        "--folder", required=True, help="Folder that will own the authored rule."
+    )
+    add_rule_parser.add_argument(
+        "--rule-group", required=True, help="Rule group name inside the folder."
+    )
+    add_rule_parser.add_argument(
+        "--receiver", help="Receiver name to route the authored rule to."
+    )
+    add_rule_parser.add_argument(
+        "--no-route", action="store_true", help="Skip route authoring for this rule."
+    )
+    add_rule_parser.add_argument(
+        "--label",
+        action="append",
+        dest="labels",
+        help="Rule label in key=value form. Repeat for more labels.",
+    )
+    add_rule_parser.add_argument(
+        "--annotation",
+        action="append",
+        dest="annotations",
+        help="Rule annotation in key=value form. Repeat for more annotations.",
+    )
+    add_rule_parser.add_argument(
+        "--severity", help="Convenience severity label value for the authored rule."
+    )
+    add_rule_parser.add_argument(
+        "--for",
+        dest="for_duration",
+        help="Pending duration before the rule starts firing.",
+    )
+    add_rule_parser.add_argument(
+        "--expr", help="Simple-rule expression reference or expression text."
+    )
+    add_rule_parser.add_argument(
+        "--threshold", type=float, help="Simple-rule threshold value."
+    )
+    add_rule_parser.add_argument(
+        "--above",
+        action="store_true",
+        help="Fire when the evaluated value is above the threshold.",
+    )
+    add_rule_parser.add_argument(
+        "--below",
+        action="store_true",
+        help="Fire when the evaluated value is below the threshold.",
+    )
+    add_rule_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Render the planned authored rule output without writing files.",
+    )
+    add_rule_parser.set_defaults(alert_command="add-rule")
+
+    clone_rule_parser = subparsers.add_parser(
+        "clone-rule",
+        help="Clone an existing staged alert rule into a new authoring target.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    clone_rule_parser.add_argument(
+        "--desired-dir",
+        required=True,
+        help="Directory containing the staged alert desired-state layout.",
+    )
+    clone_rule_parser.add_argument(
+        "--source",
+        required=True,
+        help="Existing rule identity to clone from the desired-state tree.",
+    )
+    clone_rule_parser.add_argument(
+        "--name", required=True, help="New rule name for the cloned rule."
+    )
+    clone_rule_parser.add_argument(
+        "--folder", help="Optional replacement folder for the cloned rule."
+    )
+    clone_rule_parser.add_argument(
+        "--rule-group", help="Optional replacement rule group for the cloned rule."
+    )
+    clone_rule_parser.add_argument(
+        "--receiver", help="Optional replacement receiver for the cloned rule route."
+    )
+    clone_rule_parser.add_argument(
+        "--no-route", action="store_true", help="Clear route authoring while cloning."
+    )
+    clone_rule_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Render the planned cloned rule output without writing files.",
+    )
+    clone_rule_parser.set_defaults(alert_command="clone-rule")
+
+    add_cp_parser = subparsers.add_parser(
+        "add-contact-point",
+        help="Author a staged alert contact point from the higher-level authoring surface.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    add_cp_parser.add_argument(
+        "--desired-dir",
+        required=True,
+        help="Directory containing the staged alert desired-state layout.",
+    )
+    add_cp_parser.add_argument(
+        "--name", required=True, help="Contact point name to author."
+    )
+    add_cp_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Render the planned authored contact point output without writing files.",
+    )
+    add_cp_parser.set_defaults(alert_command="add-contact-point")
+
+    set_route_parser = subparsers.add_parser(
+        "set-route",
+        help="Author or replace the tool-owned staged notification route.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    set_route_parser.add_argument(
+        "--desired-dir",
+        required=True,
+        help="Directory containing the staged alert desired-state layout.",
+    )
+    set_route_parser.add_argument(
+        "--receiver", required=True, help="Receiver name for the route."
+    )
+    set_route_parser.add_argument(
+        "--label",
+        action="append",
+        dest="labels",
+        help="Route matcher in key=value form. Repeat for more matchers.",
+    )
+    set_route_parser.add_argument(
+        "--severity", help="Convenience severity matcher value for the route."
+    )
+    set_route_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Render the managed route document that would replace the tool-owned route without writing files.",
+    )
+    set_route_parser.set_defaults(alert_command="set-route")
+
+    preview_route_parser = subparsers.add_parser(
+        "preview-route",
+        help="Preview the managed route inputs without changing runtime behavior.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    preview_route_parser.add_argument(
+        "--desired-dir",
+        required=True,
+        help="Directory containing the staged alert desired-state layout.",
+    )
+    preview_route_parser.add_argument(
+        "--label",
+        action="append",
+        dest="labels",
+        help="Preview label in key=value form. Repeat for more labels.",
+    )
+    preview_route_parser.add_argument(
+        "--severity", help="Convenience severity label value for route preview."
+    )
+    preview_route_parser.set_defaults(alert_command="preview-route")
+
     for command_name, help_text in (
         ("list-rules", "List live Grafana alert rules."),
         ("list-contact-points", "List live Grafana alert contact points."),
@@ -587,16 +828,20 @@ def _normalize_output_format_args(
     ):
         return
     if (
-        bool(getattr(args, "table", False))
+        bool(getattr(args, "text", False))
+        or bool(getattr(args, "table", False))
         or bool(getattr(args, "csv", False))
         or bool(getattr(args, "json", False))
+        or bool(getattr(args, "yaml", False))
     ):
         parser.error(
-            "--output-format cannot be combined with --table, --csv, or --json for alert list commands."
+            "--output-format cannot be combined with --text, --table, --csv, --json, or --yaml for alert list commands."
         )
+    args.text = output_format == "text"
     args.table = output_format == "table"
     args.csv = output_format == "csv"
     args.json = output_format == "json"
+    args.yaml = output_format == "yaml"
 
 
 def resolve_auth(args: argparse.Namespace) -> dict[str, str]:

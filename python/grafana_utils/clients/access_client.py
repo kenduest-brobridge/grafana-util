@@ -63,6 +63,13 @@ class GrafanaAccessClient:
         except HttpTransportError as exc:
             raise GrafanaError(str(exc)) from exc
 
+    def get_current_org(self) -> dict[str, Any]:
+        """Fetch the current organization details."""
+        data = self.request_json("/api/org")
+        if not isinstance(data, dict):
+            raise GrafanaError("Unexpected current organization response from Grafana.")
+        return data
+
     def list_org_users(self) -> list[dict[str, Any]]:
         # Purpose: implementation note.
         # Args: see function signature.

@@ -526,16 +526,16 @@ def _run_import_dashboards_for_single_org(args, deps):
 
     grafana_error = deps["GrafanaError"]
     if getattr(args, "table", False) and not args.dry_run:
-        raise grafana_error("--table is only supported with --dry-run for import-dashboard.")
+        raise grafana_error("--table is only supported with --dry-run for import.")
     if getattr(args, "json", False) and not args.dry_run:
-        raise grafana_error("--json is only supported with --dry-run for import-dashboard.")
+        raise grafana_error("--json is only supported with --dry-run for import.")
     if getattr(args, "table", False) and getattr(args, "json", False):
         raise grafana_error(
-            "--table and --json are mutually exclusive for import-dashboard."
+            "--table and --json are mutually exclusive for import."
         )
     if getattr(args, "no_header", False) and not getattr(args, "table", False):
         raise grafana_error(
-            "--no-header is only supported with --dry-run --table for import-dashboard."
+            "--no-header is only supported with --dry-run --table for import."
         )
     if (
         getattr(args, "require_matching_folder_path", False)

@@ -844,7 +844,7 @@ def build_parser() -> argparse.ArgumentParser:
     """Build parser implementation."""
     parser = argparse.ArgumentParser(
         description=(
-            "Evaluate dashboard governance policy rules against inspect-export JSON artifacts."
+            "Evaluate dashboard governance policy rules against summary JSON artifacts."
         )
     )
     parser.add_argument(
