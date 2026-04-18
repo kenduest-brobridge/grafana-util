@@ -14,6 +14,7 @@ Current AI change log only.
 - Older entries moved to [`ai-changes-archive-2026-04-16.md`](docs/internal/archive/ai-changes-archive-2026-04-16.md).
 - Older entries moved to [`ai-changes-archive-2026-04-17.md`](docs/internal/archive/ai-changes-archive-2026-04-17.md).
 - Older entries moved to [`ai-changes-archive-2026-04-18.md`](docs/internal/archive/ai-changes-archive-2026-04-18.md).
+- Older entries moved to [`ai-changes-archive-2026-04-19.md`](docs/internal/archive/ai-changes-archive-2026-04-19.md).
 
 ## 2026-04-18 - Fix Rust 1.95 sync review clippy failure
 - Summary: fixed the GitHub Actions `rust-quality` failure by rewriting sync review TUI key handling to use guarded `match` arms instead of nested `if diff_mode` blocks that Rust 1.95 clippy reports as `collapsible_match`.
@@ -22,6 +23,13 @@ Current AI change log only.
 - Impact: Rust sync review TUI internals and AI trace docs. Public CLI behavior, generated docs, README files, JSON contracts, and Python implementation were intentionally left unchanged.
 - Rollback/Risk: low behavior-preserving clippy compatibility refactor. Rollback would restore the Rust 1.95 CI failure.
 - Follow-up: verify GitHub Actions after pushing because local stable is older than the CI toolchain.
+
+## 2026-04-19 - Clarify contract ownership map
+- Summary: clarified the maintainer contract map so runtime golden output contracts, CLI/docs routing contracts, docs-entrypoint navigation, and schema/help manifests each have a distinct source of truth. This keeps `scripts/contracts/output-contracts.json`, `scripts/contracts/command-surface.json`, `scripts/contracts/docs-entrypoints.json`, and `schemas/manifests/` in separate ownership lanes.
+- Tests: no runtime behavior change.
+- Test Run: `python3 scripts/check_ai_workflow.py` initially reported that maintainer/contract/architecture docs changed without a matching trace update; the trace files were then updated to satisfy the repo’s workflow guard.
+- Impact: `docs/internal/contract-doc-map.md`, `docs/internal/ai-status.md`, and `docs/internal/ai-changes.md`. Runtime code, public CLI behavior, generated docs, README files, JSON contracts, and Python implementation were intentionally left unchanged.
+- Rollback/Risk: low documentation-only change. Rollback would return the contract map to the less explicit ownership wording.
 
 ## 2026-04-18 - Split oversized Rust test surfaces
 - Summary: split large Rust regression files into behavior-focused modules while preserving public behavior and existing test names. Sync bundle execution now separates source, domain artifact, and preflight cases; dashboard export/import/topology and browse workflow tests now route through small facades; snapshot tests now separate fixture, export, review, and metadata cases; access org runtime tests now separate routing, diff, import/export, and local-list cases.
@@ -86,11 +94,3 @@ Current AI change log only.
 - Impact: Rust access plan routing and resource-specific plan helpers, access CLI help text, access command docs in English and zh-TW, generated docs, and AI trace docs.
 - Rollback/Risk: medium access plan behavior expansion. Rollback should remove the new org/team/service-account planner modules and route those selectors back to unsupported, while keeping the user plan path intact.
 - Follow-up: implement `--resource all` as an aggregate layer after the concrete resource contracts settle, preferably without duplicating per-resource planners.
-
-## 2026-04-18 - Add review plans for access, dashboard, alert, and workspace
-- Summary: extended the review-first plan model beyond datasource. `access plan` now reviews user export bundles against live Grafana, `dashboard plan` reviews single-org dashboard export trees against live Grafana, alert plan rows now carry stable action/status/review metadata, and workspace preview normalizes legacy operations into shared `actions`, `domains`, and `blockedReasons` fields for future TUI consumers.
-- Tests: added focused access plan and dashboard plan tests; extended alert plan tests for action metadata and linked-dashboard warnings; added workspace preview contract tests for normalized action ordering and domain summaries.
-- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet access_plan --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet dashboard_plan --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet alert --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet workspace_preview --lib`.
-- Impact: Rust access, dashboard, alert, and workspace preview command surfaces; command docs in English and zh-TW; docs entrypoint contract; generated man/html docs; and AI trace docs. README files and Python implementation were intentionally left unchanged.
-- Rollback/Risk: medium new CLI surfaces and additive JSON fields. Rollback should remove `access plan`, `dashboard plan`, the workspace preview enrichment adapter, alert plan field additions, docs/tests, generated pages, and docs-entrypoint links; existing import/apply paths should remain separate.
-- Follow-up: extend access plan beyond user bundles, add dashboard multi-org routing for `--use-export-org`, and wire a TUI consumer to the shared action contract instead of adding UI concerns to plan builders.

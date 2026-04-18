@@ -24,6 +24,8 @@ Use three layers:
   [`alert-access-contract-policy.md`](docs/internal/alert-access-contract-policy.md)
 - CLI/docs surface contract:
   [`scripts/contracts/command-surface.json`](scripts/contracts/command-surface.json)
+- Docs-entrypoint contract:
+  [`scripts/contracts/docs-entrypoints.json`](scripts/contracts/docs-entrypoints.json)
 - JSON output contract registry:
   [`scripts/contracts/output-contracts.json`](scripts/contracts/output-contracts.json)
 - Schema/help manifest source:
@@ -31,16 +33,34 @@ Use three layers:
   - family-owned `contracts.json` and `routes.json`
   - generated schema artifacts under `schemas/jsonschema/`
   - generated schema-help artifacts under `schemas/help/`
+- Generated docs navigation projections:
+  [`scripts/contracts/command-reference-index.json`](scripts/contracts/command-reference-index.json)
+  and [`scripts/contracts/handbook-nav.json`](scripts/contracts/handbook-nav.json)
 
 ## Ownership Rules
 
+- Command-surface contracts own public CLI routing.
+  - Treat `scripts/contracts/command-surface.json` as the source of truth for
+    public command paths, legacy replacements, removed public paths, docs
+    routing, and `--help-full` / `--help-flat` support.
+  - Keep `scripts/contracts/command-surface.json` current when public paths or
+    docs-routing behavior change.
+
+- Docs-entrypoint contracts own navigation shortcuts.
+  - Treat `scripts/contracts/docs-entrypoints.json` as the source of truth for
+    landing quick commands, jump-select entries, and handbook sidebar command
+    shortcuts.
+  - Treat `scripts/contracts/command-reference-index.json` and
+    `scripts/contracts/handbook-nav.json` as generated navigation projections,
+    not as primary authoring surfaces.
+
 - Output contracts own runtime golden regression gates.
-  - Treat `scripts/contracts/output-contracts.json` as the contract registry for
-    machine-readable JSON output.
-  - Use it to define which fields, nested paths, array shapes, and enum values
-    must stay stable in golden regression fixtures.
-  - When an output shape changes, update the contract registry and the matching
-    runtime golden fixtures together so the checker is verifying the live
+  - Treat `scripts/contracts/output-contracts.json` as the registry for
+    machine-readable runtime JSON output contracts.
+  - Use it to define which fields, nested paths, array shapes, enum values, and
+    forbidden fields must stay stable in golden regression fixtures.
+  - When a runtime output shape changes, update the contract registry and the
+    matching runtime golden fixtures together so the checker is verifying live
     behavior, not a stale expectation.
 
 - Schema manifests own published schema/help contracts.
@@ -53,11 +73,13 @@ Use three layers:
     schema/help output.
 
 - Stable public artifacts need a promotion gate.
-  - Promote an artifact only when its command surface, schema/help manifest, and
-    runtime output contract all agree on the same shape.
+  - Promote an artifact only when its command surface, docs-entrypoint
+    navigation, schema/help manifest, and runtime output contract all agree on
+    the same shape.
   - A stable public artifact should have golden coverage for its runtime output,
     manifest coverage for its published schema/help contract, and docs routing
-    coverage through `command-surface.json` when the command path is public.
+    coverage through `command-surface.json` and `docs-entrypoints.json` when the
+    command path is public.
   - If the artifact is still under active shape churn, keep it in the runtime
     golden / manifest layer and do not describe it as a stable public contract
     yet.
@@ -73,6 +95,11 @@ Use three layers:
 - Keep `scripts/contracts/command-surface.json` current when public command paths, legacy
   replacements, docs routing, removed public path guards, or `--help-full` /
   `--help-flat` support change.
+- Keep `scripts/contracts/docs-entrypoints.json` current when landing quick
+  commands, jump-select entries, or handbook sidebar shortcuts change.
+- Treat `scripts/contracts/command-reference-index.json` and
+  `scripts/contracts/handbook-nav.json` as generated projections of the docs
+  entrypoint and handbook routing contracts.
 - Keep `scripts/contracts/output-contracts.json` current when adding or changing
   machine-readable JSON outputs; use root `requiredFields` for envelope checks and
   `requiredPaths` / `pathTypes` / `arrayItemTypes` / `minimumItems` / `enumValues`
