@@ -471,15 +471,11 @@ pub(crate) fn run_overview_interactive(document: OverviewDocument) -> Result<()>
                 OverviewPane::Items => state.move_item_selection(1),
                 OverviewPane::Details => state.move_detail_scroll(1, detail_lines_len),
             },
-            KeyCode::PageUp => {
-                if state.focus == OverviewPane::Details {
-                    state.move_detail_scroll(-10, detail_lines_len);
-                }
+            KeyCode::PageUp if state.focus == OverviewPane::Details => {
+                state.move_detail_scroll(-10, detail_lines_len);
             }
-            KeyCode::PageDown => {
-                if state.focus == OverviewPane::Details {
-                    state.move_detail_scroll(10, detail_lines_len);
-                }
+            KeyCode::PageDown if state.focus == OverviewPane::Details => {
+                state.move_detail_scroll(10, detail_lines_len);
             }
             KeyCode::Home => {
                 match state.focus {

@@ -440,15 +440,11 @@ pub(crate) fn run_sync_audit_interactive(audit: &Value) -> Result<()> {
                     }
                     AuditPane::Detail => detail_scroll = detail_scroll.saturating_add(1),
                 },
-                KeyCode::PageUp => {
-                    if active_pane == AuditPane::Detail {
-                        detail_scroll = detail_scroll.saturating_sub(10);
-                    }
+                KeyCode::PageUp if active_pane == AuditPane::Detail => {
+                    detail_scroll = detail_scroll.saturating_sub(10);
                 }
-                KeyCode::PageDown => {
-                    if active_pane == AuditPane::Detail {
-                        detail_scroll = detail_scroll.saturating_add(10);
-                    }
+                KeyCode::PageDown if active_pane == AuditPane::Detail => {
+                    detail_scroll = detail_scroll.saturating_add(10);
                 }
                 KeyCode::Home => match active_pane {
                     AuditPane::Groups => {

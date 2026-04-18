@@ -97,21 +97,17 @@ pub(crate) fn run_inspect_workbench(document: InspectWorkbenchDocument) -> Resul
                     InspectPane::Items => state.move_item_selection(1),
                     InspectPane::Facts => state.move_detail_cursor(1),
                 },
-                KeyCode::Left => {
-                    if state.focus == InspectPane::Items {
-                        state.move_item_horizontal_offset(-4);
-                        state.status =
-                            "Panned item rows left. Use Left/Right to inspect long item lines."
-                                .to_string();
-                    }
+                KeyCode::Left if state.focus == InspectPane::Items => {
+                    state.move_item_horizontal_offset(-4);
+                    state.status =
+                        "Panned item rows left. Use Left/Right to inspect long item lines."
+                            .to_string();
                 }
-                KeyCode::Right => {
-                    if state.focus == InspectPane::Items {
-                        state.move_item_horizontal_offset(4);
-                        state.status =
-                            "Panned item rows right. Use Left/Right to inspect long item lines."
-                                .to_string();
-                    }
+                KeyCode::Right if state.focus == InspectPane::Items => {
+                    state.move_item_horizontal_offset(4);
+                    state.status =
+                        "Panned item rows right. Use Left/Right to inspect long item lines."
+                            .to_string();
                 }
                 KeyCode::Home => match state.focus {
                     InspectPane::Groups => {
@@ -146,15 +142,11 @@ pub(crate) fn run_inspect_workbench(document: InspectWorkbenchDocument) -> Resul
                         state.set_detail_cursor(count.saturating_sub(1));
                     }
                 },
-                KeyCode::PageUp => {
-                    if state.focus == InspectPane::Facts {
-                        state.move_detail_cursor(-10);
-                    }
+                KeyCode::PageUp if state.focus == InspectPane::Facts => {
+                    state.move_detail_cursor(-10);
                 }
-                KeyCode::PageDown => {
-                    if state.focus == InspectPane::Facts {
-                        state.move_detail_cursor(10);
-                    }
+                KeyCode::PageDown if state.focus == InspectPane::Facts => {
+                    state.move_detail_cursor(10);
                 }
                 KeyCode::Enter => {
                     if matches!(state.focus, InspectPane::Items | InspectPane::Facts) {

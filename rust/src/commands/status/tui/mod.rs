@@ -462,10 +462,8 @@ pub(crate) fn run_project_status_interactive(document: ProjectStatus) -> Result<
             KeyCode::Tab => state.focus_next(),
             KeyCode::BackTab => state.focus_previous(),
             KeyCode::Char('h') => state.focus_home(),
-            KeyCode::Enter => {
-                if state.focus() == ProjectStatusPane::Home {
-                    state.handoff_from_home();
-                }
+            KeyCode::Enter if state.focus() == ProjectStatusPane::Home => {
+                state.handoff_from_home();
             }
             KeyCode::Up => match state.focus() {
                 ProjectStatusPane::Home => {}
@@ -479,15 +477,11 @@ pub(crate) fn run_project_status_interactive(document: ProjectStatus) -> Result<
                 ProjectStatusPane::Details => state.move_detail_scroll(1),
                 ProjectStatusPane::Actions => state.move_action_selection(1),
             },
-            KeyCode::PageUp => {
-                if state.focus() == ProjectStatusPane::Details {
-                    state.move_detail_scroll(-10);
-                }
+            KeyCode::PageUp if state.focus() == ProjectStatusPane::Details => {
+                state.move_detail_scroll(-10);
             }
-            KeyCode::PageDown => {
-                if state.focus() == ProjectStatusPane::Details {
-                    state.move_detail_scroll(10);
-                }
+            KeyCode::PageDown if state.focus() == ProjectStatusPane::Details => {
+                state.move_detail_scroll(10);
             }
             KeyCode::Home => match state.focus() {
                 ProjectStatusPane::Home => {}

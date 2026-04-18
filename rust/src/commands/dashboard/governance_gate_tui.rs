@@ -376,15 +376,11 @@ pub(crate) fn run_governance_gate_interactive(
                     }
                     FindingsPane::Detail => detail_scroll = detail_scroll.saturating_add(1),
                 },
-                KeyCode::PageUp => {
-                    if active_pane == FindingsPane::Detail {
-                        detail_scroll = detail_scroll.saturating_sub(10);
-                    }
+                KeyCode::PageUp if active_pane == FindingsPane::Detail => {
+                    detail_scroll = detail_scroll.saturating_sub(10);
                 }
-                KeyCode::PageDown => {
-                    if active_pane == FindingsPane::Detail {
-                        detail_scroll = detail_scroll.saturating_add(10);
-                    }
+                KeyCode::PageDown if active_pane == FindingsPane::Detail => {
+                    detail_scroll = detail_scroll.saturating_add(10);
                 }
                 KeyCode::Home => match active_pane {
                     FindingsPane::Groups => {

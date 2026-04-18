@@ -85,12 +85,10 @@ fn handle_datasource_command_early_exits(command: &DatasourceGroupCommand) -> Re
 
 fn validate_datasource_command_inputs(command: &DatasourceGroupCommand) -> Result<()> {
     match command {
-        DatasourceGroupCommand::Import(args) => {
-            if !args.output_columns.is_empty() && !args.table {
-                return Err(message(
-                    "--output-columns is only supported with --dry-run --table or table-like --output-format for datasource import.",
-                ));
-            }
+        DatasourceGroupCommand::Import(args) if !args.output_columns.is_empty() && !args.table => {
+            return Err(message(
+                "--output-columns is only supported with --dry-run --table or table-like --output-format for datasource import.",
+            ));
         }
         DatasourceGroupCommand::Plan(args) => {
             if !args.output_columns.is_empty()

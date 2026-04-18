@@ -276,7 +276,7 @@ fn discover_plan_export_org_scopes(
             scopes.push(scope);
         }
     }
-    scopes.sort_by(|left, right| left.source_org_id.cmp(&right.source_org_id));
+    scopes.sort_by_key(|scope| scope.source_org_id);
     if scopes.is_empty() {
         if selected_org_ids.is_empty() {
             return Err(message(format!(

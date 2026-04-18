@@ -166,7 +166,7 @@ pub(crate) fn discover_export_org_import_scopes(
         matched_source_org_ids.insert(scope.source_org_id);
         scopes.push(scope);
     }
-    scopes.sort_by(|left, right| left.source_org_id.cmp(&right.source_org_id));
+    scopes.sort_by_key(|scope| scope.source_org_id);
     if !selected_org_ids.is_empty() {
         let missing: Vec<String> = selected_org_ids
             .difference(&matched_source_org_ids)

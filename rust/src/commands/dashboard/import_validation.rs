@@ -276,7 +276,7 @@ pub(crate) fn discover_export_org_import_scopes(
         }
         scopes.push(scope);
     }
-    scopes.sort_by(|left, right| left.source_org_id.cmp(&right.source_org_id));
+    scopes.sort_by_key(|scope| scope.source_org_id);
     if scopes.is_empty() {
         if let Some(metadata) = load_export_metadata(&scan_root, None)? {
             if metadata.variant != "root" {
