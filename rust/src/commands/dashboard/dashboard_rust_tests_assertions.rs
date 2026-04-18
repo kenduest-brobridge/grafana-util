@@ -3,7 +3,7 @@ use serde_json::Value;
 use std::fs;
 use std::path::Path;
 
-pub(crate) fn read_json_output_file(path: &Path) -> Value {
+pub(in crate::dashboard) fn read_json_output_file(path: &Path) -> Value {
     let raw = fs::read_to_string(path).unwrap();
     assert!(
         raw.ends_with('\n'),
@@ -22,7 +22,7 @@ fn json_query_report_row<'a>(document: &'a Value, ref_id: &str) -> &'a Value {
         .unwrap()
 }
 
-pub(crate) fn assert_json_query_report_row_parity(
+pub(in crate::dashboard) fn assert_json_query_report_row_parity(
     export_document: &Value,
     live_document: &Value,
     ref_id: &str,
@@ -70,7 +70,7 @@ pub(crate) fn assert_json_query_report_row_parity(
     }
 }
 
-pub(crate) fn normalize_governance_document_for_compare(document: &Value) -> Value {
+pub(in crate::dashboard) fn normalize_governance_document_for_compare(document: &Value) -> Value {
     let mut normalized = document.clone();
     if let Some(rows) = normalized
         .get_mut("dashboardDependencies")
@@ -85,7 +85,7 @@ pub(crate) fn normalize_governance_document_for_compare(document: &Value) -> Val
     normalized
 }
 
-pub(crate) fn normalize_queries_document_for_compare(document: &Value) -> Value {
+pub(in crate::dashboard) fn normalize_queries_document_for_compare(document: &Value) -> Value {
     let mut normalized = document.clone();
     if let Some(rows) = normalized
         .get_mut("queries")
@@ -106,14 +106,17 @@ pub(crate) fn normalize_queries_document_for_compare(document: &Value) -> Value 
     normalized
 }
 
-pub(crate) fn assert_governance_documents_match(export_document: &Value, live_document: &Value) {
+pub(in crate::dashboard) fn assert_governance_documents_match(
+    export_document: &Value,
+    live_document: &Value,
+) {
     assert_eq!(
         normalize_governance_document_for_compare(export_document),
         normalize_governance_document_for_compare(live_document)
     );
 }
 
-pub(crate) fn assert_all_orgs_export_live_documents_match(
+pub(in crate::dashboard) fn assert_all_orgs_export_live_documents_match(
     export_report_document: &Value,
     live_report_document: &Value,
     export_dependency_document: &Value,
@@ -132,7 +135,7 @@ pub(crate) fn assert_all_orgs_export_live_documents_match(
     assert_governance_documents_match(export_governance_document, live_governance_document);
 }
 
-pub(crate) fn export_query_row<'a>(
+pub(in crate::dashboard) fn export_query_row<'a>(
     report: &'a ExportInspectionQueryReport,
     dashboard_uid: &str,
 ) -> &'a ExportInspectionQueryRow {
@@ -144,38 +147,38 @@ pub(crate) fn export_query_row<'a>(
 }
 
 #[derive(Clone, Copy, Default)]
-pub(crate) struct CoreFamilyQueryRowExpectation<'a> {
-    pub(crate) dashboard_uid: &'a str,
-    pub(crate) dashboard_title: &'a str,
-    pub(crate) panel_id: &'a str,
-    pub(crate) panel_title: &'a str,
-    pub(crate) panel_type: &'a str,
-    pub(crate) ref_id: &'a str,
-    pub(crate) datasource: &'a str,
-    pub(crate) datasource_name: &'a str,
-    pub(crate) datasource_uid: &'a str,
-    pub(crate) datasource_type: &'a str,
-    pub(crate) datasource_family: &'a str,
-    pub(crate) query_field: &'a str,
-    pub(crate) query_text: &'a str,
-    pub(crate) folder_path: &'a str,
-    pub(crate) folder_full_path: &'a str,
-    pub(crate) folder_level: &'a str,
-    pub(crate) folder_uid: &'a str,
-    pub(crate) parent_folder_uid: &'a str,
-    pub(crate) datasource_org: &'a str,
-    pub(crate) datasource_org_id: &'a str,
-    pub(crate) datasource_database: &'a str,
-    pub(crate) datasource_bucket: &'a str,
-    pub(crate) datasource_organization: &'a str,
-    pub(crate) datasource_index_pattern: &'a str,
-    pub(crate) metrics: &'a [&'a str],
-    pub(crate) functions: &'a [&'a str],
-    pub(crate) measurements: &'a [&'a str],
-    pub(crate) buckets: &'a [&'a str],
+pub(in crate::dashboard) struct CoreFamilyQueryRowExpectation<'a> {
+    pub(in crate::dashboard) dashboard_uid: &'a str,
+    pub(in crate::dashboard) dashboard_title: &'a str,
+    pub(in crate::dashboard) panel_id: &'a str,
+    pub(in crate::dashboard) panel_title: &'a str,
+    pub(in crate::dashboard) panel_type: &'a str,
+    pub(in crate::dashboard) ref_id: &'a str,
+    pub(in crate::dashboard) datasource: &'a str,
+    pub(in crate::dashboard) datasource_name: &'a str,
+    pub(in crate::dashboard) datasource_uid: &'a str,
+    pub(in crate::dashboard) datasource_type: &'a str,
+    pub(in crate::dashboard) datasource_family: &'a str,
+    pub(in crate::dashboard) query_field: &'a str,
+    pub(in crate::dashboard) query_text: &'a str,
+    pub(in crate::dashboard) folder_path: &'a str,
+    pub(in crate::dashboard) folder_full_path: &'a str,
+    pub(in crate::dashboard) folder_level: &'a str,
+    pub(in crate::dashboard) folder_uid: &'a str,
+    pub(in crate::dashboard) parent_folder_uid: &'a str,
+    pub(in crate::dashboard) datasource_org: &'a str,
+    pub(in crate::dashboard) datasource_org_id: &'a str,
+    pub(in crate::dashboard) datasource_database: &'a str,
+    pub(in crate::dashboard) datasource_bucket: &'a str,
+    pub(in crate::dashboard) datasource_organization: &'a str,
+    pub(in crate::dashboard) datasource_index_pattern: &'a str,
+    pub(in crate::dashboard) metrics: &'a [&'a str],
+    pub(in crate::dashboard) functions: &'a [&'a str],
+    pub(in crate::dashboard) measurements: &'a [&'a str],
+    pub(in crate::dashboard) buckets: &'a [&'a str],
 }
 
-pub(crate) fn assert_core_family_query_row(
+pub(in crate::dashboard) fn assert_core_family_query_row(
     report: &ExportInspectionQueryReport,
     expected: CoreFamilyQueryRowExpectation<'_>,
 ) {

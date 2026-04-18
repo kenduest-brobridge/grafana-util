@@ -8,7 +8,7 @@ use std::fs;
 use tempfile::tempdir;
 
 use super::test_support;
-pub(crate) use super::test_support::*;
+pub(super) use super::test_support::*;
 
 #[cfg(test)]
 #[path = "dashboard_rust_tests_assertions.rs"]
@@ -21,11 +21,23 @@ mod dashboard_rust_tests_fixtures;
 mod dashboard_rust_tests_support;
 
 #[cfg(test)]
-pub(crate) use dashboard_rust_tests_assertions::*;
+pub(super) use dashboard_rust_tests_assertions::{
+    assert_all_orgs_export_live_documents_match, assert_core_family_query_row,
+    assert_governance_documents_match, assert_json_query_report_row_parity, export_query_row,
+    normalize_governance_document_for_compare, normalize_queries_document_for_compare,
+    read_json_output_file, CoreFamilyQueryRowExpectation,
+};
 #[cfg(test)]
-pub(crate) use dashboard_rust_tests_fixtures::*;
+pub(super) use dashboard_rust_tests_fixtures::{
+    all_orgs_inspect_live_request_fixture, core_family_inspect_live_request_fixture,
+};
 #[cfg(test)]
-pub(crate) use dashboard_rust_tests_support::*;
+pub(super) use dashboard_rust_tests_support::{
+    load_inspection_analyzer_cases, load_prompt_export_cases, make_basic_common_args,
+    make_common_args, make_import_args, sample_topology_tui_document,
+    with_dashboard_import_live_preflight, write_basic_provisioning_export, write_basic_raw_export,
+    write_combined_export_root_metadata, TestRequestResult,
+};
 
 #[cfg(test)]
 #[path = "dashboard_authoring_rust_tests.rs"]

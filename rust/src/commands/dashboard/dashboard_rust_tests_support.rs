@@ -4,9 +4,9 @@ use serde_json::{json, Value};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-pub(crate) type TestRequestResult = crate::common::Result<Option<Value>>;
+pub(in crate::dashboard) type TestRequestResult = crate::common::Result<Option<Value>>;
 
-pub(crate) fn make_common_args(base_url: String) -> CommonCliArgs {
+pub(in crate::dashboard) fn make_common_args(base_url: String) -> CommonCliArgs {
     CommonCliArgs {
         color: crate::common::CliColorChoice::Auto,
         profile: None,
@@ -21,7 +21,7 @@ pub(crate) fn make_common_args(base_url: String) -> CommonCliArgs {
     }
 }
 
-pub(crate) fn make_basic_common_args(base_url: String) -> CommonCliArgs {
+pub(in crate::dashboard) fn make_basic_common_args(base_url: String) -> CommonCliArgs {
     CommonCliArgs {
         color: crate::common::CliColorChoice::Auto,
         profile: None,
@@ -37,21 +37,21 @@ pub(crate) fn make_basic_common_args(base_url: String) -> CommonCliArgs {
 }
 
 #[allow(dead_code)]
-pub(crate) fn load_prompt_export_cases() -> Vec<Value> {
+pub(in crate::dashboard) fn load_prompt_export_cases() -> Vec<Value> {
     serde_json::from_str(include_str!(
         "../../../../fixtures/dashboard_prompt_export_cases.json"
     ))
     .unwrap()
 }
 
-pub(crate) fn load_inspection_analyzer_cases() -> Vec<Value> {
+pub(in crate::dashboard) fn load_inspection_analyzer_cases() -> Vec<Value> {
     serde_json::from_str(include_str!(
         "../../../../fixtures/dashboard_inspection_analyzer_cases.json"
     ))
     .unwrap()
 }
 
-pub(crate) fn sample_topology_tui_document() -> TopologyDocument {
+pub(in crate::dashboard) fn sample_topology_tui_document() -> TopologyDocument {
     let governance = json!({
         "dashboardGovernance": [
             {
@@ -100,7 +100,7 @@ pub(crate) fn sample_topology_tui_document() -> TopologyDocument {
 }
 
 #[allow(clippy::type_complexity)]
-pub(crate) fn with_dashboard_import_live_preflight<F>(
+pub(in crate::dashboard) fn with_dashboard_import_live_preflight<F>(
     preflight_datasources: Value,
     preflight_plugins: Value,
     mut handler: F,
@@ -122,7 +122,7 @@ where
     }
 }
 
-pub(crate) fn make_import_args(input_dir: PathBuf) -> ImportArgs {
+pub(in crate::dashboard) fn make_import_args(input_dir: PathBuf) -> ImportArgs {
     ImportArgs {
         common: make_common_args("http://127.0.0.1:3000".to_string()),
         org_id: None,
@@ -154,7 +154,7 @@ pub(crate) fn make_import_args(input_dir: PathBuf) -> ImportArgs {
 }
 
 #[allow(clippy::too_many_arguments)]
-pub(crate) fn write_basic_raw_export(
+pub(in crate::dashboard) fn write_basic_raw_export(
     raw_dir: &Path,
     org_id: &str,
     org_name: &str,
@@ -262,7 +262,7 @@ pub(crate) fn write_basic_raw_export(
 }
 
 #[allow(clippy::too_many_arguments)]
-pub(crate) fn write_basic_provisioning_export(
+pub(in crate::dashboard) fn write_basic_provisioning_export(
     provisioning_dir: &Path,
     org_id: &str,
     org_name: &str,
@@ -330,7 +330,10 @@ pub(crate) fn write_basic_provisioning_export(
     .unwrap();
 }
 
-pub(crate) fn write_combined_export_root_metadata(export_root: &Path, orgs: &[(&str, &str, &str)]) {
+pub(in crate::dashboard) fn write_combined_export_root_metadata(
+    export_root: &Path,
+    orgs: &[(&str, &str, &str)],
+) {
     fs::create_dir_all(export_root).unwrap();
     let org_entries: Vec<Value> = orgs
         .iter()

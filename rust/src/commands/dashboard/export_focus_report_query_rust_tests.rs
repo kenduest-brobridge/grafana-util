@@ -57,7 +57,7 @@ mod export_focus_report_query_family_rust_tests;
 mod export_focus_report_query_presentation_rust_tests;
 
 #[allow(clippy::too_many_arguments)]
-pub(crate) fn make_core_family_report_row(
+pub(super) fn make_core_family_report_row(
     dashboard_uid: &str,
     panel_id: &str,
     ref_id: &str,

@@ -3,7 +3,7 @@ use super::TestRequestResult;
 use serde_json::Value;
 
 #[allow(clippy::type_complexity)]
-pub(crate) fn core_family_inspect_live_request_fixture(
+pub(in crate::dashboard) fn core_family_inspect_live_request_fixture(
     datasource_inventory: Value,
     dashboard_payload: Value,
 ) -> impl FnMut(reqwest::Method, &str, &[(String, String)], Option<&Value>) -> TestRequestResult {
@@ -45,7 +45,7 @@ pub(crate) fn core_family_inspect_live_request_fixture(
 }
 
 #[allow(clippy::type_complexity)]
-pub(crate) fn all_orgs_inspect_live_request_fixture(
+pub(in crate::dashboard) fn all_orgs_inspect_live_request_fixture(
 ) -> impl FnMut(reqwest::Method, &str, &[(String, String)], Option<&Value>) -> TestRequestResult {
     move |method, path, params, _payload| {
         let method_name = method.to_string();
