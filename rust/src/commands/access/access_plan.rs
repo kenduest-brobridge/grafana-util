@@ -4,7 +4,8 @@
 //! - parser already lives in `cli_defs`
 //! - pure model lives here
 //! - renderers return strings so later TUI code can reuse the same document
-//! - current implementation supports `--resource user` only
+//! - current implementation supports `--resource user`, `--resource org`,
+//!   `--resource team`, and `--resource service-account`
 
 use reqwest::Method;
 use serde::Serialize;
@@ -12,6 +13,7 @@ use serde_json::{Map, Value};
 use std::fmt::Write as _;
 use std::path::Path;
 
+use super::access_plan_org::build_org_access_plan_actions;
 use crate::access::cli_defs::{AccessPlanArgs, AccessPlanResource, PlanOutputFormat};
 use crate::access::render::{
     format_table, map_get_text, normalize_user_row, user_scope_text, value_bool,
@@ -27,6 +29,9 @@ use crate::access::{
 use crate::common::{
     load_json_object_file, message, render_json_value, string_field, tool_version, Result,
 };
+
+#[path = "access_plan_service_account.rs"]
+mod access_plan_service_account;
 
 const ACCESS_PLAN_KIND: &str = "grafana-util-access-plan";
 const ACCESS_PLAN_SCHEMA_VERSION: i64 = 1;
@@ -608,31 +613,73 @@ fn build_access_plan_document<F>(
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
-    let bundle = load_user_bundle(&args.input_dir)?;
-    let (resource, actions) =
-        build_access_plan_actions(request_json, args, &args.input_dir, &bundle)?;
-    let resources = vec![resource];
-    let mut actions = actions;
-    sort_actions(&mut actions);
-    Ok(AccessPlanDocument {
-        kind: ACCESS_PLAN_KIND.to_string(),
-        schema_version: ACCESS_PLAN_SCHEMA_VERSION,
-        tool_version: tool_version().to_string(),
-        summary: AccessPlanSummary {
-            resource_count: resources.len(),
-            checked: resources.iter().map(|item| item.checked).sum(),
-            same: resources.iter().map(|item| item.same).sum(),
-            create: resources.iter().map(|item| item.create).sum(),
-            update: resources.iter().map(|item| item.update).sum(),
-            extra_remote: resources.iter().map(|item| item.extra_remote).sum(),
-            delete: resources.iter().map(|item| item.delete).sum(),
-            blocked: resources.iter().map(|item| item.blocked).sum(),
-            warning: resources.iter().map(|item| item.warning).sum(),
-            prune: args.prune,
-        },
-        resources,
-        actions,
-    })
+    match args.resource {
+        AccessPlanResource::User => {
+            let bundle = load_user_bundle(&args.input_dir)?;
+            let (resource, actions) =
+                build_access_plan_actions(request_json, args, &args.input_dir, &bundle)?;
+            let resources = vec![resource];
+            let mut actions = actions;
+            sort_actions(&mut actions);
+            Ok(AccessPlanDocument {
+                kind: ACCESS_PLAN_KIND.to_string(),
+                schema_version: ACCESS_PLAN_SCHEMA_VERSION,
+                tool_version: tool_version().to_string(),
+                summary: AccessPlanSummary {
+                    resource_count: resources.len(),
+                    checked: resources.iter().map(|item| item.checked).sum(),
+                    same: resources.iter().map(|item| item.same).sum(),
+                    create: resources.iter().map(|item| item.create).sum(),
+                    update: resources.iter().map(|item| item.update).sum(),
+                    extra_remote: resources.iter().map(|item| item.extra_remote).sum(),
+                    delete: resources.iter().map(|item| item.delete).sum(),
+                    blocked: resources.iter().map(|item| item.blocked).sum(),
+                    warning: resources.iter().map(|item| item.warning).sum(),
+                    prune: args.prune,
+                },
+                resources,
+                actions,
+            })
+        }
+        AccessPlanResource::Org => {
+            let (resource, actions) =
+                build_org_access_plan_actions(request_json, args, &args.input_dir)?;
+            let resources = vec![resource];
+            let mut actions = actions;
+            sort_actions(&mut actions);
+            Ok(AccessPlanDocument {
+                kind: ACCESS_PLAN_KIND.to_string(),
+                schema_version: ACCESS_PLAN_SCHEMA_VERSION,
+                tool_version: tool_version().to_string(),
+                summary: AccessPlanSummary {
+                    resource_count: resources.len(),
+                    checked: resources.iter().map(|item| item.checked).sum(),
+                    same: resources.iter().map(|item| item.same).sum(),
+                    create: resources.iter().map(|item| item.create).sum(),
+                    update: resources.iter().map(|item| item.update).sum(),
+                    extra_remote: resources.iter().map(|item| item.extra_remote).sum(),
+                    delete: resources.iter().map(|item| item.delete).sum(),
+                    blocked: resources.iter().map(|item| item.blocked).sum(),
+                    warning: resources.iter().map(|item| item.warning).sum(),
+                    prune: args.prune,
+                },
+                resources,
+                actions,
+            })
+        }
+        AccessPlanResource::Team => super::access_plan_team::build_team_access_plan_document(
+            request_json,
+            args,
+            ACCESS_PLAN_KIND,
+            ACCESS_PLAN_SCHEMA_VERSION,
+        ),
+        AccessPlanResource::ServiceAccount => {
+            access_plan_service_account::build_service_account_plan_document(request_json, args)
+        }
+        _ => Err(message(
+            "access plan currently supports --resource user, --resource org, --resource team, and --resource service-account in this slice.",
+        )),
+    }
 }
 
 fn validate_plan_columns(args: &AccessPlanArgs) -> Result<()> {
@@ -741,12 +788,6 @@ where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
     validate_plan_columns(args)?;
-    if !matches!(args.resource, AccessPlanResource::User) {
-        return Err(message(
-            "access plan currently supports --resource user only in this slice.",
-        ));
-    }
-
     let document = build_access_plan_document(&mut request_json, args)?;
     match args.output_format {
         PlanOutputFormat::Text => {
@@ -767,7 +808,7 @@ mod tests {
     use super::*;
     use crate::access::cli_defs::PlanOutputFormat;
     use crate::access::{parse_cli_from, CommonCliArgs};
-    use serde_json::json;
+    use serde_json::{json, Value};
     use std::fs;
     use tempfile::tempdir;
 
@@ -798,6 +839,19 @@ mod tests {
                     {"login": "alice", "email": "alice@example.com", "name": "Alice", "orgRole": "Editor"},
                     {"login": "bob", "email": "bob@example.com", "name": "Bob", "orgRole": "Viewer"}
                 ]
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+    }
+
+    fn write_org_bundle(dir: &Path, records: Value) {
+        fs::write(
+            dir.join("orgs.json"),
+            serde_json::to_string_pretty(&json!({
+                "kind": "grafana-utils-access-org-export-index",
+                "version": 1,
+                "records": records
             }))
             .unwrap(),
         )
@@ -876,7 +930,7 @@ mod tests {
         let args = AccessPlanArgs {
             common: make_common(),
             input_dir: temp_dir.path().to_path_buf(),
-            resource: AccessPlanResource::Team,
+            resource: AccessPlanResource::All,
             prune: false,
             output_columns: Vec::new(),
             list_columns: false,
@@ -887,6 +941,158 @@ mod tests {
         let err =
             build_access_plan_document(|_method, _path, _params, _payload| unreachable!(), &args)
                 .unwrap_err();
-        assert!(err.to_string().contains("supports --resource user only"));
+        assert!(err
+            .to_string()
+            .contains("supports --resource user, --resource org"));
+    }
+
+    #[test]
+    fn org_plan_builds_summary_and_renderers() {
+        let temp_dir = tempdir().unwrap();
+        write_org_bundle(
+            temp_dir.path(),
+            json!([
+                {
+                    "name": "Main Org",
+                    "users": [
+                        {"login": "alice", "email": "alice@example.com", "orgRole": "Editor"}
+                    ]
+                },
+                {
+                    "name": "New Org",
+                    "users": [
+                        {"login": "bob", "email": "bob@example.com", "orgRole": "Viewer"}
+                    ]
+                },
+                {
+                    "name": "Ops Org",
+                    "users": [
+                        {"login": "carol", "email": "carol@example.com", "orgRole": "Editor"}
+                    ]
+                }
+            ]),
+        );
+        let args = AccessPlanArgs {
+            common: make_common(),
+            input_dir: temp_dir.path().to_path_buf(),
+            resource: AccessPlanResource::Org,
+            prune: false,
+            output_columns: vec![
+                "identity".to_string(),
+                "action".to_string(),
+                "status".to_string(),
+            ],
+            list_columns: false,
+            no_header: false,
+            show_same: false,
+            output_format: PlanOutputFormat::Text,
+        };
+        let document = build_access_plan_document(
+            |method, path, _params, _payload| match (method, path) {
+                (Method::GET, "/api/orgs") => Ok(Some(json!([
+                    {"id": 1, "name": "Main Org"},
+                    {"id": 2, "name": "Ops Org"},
+                    {"id": 3, "name": "Extra Org"}
+                ]))),
+                (Method::GET, "/api/orgs/1/users") => Ok(Some(json!([
+                    {"userId": 7, "login": "alice", "email": "alice@example.com", "role": "Editor"}
+                ]))),
+                (Method::GET, "/api/orgs/2/users") => Ok(Some(json!([
+                    {"userId": 8, "login": "carol", "email": "carol@example.com", "role": "Viewer"}
+                ]))),
+                (Method::GET, "/api/orgs/3/users") => Ok(Some(json!([]))),
+                _ => panic!("unexpected path {path}"),
+            },
+            &args,
+        )
+        .unwrap();
+
+        assert_eq!(document.kind, ACCESS_PLAN_KIND);
+        assert_eq!(document.summary.checked, 4);
+        assert_eq!(document.summary.same, 1);
+        assert_eq!(document.summary.create, 1);
+        assert_eq!(document.summary.update, 1);
+        assert_eq!(document.summary.extra_remote, 1);
+        assert_eq!(document.summary.warning, 2);
+        assert_eq!(document.actions.len(), 4);
+        assert!(document
+            .actions
+            .iter()
+            .any(|action| action.identity == "New Org" && action.action == "would-create"));
+        assert!(document
+            .actions
+            .iter()
+            .any(|action| action.identity == "Ops Org" && action.action == "would-update"));
+        assert!(document
+            .actions
+            .iter()
+            .any(|action| action.identity == "Main Org" && action.action == "same"));
+        assert!(document
+            .actions
+            .iter()
+            .any(|action| action.identity == "Extra Org" && action.action == "extra-remote"));
+
+        let text = render_plan_text(&document, &args);
+        assert!(text.contains("access plan:"));
+        assert!(text.contains("would-create"));
+        assert!(text.contains("would-update"));
+        assert!(!text.contains("\nSAME "));
+    }
+
+    #[test]
+    fn org_plan_prune_marks_remote_orgs_for_delete() {
+        let temp_dir = tempdir().unwrap();
+        write_org_bundle(
+            temp_dir.path(),
+            json!([
+                {
+                    "name": "Main Org",
+                    "users": [
+                        {"login": "alice", "email": "alice@example.com", "orgRole": "Editor"}
+                    ]
+                }
+            ]),
+        );
+        let args = AccessPlanArgs {
+            common: make_common(),
+            input_dir: temp_dir.path().to_path_buf(),
+            resource: AccessPlanResource::Org,
+            prune: true,
+            output_columns: vec![
+                "identity".to_string(),
+                "action".to_string(),
+                "status".to_string(),
+            ],
+            list_columns: false,
+            no_header: false,
+            show_same: false,
+            output_format: PlanOutputFormat::Text,
+        };
+        let document = build_access_plan_document(
+            |method, path, _params, _payload| match (method, path) {
+                (Method::GET, "/api/orgs") => Ok(Some(json!([
+                    {"id": 1, "name": "Main Org"},
+                    {"id": 2, "name": "Extra Org"}
+                ]))),
+                (Method::GET, "/api/orgs/1/users") => Ok(Some(json!([
+                    {"userId": 7, "login": "alice", "email": "alice@example.com", "role": "Editor"}
+                ]))),
+                (Method::GET, "/api/orgs/2/users") => Ok(Some(json!([]))),
+                _ => panic!("unexpected path {path}"),
+            },
+            &args,
+        )
+        .unwrap();
+
+        assert_eq!(document.summary.checked, 2);
+        assert_eq!(document.summary.same, 1);
+        assert_eq!(document.summary.extra_remote, 1);
+        assert_eq!(document.summary.delete, 1);
+        assert!(document
+            .actions
+            .iter()
+            .any(|action| action.identity == "Extra Org" && action.action == "would-delete"));
+        let text = render_plan_text(&document, &args);
+        assert!(text.contains("would-delete"));
     }
 }

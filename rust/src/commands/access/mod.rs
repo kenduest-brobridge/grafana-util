@@ -15,6 +15,10 @@ pub(crate) const ACCESS_IMPORT_DRY_RUN_SCHEMA_VERSION: i64 = 1;
 // workflows can evolve independently while this file keeps only domain routing.
 #[path = "access_plan.rs"]
 mod access_plan;
+#[path = "access_plan_org.rs"]
+mod access_plan_org;
+#[path = "access_plan_team.rs"]
+mod access_plan_team;
 #[path = "auth_materialize.rs"]
 mod auth_materialize;
 #[path = "browse_support.rs"]

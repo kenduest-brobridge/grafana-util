@@ -39,3 +39,10 @@
 - Baseline: classic prompt export already preserves datasource variables and maps used datasource-variable current values, but constant variables are not exported as `VAR_*` inputs, dashboard v2-shaped files are not explicitly rejected by raw-to-prompt, and library panel references are not surfaced as portability warnings.
 - Current Update: Added classic prompt parity for constant variables, kept expression datasource refs outside user-mapped inputs, rejected dashboard v2 resource/spec shapes in raw-to-prompt, and surfaced library panel portability warnings without adding a v2 export lane.
 - Result: Focused raw-to-prompt and validation tests, full Rust tests, formatting, AI workflow, and whitespace checks pass.
+
+## 2026-04-18 - Harden access user/team import preflight
+- State: Done
+- Scope: Rust access user/team import planning and dry-run output, focused access tests, access command docs, and AI trace docs. README files, Python implementation, and Grafana IAM/K8s API support are out of scope.
+- Baseline: team import can pass login-style identities into Grafana's bulk team membership endpoint even though the official legacy endpoint resolves bulk members by email, and user/team dry-run does not consistently block externally synced users or provisioned teams before live apply.
+- Current Update: Team import now resolves member/admin identities to live org-user emails before bulk apply, blocks missing-email identities, and surfaces provisioned-team blockers with target evidence. User import now blocks external/synced profile, org role, and Grafana-admin changes before apply while dry-run rows carry target evidence and blocked status.
+- Result: Focused team/user import tests, access test suite, full Rust tests, clippy, formatting, generated docs, docs-surface, man/html checks, AI workflow, and whitespace checks pass.

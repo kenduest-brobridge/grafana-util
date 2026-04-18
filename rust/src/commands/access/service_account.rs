@@ -19,7 +19,8 @@ pub(crate) use service_account_workflows::{
 };
 #[allow(unused_imports)]
 pub(crate) use service_account_workflows::{
-    list_all_service_accounts_with_request, load_service_account_import_records,
+    build_service_account_diff_map, list_all_service_accounts_with_request,
+    load_service_account_import_records,
 };
 
 /// Fetch one page of service-account search results from Grafana.

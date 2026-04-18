@@ -19,7 +19,7 @@ This page is for administrators who first need to choose the right access surfac
 
 - **Inspect**: user, org, team, and service-account inventory reads from live Grafana or local bundles.
 - **Move**: export, import, diff, and snapshot paths for moving or comparing access state.
-- **Plan**: review a user access bundle against live Grafana before import or prune.
+- **Plan**: review user, org, team, or service-account bundles against live Grafana before import or prune.
 - **Review Before Mutate**: lifecycle changes, membership edits, and service-account token rotation.
 
 Choose this page when you need to decide whether the next access task is inventory, migration, or a reviewed mutation.
@@ -66,8 +66,9 @@ grafana-util access org list --input-dir ./access-orgs --output-format text
 ```
 
 ```bash
-# Plan a saved user bundle before import.
+# Plan a saved user or team bundle before import.
 grafana-util access plan --profile prod --input-dir ./access-users --resource user --output-format table
+grafana-util access plan --profile prod --input-dir ./access-teams --resource team --output-format table
 ```
 
 ```bash

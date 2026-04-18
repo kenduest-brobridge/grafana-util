@@ -15,6 +15,13 @@ Current AI-maintained status only.
 - Older entries moved to [`ai-status-archive-2026-04-17.md`](docs/internal/archive/ai-status-archive-2026-04-17.md).
 - Older entries moved to [`ai-status-archive-2026-04-18.md`](docs/internal/archive/ai-status-archive-2026-04-18.md).
 
+## 2026-04-18 - Extend access plan resource coverage
+- State: Done
+- Scope: Rust access plan team/org/service-account slices, focused access tests, access plan docs, generated docs, and AI trace docs. README files and Python implementation are out of scope.
+- Baseline: `access plan` initially reviewed user bundles only while team, org, service-account, and `all` selectors remained unsupported.
+- Current Update: Added concrete `--resource org`, `--resource team`, and `--resource service-account` plan paths using the existing import/diff/live helpers. `--resource all` remains reserved for a later aggregate layer.
+- Result: Focused access tests and clippy pass; broader validation is in progress.
+
 ## 2026-04-18 - Add review plans for access, dashboard, alert, and workspace
 - State: Done
 - Scope: Rust access/dashboard plan slices, alert plan contract fields, workspace preview normalized actions, focused tests, command docs, generated docs, and AI trace docs. README files and Python implementation are out of scope.
@@ -49,10 +56,3 @@ Current AI-maintained status only.
 - Baseline: user/team import preflight is hardened, but service-account import still has an older dry-run shape, user modify can partially write before later Grafana-source blockers, org import dry-run does not inspect live users for role plans, and token add surfaces Grafana TTL/config failures as raw API errors.
 - Current Update: Service-account import now validates roles and emits status/blocked/target evidence; user modify preflights external/provisioned/synced blockers before writes; org import dry-run checks live org users and blocks externally synced role changes; token add preserves Grafana errors while adding targeted TTL/duplicate-name hints.
 - Result: Focused access tests, full Rust tests, clippy, formatting, generated docs, docs-surface, man/html checks, AI workflow, and whitespace checks pass.
-
-## 2026-04-18 - Harden access user/team import preflight
-- State: Done
-- Scope: Rust access user/team import planning and dry-run output, focused access tests, access command docs, and AI trace docs. README files, Python implementation, and Grafana IAM/K8s API support are out of scope.
-- Baseline: team import can pass login-style identities into Grafana's bulk team membership endpoint even though the official legacy endpoint resolves bulk members by email, and user/team dry-run does not consistently block externally synced users or provisioned teams before live apply.
-- Current Update: Team import now resolves member/admin identities to live org-user emails before bulk apply, blocks missing-email identities, and surfaces provisioned-team blockers with target evidence. User import now blocks external/synced profile, org role, and Grafana-admin changes before apply while dry-run rows carry target evidence and blocked status.
-- Result: Focused team/user import tests, access test suite, full Rust tests, clippy, formatting, generated docs, docs-surface, man/html checks, AI workflow, and whitespace checks pass.

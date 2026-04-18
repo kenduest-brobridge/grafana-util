@@ -13,6 +13,7 @@ pub(crate) use service_account_workflows_mutation::{
     add_service_account_token_with_request, add_service_account_with_request,
     list_service_accounts_command_with_request, list_service_accounts_from_input_dir,
 };
+pub(crate) use service_account_workflows_support::build_service_account_diff_map;
 pub(crate) use service_account_workflows_support::list_all_service_accounts_with_request;
 pub(crate) use service_account_workflows_support::load_service_account_import_records;
 pub(crate) use service_account_workflows_sync::{

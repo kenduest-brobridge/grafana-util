@@ -566,7 +566,7 @@ pub struct AccessPlanArgs {
         long,
         value_enum,
         default_value_t = AccessPlanResource::User,
-        help = "Select which access resource bundle to plan. The current vertical slice supports user bundles."
+        help = "Select which access resource bundle to plan. The current vertical slice supports user, org, team, and service-account bundles."
     )]
     pub resource: AccessPlanResource,
     #[arg(

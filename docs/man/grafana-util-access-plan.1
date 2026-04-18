@@ -10,9 +10,9 @@ Build a review\-first access reconcile plan from a local access bundle against l
 Use this before importing or pruning access state when you want a structured answer to "what would change?" without mutating Grafana.
 .SH BEFORE / AFTER
 .IP \(bu 2
-Before: access export, import, and diff flows were split by resource type, so a user bundle review could still require manual reasoning before mutation.
+Before: access export, import, and diff flows were split by resource type, so bundle review could still require manual reasoning before mutation.
 .IP \(bu 2
-After: access plan emits a single review document with stable action rows for user bundle reconciliation.
+After: access plan emits a single review document with stable action rows for user, org, team, and service\-account reconciliation.
 .IP \(bu 2
 JSON output is structured for CI and future TUI review. Rows include stable actionId, status, changed fields, target details, blocked reason, and review hints.
 .SH COMMON OPTIONS
@@ -21,7 +21,7 @@ JSON output is structured for CI and future TUI review. Rows include stable acti
 local access export bundle to review.
 .TP
 .B \-\-resource
-choose user, team, org, service\-account, or all. This slice currently supports user.
+choose user, team, org, service\-account, or all. The current planner supports the concrete resource choices and rejects all.
 .TP
 .B \-\-prune
 show remote\-only users as delete candidates. Without this flag they remain extra remote review items.
@@ -36,14 +36,14 @@ include unchanged rows in text and table output.
 tune table output.
 .SH SUCCESS CRITERIA
 .IP \(bu 2
-user create, update, same, and remote\-only states are visible before import
+create, update, same, and remote\-only states are visible before import
 .IP \(bu 2
 delete candidates require an explicit \-\-prune review mode
 .IP \(bu 2
 JSON output can be saved as review evidence or loaded by automation
 .SH FAILURE CHECKS
 .IP \(bu 2
-if the command says the selected resource is unsupported, switch to \-\-resource user for this slice
+if the command says the selected resource is unsupported, choose one concrete resource instead of \-\-resource all
 .IP \(bu 2
 if the plan points at the wrong org, confirm the profile or shared auth flags
 .IP \(bu 2
