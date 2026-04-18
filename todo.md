@@ -127,43 +127,6 @@ Validation:
 - `cargo test --manifest-path rust/Cargo.toml --quiet`
 - `cargo fmt --manifest-path rust/Cargo.toml --all --check`
 
-## P0 - Test Surface Control
-
-### Split Oversized Rust Test Files
-
-Problem:
-
-Several Rust test files are still too large to review or debug quickly. Keep
-splitting only when a file mixes clearly separable behavior groups.
-
-Current hotspots:
-
-- `rust/src/commands/access/rust_tests.rs`
-- `rust/src/commands/datasource/tests/payload.rs`
-- `rust/src/commands/dashboard/rust_tests.rs`
-- `rust/src/commands/snapshot/tests_review_rust_tests.rs`
-
-Action:
-
-- Split by behavior suite, not by arbitrary line count.
-- Preserve existing test names when possible.
-- Move shared fixture builders into local test support modules.
-- Keep each split behavior-preserving.
-- Avoid scattering one assertion family across many small files; each new test module should represent a real workflow or contract group.
-
-Suggested order:
-
-1. `datasource/tests/payload.rs`
-2. `access/rust_tests.rs`
-3. `dashboard/rust_tests.rs`
-4. `snapshot/tests_review_rust_tests.rs`
-
-Validation:
-
-- `cargo fmt --manifest-path rust/Cargo.toml --all --check`
-- Focused `cargo test --manifest-path rust/Cargo.toml --quiet <domain_or_test_filter>`
-- `cargo test --manifest-path rust/Cargo.toml --quiet` when the split crosses module boundaries
-
 ## P1 - TUI Boundary Cleanup
 
 ### Split Access Team Browse Input
