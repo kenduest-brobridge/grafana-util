@@ -13,8 +13,8 @@ Scope rules:
 ## Current Baseline
 
 - Branch is `dev`; keep new work grouped into focused Rust/test commits.
-- Local `dev` is ahead of `origin/dev` with validated Rust maintenance
-  commits. Push before starting a broad behavior-changing series.
+- Local `dev` is synchronized with `origin/dev` after the validated Rust
+  maintenance commits landed.
 - GitHub Actions `rust-quality` is currently green on Rust 1.95 after the
   latest clippy compatibility pass.
 - Default Rust build and `--features browser` are supported release surfaces.
@@ -32,15 +32,26 @@ Scope rules:
 Run the next development passes in this order unless a CI failure or user report
 changes priority.
 
-1. Push the validated maintenance commits on `dev`.
-2. Normalize project status producers around a shared internal status reading
+1. Normalize project status producers around a shared internal status reading
    model. Include live Grafana evidence such as health/version where available.
-3. Split the access team browse input boundary by one stable responsibility.
-4. Split one safe phase out of sync live apply, preferably response/error
-   normalization before request execution changes.
+2. Split the next TUI browse boundaries for access user browse input and
+   dashboard browse render/detail behavior.
+3. Split one safe phase out of sync live apply, starting with the next phase
+   boundary that is still mixed.
+4. Reconcile output contracts and schema manifests so runtime goldens and
+   published schema/help contracts have clear ownership.
+5. Finish dashboard prompt external export parity for the remaining library
+   panel live-model handling.
 
 Completed cleanup now closed:
 
+- Push baseline on `dev` completed and is already validated.
+- Output contract checker collection and enum constraint checks are in place.
+- Docs diff classifier is in place.
+- Feature matrix full probe is in place.
+- Access team browse reload and confirmation boundaries are split.
+- Dashboard browse tree rows are split.
+- Sync live apply response normalization and error classification are split.
 - Oversized Rust test suites split into smaller facades.
 - Dashboard test helper re-exports narrowed from crate-wide visibility.
 - Dashboard and snapshot test-support helpers narrowed to local module trees.
@@ -154,26 +165,23 @@ Validation:
 
 ## P1 - TUI Boundary Cleanup
 
-### Split Access Team Browse Input
+### Split Access User Browse Input
 
 Problem:
 
-`rust/src/commands/access/team_browse_input.rs` is still a dense TUI input surface. It mixes key handling, selection state, confirmation flow, mutation dispatch, refresh behavior, and error handling.
+`rust/src/commands/access/user_browse_input.rs` is still a dense TUI input surface. It mixes key handling, selection state, mutation dispatch, refresh behavior, and error handling.
 
 Action:
 
 - Extract only the most stable focused boundary first. Candidate boundaries are:
   - action dispatch
-  - confirmation dialogs
   - refresh/reload behavior
   - key handling
 - Keep public behavior unchanged.
-- Keep live mutation confirmation paths easy to review.
 - Do not create all candidate modules in one pass unless each one removes a clearly mixed responsibility.
 
 Validation:
 
-- `cargo test --manifest-path rust/Cargo.toml --quiet team_browse`
 - `cargo test --manifest-path rust/Cargo.toml --quiet access`
 - `cargo fmt --manifest-path rust/Cargo.toml --all --check`
 
@@ -181,7 +189,7 @@ Validation:
 
 Problem:
 
-Dashboard browse/render is still large and UI-sensitive.
+Dashboard browse/render is still large and UI-sensitive even after the row split.
 
 Hotspots:
 
@@ -190,7 +198,6 @@ Hotspots:
 
 Action:
 
-- Extract row model helpers.
 - Extract detail-pane rendering.
 - Extract footer/action rendering.
 - Separate live-tree rendering from local-export-tree rendering where practical.
@@ -250,10 +257,8 @@ Action:
   - request builders
   - dependency ordering
   - apply execution
-  - response normalization
-  - error classification
 - Keep API behavior unchanged.
-- Add focused tests around ordering and error normalization if missing.
+- Add focused tests around ordering and the next split boundary if missing.
 - Start with one phase boundary, then reassess. Do not split every phase in a single pass if the parent control flow becomes harder to follow.
 
 Validation:
@@ -287,27 +292,6 @@ Validation:
 - `make quality-output-contracts` if JSON output changes.
 
 ## P2 - Contract Depth And Schema Governance
-
-### Extend Output Contract Checker
-
-Problem:
-
-The output contract checker now supports nested required paths and path types, but it does not yet validate richer collection shape.
-
-Action:
-
-- Add support for:
-  - `arrayItemTypes`
-  - `minimumItems`
-  - `enumValues`
-  - wildcard-like paths such as `operations[*].kind`
-- Apply first to dashboard and sync fixtures.
-- Keep registry syntax simple enough to review in JSON.
-
-Validation:
-
-- `make quality-output-contracts`
-- Negative probes for missing array items, wrong enum values, and wrong item types
 
 ### Reconcile Output Contracts And Schema Manifests
 
@@ -356,29 +340,6 @@ Validation:
 
 ## P3 - Docs And Generated Surface Discipline
 
-### Add Docs Diff Classifier
-
-Problem:
-
-Generated man/html docs are correct but noisy. Small source/help changes can produce large diffs, making review harder.
-
-Action:
-
-- Add a classifier script that reports:
-  - source docs changed
-  - generated docs changed
-  - command contract changed
-  - public CLI changed
-  - generated docs changed without source/contract reason
-  - source docs changed but generated docs missing
-- Integrate as a maintainer-only quality command.
-
-Validation:
-
-- `make man-check`
-- `make html-check`
-- `make quality-docs-surface`
-
 ### Keep Public Command Wording Consistent
 
 Problem:
@@ -399,28 +360,6 @@ Validation:
 - `make quality-docs-surface`
 - `make quality-ai-workflow`
 - targeted `rg` search for removed public paths
-
-## P3 - Feature Matrix Maturity
-
-### Add Full Rust Feature Matrix Gate
-
-Problem:
-
-`make quality-rust-feature-matrix` now documents the supported feature surfaces, but it is mostly a policy/gate check rather than a full artifact capability check.
-
-Action:
-
-- Add optional deeper gate:
-  - default check
-  - browser check
-  - explicit no-default expected-fail probe
-  - TUI-gated module lint check
-- Keep the fast gate cheap enough for normal development.
-
-Validation:
-
-- `make quality-rust-feature-matrix`
-- optional `make quality-rust-feature-matrix-full`
 
 ## P3 - Product Surface Balance
 
