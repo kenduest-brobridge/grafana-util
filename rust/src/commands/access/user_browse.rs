@@ -26,6 +26,9 @@ mod user_browse_input;
 #[path = "user_browse_mutation.rs"]
 mod user_browse_mutation;
 #[cfg(feature = "tui")]
+#[path = "user_browse_reload.rs"]
+mod user_browse_reload;
+#[cfg(feature = "tui")]
 #[path = "user_browse_render.rs"]
 mod user_browse_render;
 #[cfg(feature = "tui")]

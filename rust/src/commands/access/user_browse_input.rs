@@ -10,6 +10,7 @@ use crate::common::message;
 
 use super::user_browse_dialog::{EditDialogAction, EditDialogState};
 use super::user_browse_mutation::{confirm_delete, confirm_member_remove, save_edit};
+use super::user_browse_reload::reload_rows;
 use super::user_browse_state::{
     row_kind, BrowserState, DisplayMode, PaneFocus, SearchDirection, SearchState,
 };
@@ -207,12 +208,7 @@ where
             };
         }
         KeyCode::Char('l') => {
-            state.replace_rows(load_rows(request_json, args, state.display_mode)?);
-            state.status = if args.input_dir.is_some() {
-                "Reloaded user browser from local bundle.".to_string()
-            } else {
-                "Refreshed user browser from live Grafana.".to_string()
-            };
+            reload_rows(request_json, args, state)?;
         }
         KeyCode::Char('e') => {
             if args.input_dir.is_some() {
