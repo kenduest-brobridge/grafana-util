@@ -15,6 +15,13 @@ Current AI-maintained status only.
 - Older entries moved to [`ai-status-archive-2026-04-17.md`](docs/internal/archive/ai-status-archive-2026-04-17.md).
 - Older entries moved to [`ai-status-archive-2026-04-18.md`](docs/internal/archive/ai-status-archive-2026-04-18.md).
 
+## 2026-04-18 - Clear Rust architecture warnings
+- State: Done
+- Scope: Rust architecture-warning cleanup across dashboard plan/export/export-layout/import-apply, status live, datasource CLI defs, alert runtime tests, focused tests, full Rust quality gate, and AI trace docs. README files, generated user docs, and Python implementation are out of scope.
+- Baseline: `make quality-architecture` reported warning-threshold files in dashboard export/export-layout/import_apply/plan, status live, datasource CLI defs, and alert runtime tests. Several production files mixed orchestration, rendering, live collection, artifact writing, and tests in one module.
+- Current Update: Split each warning surface by responsibility: dashboard plan into input/reconcile/render, dashboard import/apply into backend/prepare/live/render, dashboard export into provisioning/root-bundle helpers, export-layout into apply/render/tests, status live into discovery/domains/multi-org/tests, datasource CLI output-format helpers, and alert runtime tests by scenario group.
+- Result: `make quality-architecture` is clean with zero warnings, focused tests pass, full Rust tests pass, clippy passes, and `make quality-rust` passes outside the sandbox. The sandboxed `make quality-rust` run still fails local mock-server socket tests with `Operation not permitted`.
+
 ## 2026-04-18 - Fix datasource plan architecture gate
 - State: Done
 - Scope: Rust datasource plan module split, shared review/action contract vocabulary, focused tests, architecture quality gate, and AI trace docs. README files, generated user docs, and Python implementation are out of scope.
@@ -35,24 +42,3 @@ Current AI-maintained status only.
 - Baseline: Domain plan surfaces now expose stable action-style review documents, but workspace aggregation, TUI input boundaries, and dashboard summary naming still have follow-up TODOs.
 - Current Update: Added a shared workspace review view adapter for preview/review normalization, split access team browse key dispatch and tests out of the input surface, and cleaned public dashboard summary/review wording while preserving true query analyzer internals.
 - Result: Focused workspace/access/dashboard tests, full Rust tests, clippy, formatting, generated docs, docs-surface, and dashboard wording scan pass.
-
-## 2026-04-18 - Add access plan aggregate resource
-- State: Done
-- Scope: Rust access plan aggregate routing/tests, access plan docs/help, generated docs, and AI trace docs. README files and Python implementation are out of scope.
-- Baseline: `access plan` supports concrete `user`, `org`, `team`, and `service-account` resources, but `--resource all` is parsed and rejected as a future aggregate layer.
-- Current Update: Added `--resource all` as a read-only aggregate over root-level `access-users`, `access-orgs`, `access-teams`, and `access-service-accounts` bundle directories. Split access plan code by contract types, renderers, user planner, aggregate planner, and tests so production files stay below the 500-line review threshold.
-- Result: Focused access plan tests, access lib tests, full Rust tests, clippy, formatting, generated docs, docs-surface, AI workflow, man/html checks, whitespace checks, and CLI help smoke pass.
-
-## 2026-04-18 - Add dashboard plan multi-org routing
-- State: Done
-- Scope: Rust dashboard plan routing/model/tests, dashboard plan command docs, generated docs if needed, and AI trace docs. README files and Python implementation are out of scope.
-- Baseline: `dashboard plan` can review one local dashboard export tree against one live Grafana org, but `--use-export-org`, `--only-org-id`, and `--create-missing-orgs` are parsed and then rejected as unsupported.
-- Current Update: Added export-org routing for dashboard plan, including all-org scope discovery, Basic-auth org resolution, scoped live collection for matching orgs, and missing-org review rows.
-- Result: Focused dashboard plan/parser tests, full Rust tests, clippy, formatting, docs generation, docs-surface, AI workflow, man/html checks, and whitespace checks pass.
-
-## 2026-04-18 - Extend access plan resource coverage
-- State: Done
-- Scope: Rust access plan team/org/service-account slices, focused access tests, access plan docs, generated docs, and AI trace docs. README files and Python implementation are out of scope.
-- Baseline: `access plan` initially reviewed user bundles only while team, org, service-account, and `all` selectors remained unsupported.
-- Current Update: Added concrete `--resource org`, `--resource team`, and `--resource service-account` plan paths using the existing import/diff/live helpers. `--resource all` remains reserved for a later aggregate layer.
-- Result: Focused access tests and clippy pass; broader validation is in progress.

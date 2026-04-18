@@ -3,14 +3,21 @@
 use serde_json::{json, Value};
 use std::fs;
 use std::path::Path;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
+
+static FIXTURE_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 pub(super) fn write_diff_fixture(records: &[Value]) -> std::path::PathBuf {
     let unique = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_nanos();
-    let dir = std::env::temp_dir().join(format!("grafana-util-datasource-diff-{unique}"));
+    let sequence = FIXTURE_COUNTER.fetch_add(1, Ordering::Relaxed);
+    let dir = std::env::temp_dir().join(format!(
+        "grafana-util-datasource-diff-{}-{unique}-{sequence}",
+        std::process::id()
+    ));
     fs::create_dir_all(&dir).unwrap();
     fs::write(
         dir.join("export-metadata.json"),

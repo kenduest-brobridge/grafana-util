@@ -12,6 +12,7 @@ use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::thread;
 use std::time::Duration;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -43,6 +44,7 @@ use super::{
 const MAX_LIVE_INSPECT_CONCURRENCY: usize = 16;
 const LIVE_INSPECT_RETRY_LIMIT: usize = 3;
 const LIVE_INSPECT_RETRY_BACKOFF_MS: u64 = 200;
+static LIVE_INSPECT_TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 pub(crate) struct TempInspectDir {
     pub(crate) path: PathBuf,
@@ -54,9 +56,10 @@ impl TempInspectDir {
             .duration_since(UNIX_EPOCH)
             .map_err(|error| validation(format!("Failed to build {prefix} temp path: {error}")))?
             .as_nanos();
+        let sequence = LIVE_INSPECT_TEMP_COUNTER.fetch_add(1, Ordering::Relaxed);
         let path = env::temp_dir().join(format!(
-            "grafana-utils-{prefix}-{}-{timestamp}",
-            process::id()
+            "grafana-utils-{prefix}-{}-{timestamp}-{sequence}",
+            process::id(),
         ));
         fs::create_dir_all(&path)?;
         Ok(Self { path })

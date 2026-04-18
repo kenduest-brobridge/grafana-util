@@ -39,8 +39,14 @@ mod alert_rust_tests_compare_diff;
 mod alert_rust_tests_contract;
 #[path = "parser_help.rs"]
 mod alert_rust_tests_parser_help;
-#[path = "runtime.rs"]
-mod alert_rust_tests_runtime;
+#[path = "runtime_apply.rs"]
+mod alert_rust_tests_runtime_apply;
+#[path = "runtime_normalize.rs"]
+mod alert_rust_tests_runtime_normalize;
+#[path = "runtime_plan.rs"]
+mod alert_rust_tests_runtime_plan;
+#[path = "runtime_request.rs"]
+mod alert_rust_tests_runtime_request;
 
 fn render_alert_help() -> String {
     let mut command = root_command();
