@@ -6,17 +6,19 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Clear, List, ListItem, Paragraph};
 
 use super::browse_state::{BrowserState, PaneFocus, SearchDirection};
-use super::browse_support::{DashboardBrowseNode, DashboardBrowseNodeKind};
 use super::delete_render::render_delete_dry_run_text;
 
 #[path = "browse_render_detail.rs"]
 mod browse_render_detail;
+#[path = "browse_render_rows.rs"]
+mod browse_render_rows;
 
 #[cfg(test)]
 #[path = "browse_render_rust_tests.rs"]
 mod browse_render_rust_tests;
 
 use self::browse_render_detail::render_detail_panel;
+use self::browse_render_rows::build_tree_items;
 
 pub(crate) fn render_dashboard_browser_frame(frame: &mut ratatui::Frame, state: &mut BrowserState) {
     let outer = Layout::default()
@@ -111,79 +113,6 @@ pub(crate) fn render_dashboard_browser_frame(frame: &mut ratatui::Frame, state: 
             Color::Green,
         );
     }
-}
-
-fn build_tree_items(nodes: &[DashboardBrowseNode]) -> Vec<ListItem<'_>> {
-    let mut rendered = Vec::new();
-    for (index, node) in nodes.iter().enumerate() {
-        if node.kind == DashboardBrowseNodeKind::Org {
-            let divider = Line::from(vec![
-                Span::styled("──── ", Style::default().fg(Color::DarkGray)),
-                Span::styled(
-                    node.org_name.clone(),
-                    Style::default()
-                        .fg(Color::Gray)
-                        .add_modifier(Modifier::BOLD),
-                ),
-                Span::styled(
-                    " ─────────────────────",
-                    Style::default().fg(Color::DarkGray),
-                ),
-            ]);
-            let line = Line::from(vec![
-                Span::styled(
-                    " ORG ",
-                    Style::default()
-                        .fg(Color::White)
-                        .bg(Color::Rgb(46, 66, 98))
-                        .add_modifier(Modifier::BOLD),
-                ),
-                Span::raw(" "),
-                Span::styled(
-                    format!("{} ", node.title),
-                    Style::default()
-                        .fg(Color::LightCyan)
-                        .add_modifier(Modifier::BOLD),
-                ),
-                Span::styled(
-                    format!("│ id={} │ {}", node.org_id, node.meta),
-                    Style::default().fg(Color::Gray),
-                ),
-            ]);
-            if index > 0 {
-                rendered.push(ListItem::new(vec![
-                    Line::from(Span::raw(" ")),
-                    divider,
-                    line,
-                ]));
-            } else {
-                rendered.push(ListItem::new(vec![divider, line]));
-            }
-            continue;
-        }
-
-        let prefix = match node.kind {
-            DashboardBrowseNodeKind::Folder => "+",
-            DashboardBrowseNodeKind::Dashboard => "-",
-            DashboardBrowseNodeKind::Org => "",
-        };
-        let line = Line::from(vec![
-            Span::styled("     ", Style::default().fg(Color::DarkGray)),
-            Span::raw(format!("{}{} ", "  ".repeat(node.depth), prefix)),
-            Span::styled(
-                node.title.clone(),
-                Style::default()
-                    .fg(node_color(node))
-                    .add_modifier(Modifier::BOLD),
-            ),
-            Span::styled(
-                format!("  │  {}", node.meta),
-                Style::default().fg(Color::DarkGray),
-            ),
-        ]);
-        rendered.push(ListItem::new(line));
-    }
-    rendered
 }
 
 fn render_summary_lines(state: &BrowserState) -> Vec<Line<'static>> {
@@ -378,14 +307,6 @@ fn control_lines(
 
 fn muted(text: &'static str) -> Span<'static> {
     Span::styled(text, Style::default().fg(Color::Gray))
-}
-
-fn node_color(node: &DashboardBrowseNode) -> Color {
-    match node.kind {
-        DashboardBrowseNodeKind::Org => Color::LightCyan,
-        DashboardBrowseNodeKind::Folder => Color::Cyan,
-        DashboardBrowseNodeKind::Dashboard => Color::Yellow,
-    }
 }
 
 fn pane_block(title: &str, focused: bool, accent: Color, bg: Color) -> Block<'static> {

@@ -16,6 +16,50 @@ fn empty_document() -> super::super::browse_support::DashboardBrowseDocument {
 }
 
 #[test]
+fn tree_rows_render_org_header_and_dashboard_metadata() {
+    let nodes = vec![
+        super::super::browse_support::DashboardBrowseNode {
+            kind: super::super::browse_support::DashboardBrowseNodeKind::Org,
+            title: "Acme".to_string(),
+            path: "Acme".to_string(),
+            uid: None,
+            depth: 0,
+            meta: "2 folder(s) | 1 dashboard(s)".to_string(),
+            details: Vec::new(),
+            url: None,
+            org_name: "Acme".to_string(),
+            org_id: "42".to_string(),
+            child_count: 2,
+        },
+        super::super::browse_support::DashboardBrowseNode {
+            kind: super::super::browse_support::DashboardBrowseNodeKind::Dashboard,
+            title: "CPU Main".to_string(),
+            path: "Platform / Infra".to_string(),
+            uid: Some("cpu-main".to_string()),
+            depth: 1,
+            meta: "uid=cpu-main".to_string(),
+            details: vec!["Type: Dashboard".to_string()],
+            url: Some("https://grafana.example.com/d/cpu-main".to_string()),
+            org_name: "Acme".to_string(),
+            org_id: "42".to_string(),
+            child_count: 0,
+        },
+    ];
+    let items = super::browse_render_rows::build_tree_items(&nodes);
+    let debug = items
+        .iter()
+        .map(|item| format!("{item:?}"))
+        .collect::<Vec<_>>();
+
+    assert_eq!(items.len(), 2);
+    assert!(debug[0].contains("ORG"));
+    assert!(debug[0].contains("Acme"));
+    assert!(debug[0].contains("id=42"));
+    assert!(debug[1].contains("CPU Main"));
+    assert!(debug[1].contains("uid=cpu-main"));
+}
+
+#[test]
 fn summary_lines_move_status_out_of_the_header() {
     let state = BrowserState::new(empty_document());
     let lines = render_summary_lines(&state)
