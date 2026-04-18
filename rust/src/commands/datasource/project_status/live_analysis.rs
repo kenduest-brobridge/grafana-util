@@ -5,6 +5,7 @@ use crate::common::string_field;
 use crate::project_status::{
     status_finding, ProjectDomainStatus, PROJECT_STATUS_PARTIAL, PROJECT_STATUS_READY,
 };
+use crate::project_status_model::{StatusReading, StatusRecordCount};
 
 const DATASOURCE_DOMAIN_ID: &str = "datasource";
 const DATASOURCE_SCOPE: &str = "live";
@@ -577,23 +578,24 @@ pub(crate) fn build_datasource_live_project_status(
         (PROJECT_STATUS_READY, DATASOURCE_REASON_READY)
     };
 
-    Some(ProjectDomainStatus {
-        id: DATASOURCE_DOMAIN_ID.to_string(),
-        scope: DATASOURCE_SCOPE.to_string(),
-        mode: DATASOURCE_MODE.to_string(),
-        status: status.to_string(),
-        reason_code: reason_code.to_string(),
-        primary_count: datasource_count,
-        blocker_count: 0,
-        warning_count: warnings.iter().map(|item| item.count).sum(),
-        source_kinds,
-        signal_keys: DATASOURCE_SIGNAL_KEYS
-            .iter()
-            .map(|item| (*item).to_string())
-            .collect(),
-        blockers: Vec::new(),
-        warnings,
-        next_actions,
-        freshness: Default::default(),
-    })
+    Some(
+        StatusReading {
+            id: DATASOURCE_DOMAIN_ID.to_string(),
+            scope: DATASOURCE_SCOPE.to_string(),
+            mode: DATASOURCE_MODE.to_string(),
+            status: status.to_string(),
+            reason_code: reason_code.to_string(),
+            primary_count: datasource_count,
+            source_kinds,
+            signal_keys: DATASOURCE_SIGNAL_KEYS
+                .iter()
+                .map(|item| (*item).to_string())
+                .collect(),
+            blockers: Vec::new(),
+            warnings: warnings.into_iter().map(StatusRecordCount::from).collect(),
+            next_actions,
+            freshness: Default::default(),
+        }
+        .into_project_domain_status(),
+    )
 }
