@@ -133,6 +133,57 @@ fn load_rows_reads_local_team_bundle_without_live_requests() {
 }
 
 #[test]
+fn reload_key_l_refreshes_local_bundle_without_live_requests() {
+    let temp = tempdir().unwrap();
+    fs::write(
+        temp.path().join("teams.json"),
+        r#"{
+            "kind":"grafana-utils-access-team-export-index",
+            "version":1,
+            "records":[
+                {"name":"platform-team","email":"platform@example.com","members":["alice"],"admins":[]}
+            ]
+        }"#,
+    )
+    .unwrap();
+    let args = TeamBrowseArgs {
+        common: common_args(None),
+        input_dir: Some(temp.path().to_path_buf()),
+        query: None,
+        name: None,
+        with_members: true,
+        page: 1,
+        per_page: 100,
+    };
+    let mut state = BrowserState::new(vec![Map::from_iter(vec![
+        ("id".to_string(), Value::String("1".to_string())),
+        ("name".to_string(), Value::String("stale-team".to_string())),
+        (
+            "email".to_string(),
+            Value::String("stale@example.com".to_string()),
+        ),
+    ])]);
+
+    let action = handle_key(
+        &mut |_method, _path, _params, _payload| {
+            panic!("local team reload should not hit the request layer")
+        },
+        &args,
+        &mut state,
+        &KeyEvent::new(
+            crossterm::event::KeyCode::Char('l'),
+            crossterm::event::KeyModifiers::NONE,
+        ),
+    )
+    .unwrap();
+
+    assert!(matches!(action, BrowseAction::Continue));
+    assert_eq!(state.status, "Reloaded team browser from local bundle.");
+    assert_eq!(state.rows.len(), 1);
+    assert_eq!(map_get_text(&state.rows[0], "name"), "platform-team");
+}
+
+#[test]
 fn member_row_edit_prompts_user_browse_instead_of_team_editor() {
     let mut state = selected_member_state(vec![member_row("alice", "Member")]);
     let args = live_browse_args();

@@ -9,7 +9,7 @@ use crate::access::TeamBrowseArgs;
 use crate::common::{message, Result};
 
 use super::team_browse_dialog::EditDialogState;
-use super::team_browse_input::{load_rows, BrowseAction};
+use super::team_browse_input::BrowseAction;
 use super::team_browse_state::{row_kind, BrowserState, PaneFocus, SearchDirection};
 
 pub(super) fn handle_normal_key<F>(
@@ -110,12 +110,7 @@ where
             }
         }
         KeyCode::Char('l') => {
-            state.replace_rows(load_rows(request_json, args)?);
-            state.status = if args.input_dir.is_some() {
-                "Reloaded team browser from local bundle.".to_string()
-            } else {
-                "Refreshed team browser from live Grafana.".to_string()
-            };
+            super::team_browse_reload::reload_rows(request_json, args, state)?;
         }
         KeyCode::Char('e') => {
             if args.input_dir.is_some() {

@@ -29,6 +29,9 @@ mod team_browse_dispatch;
 #[path = "team_browse_input.rs"]
 mod team_browse_input;
 #[cfg(feature = "tui")]
+#[path = "team_browse_reload.rs"]
+mod team_browse_reload;
+#[cfg(feature = "tui")]
 #[path = "team_browse_render.rs"]
 mod team_browse_render;
 #[cfg(feature = "tui")]
