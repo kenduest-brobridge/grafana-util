@@ -90,6 +90,35 @@ class OutputContractTests(unittest.TestCase):
             errors,
         )
 
+    def test_check_output_contracts_reports_minimum_items_failures(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_root = Path(temp_dir)
+            temp_registry_path = temp_root / "output-contracts.json"
+            temp_fixture_dir = temp_root / "output-fixtures"
+            temp_fixture_dir.mkdir(parents=True, exist_ok=True)
+
+            registry = copy.deepcopy(self.registry)
+            registry["contracts"][1]["fixture"] = "output-fixtures/sync-preflight.json"
+            temp_fixture_path = temp_fixture_dir / "sync-preflight.json"
+            fixture = json.loads(
+                (REGISTRY_PATH.parent / "output-fixtures" / "sync-preflight.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            fixture["checks"] = fixture["checks"][:1]
+            temp_fixture_path.write_text(json.dumps(fixture, indent=2) + "\n", encoding="utf-8")
+            temp_registry_path.write_text(
+                json.dumps(registry, indent=2) + "\n",
+                encoding="utf-8",
+            )
+
+            errors = output_contracts.check_output_contracts(temp_registry_path)
+
+        self.assertTrue(
+            any("checks" in error and "expected at least 2 items" in error for error in errors),
+            errors,
+        )
+
     def test_module_entrypoint_round_trip(self):
         stdout = io.StringIO()
         with redirect_stdout(stdout):

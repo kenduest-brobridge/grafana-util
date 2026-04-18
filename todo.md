@@ -38,13 +38,13 @@ changes priority.
 3. Split the access team browse input boundary by one stable responsibility.
 4. Split one safe phase out of sync live apply, preferably response/error
    normalization before request execution changes.
-5. Extend output contract checks for collection shape and enum constraints.
 
 Completed cleanup now closed:
 
 - Oversized Rust test suites split into smaller facades.
 - Dashboard test helper re-exports narrowed from crate-wide visibility.
 - Dashboard and snapshot test-support helpers narrowed to local module trees.
+- Output contract checker now validates collection shape and enum constraints.
 
 ## Split Policy - Conservative Boundaries
 
