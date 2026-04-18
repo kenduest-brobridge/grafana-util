@@ -40,4 +40,5 @@ Use three layers:
   `--help-flat` support change.
 - Keep `scripts/contracts/output-contracts.json` current when adding or changing
   machine-readable JSON outputs; use root `requiredFields` for envelope checks and
-  `requiredPaths` / `pathTypes` for small nested shape guarantees in golden fixtures.
+  `requiredPaths` / `pathTypes` / `arrayItemTypes` / `minimumItems` / `enumValues`
+  for small nested and collection shape guarantees in golden fixtures.

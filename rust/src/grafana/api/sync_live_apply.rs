@@ -7,7 +7,7 @@ use crate::alert::{
 use crate::common::{message, Result};
 use crate::sync::live::SyncApplyOperation;
 
-use super::sync_live_apply_result::{append_live_apply_result, finish_live_apply_response};
+use super::sync_live_apply_phase::execute_live_apply_phase;
 use super::SyncLiveClient;
 
 #[cfg(test)]
@@ -206,35 +206,9 @@ impl<'a> SyncLiveClient<'a> {
         allow_folder_delete: bool,
         allow_policy_reset: bool,
     ) -> Result<Value> {
-        let mut results = Vec::new();
-        for operation in operations {
-            let kind = operation.kind.as_str();
-            let response = match kind {
-                "folder" => {
-                    apply_folder_operation_with_client(self, operation, allow_folder_delete)?
-                }
-                "dashboard" => apply_dashboard_operation_with_client(self, operation)?,
-                "datasource" => apply_datasource_operation_with_client(self, operation)?,
-                "alert"
-                | "alert-contact-point"
-                | "alert-mute-timing"
-                | "alert-policy"
-                | "alert-template" => {
-                    if operation.kind == "alert-policy"
-                        && operation.action == "would-delete"
-                        && !allow_policy_reset
-                    {
-                        return Err(message(
-                            "Refusing live notification policy reset without --allow-policy-reset.",
-                        ));
-                    }
-                    apply_alert_operation_with_client(self, operation)?
-                }
-                _ => return Err(message(format!("Unsupported sync resource kind {kind}."))),
-            };
-            append_live_apply_result(&mut results, operation, response);
-        }
-        Ok(finish_live_apply_response(results))
+        execute_live_apply_phase(operations, allow_policy_reset, |operation| {
+            apply_live_operation_with_client(self, operation, allow_folder_delete)
+        })
     }
 }
 
@@ -245,6 +219,25 @@ pub(crate) fn execute_live_apply_with_client(
     allow_policy_reset: bool,
 ) -> Result<Value> {
     client.execute_live_apply(operations, allow_folder_delete, allow_policy_reset)
+}
+
+fn apply_live_operation_with_client(
+    client: &SyncLiveClient<'_>,
+    operation: &SyncApplyOperation,
+    allow_folder_delete: bool,
+) -> Result<Value> {
+    let kind = operation.kind.as_str();
+    match kind {
+        "folder" => apply_folder_operation_with_client(client, operation, allow_folder_delete),
+        "dashboard" => apply_dashboard_operation_with_client(client, operation),
+        "datasource" => apply_datasource_operation_with_client(client, operation),
+        "alert"
+        | "alert-contact-point"
+        | "alert-mute-timing"
+        | "alert-policy"
+        | "alert-template" => apply_alert_operation_with_client(client, operation),
+        _ => Err(message(format!("Unsupported sync resource kind {kind}."))),
+    }
 }
 
 fn apply_folder_operation_with_client(

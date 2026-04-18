@@ -15,6 +15,13 @@ Current AI-maintained status only.
 - Older entries moved to [`ai-status-archive-2026-04-17.md`](docs/internal/archive/ai-status-archive-2026-04-17.md).
 - Older entries moved to [`ai-status-archive-2026-04-18.md`](docs/internal/archive/ai-status-archive-2026-04-18.md).
 
+## 2026-04-18 - Advance review and contract backlog
+- State: Done
+- Scope: Rust dashboard browse render cleanup, status producer shared shape, sync live apply phase split, output contract checker depth, focused tests, generated docs if public docs change, and AI trace docs. README files and Python implementation are out of scope.
+- Baseline: The remaining backlog has oversized dashboard browse render/support surfaces, scattered project status producer shapes, a high-risk live apply path, and shallow output contract validation.
+- Current Update: Split dashboard browse detail rendering out of the frame renderer, introduced a shared status producer model for staged datasource/alert adapters, extracted the sync live apply phase loop, and extended output contract checks with collection-aware constraints.
+- Result: Focused dashboard/status/sync/contract tests, full Rust tests, formatting, output contract checks, and sync quality gate pass. `make quality-architecture` still reports the pre-existing `rust/src/commands/datasource/plan/mod.rs` hard line-count blocker.
+
 ## 2026-04-18 - Advance workspace review aggregation and cleanup
 - State: Done
 - Scope: Rust workspace review aggregation, access team browse TUI boundary cleanup, dashboard summary/review naming cleanup, focused tests, generated docs if public docs change, and AI trace docs. README files and Python implementation are out of scope.
@@ -49,10 +56,3 @@ Current AI-maintained status only.
 - Baseline: `datasource plan` introduced the reconcile-plan shape, while access/dashboard still lacked a plan command, alert plan rows did not consistently expose TUI-ready metadata, and workspace preview did not normalize legacy operations into a shared action/domain/blocker contract.
 - Current Update: Added `access plan` for user bundles and `dashboard plan` for single-org dashboard exports, enriched alert plan rows with stable action/status/review fields while preserving existing apply compatibility, and normalized workspace preview output with `actions`, `domains`, and `blockedReasons` for future TUI review.
 - Result: Focused access, dashboard, alert, and workspace preview tests pass; broader validation is in progress.
-
-## 2026-04-18 - Add datasource reconcile plan
-- State: Done
-- Scope: Rust datasource plan command, plan model/rendering, focused datasource tests, command docs, generated docs, and AI trace docs. README files and Python implementation are out of scope.
-- Baseline: `datasource diff` compares local bundles with live Grafana and reports `missing-remote` / `extra-remote`, while `datasource import --dry-run` previews create/update for import records only. There is no dedicated review-first datasource reconcile plan, no opt-in prune planning, and no TUI-ready action model.
-- Current Update: Added `datasource plan` as a review-only reconcile surface with text/table/json output, opt-in prune planning, all-org export routing, safe field comparison, read-only blocking, and stable TUI-ready action IDs. `datasource diff` and import dry-run remain separate surfaces.
-- Result: Focused datasource plan tests, datasource suite, clippy, formatting, docs-surface, and generated docs checks pass.

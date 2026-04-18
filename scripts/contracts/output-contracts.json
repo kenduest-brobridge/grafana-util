@@ -12,7 +12,25 @@
         "summary",
         "alertAssessment",
         "operations"
-      ]
+      ],
+      "minimumItems": {
+        "operations": 1
+      },
+      "arrayItemTypes": {
+        "operations": "object"
+      },
+      "pathTypes": {
+        "operations[*].kind": "non-empty-string",
+        "operations[*].action": "non-empty-string"
+      },
+      "enumValues": {
+        "operations[*].kind": [
+          "folder"
+        ],
+        "operations[*].action": [
+          "would-create"
+        ]
+      }
     },
     {
       "name": "sync-preflight",
@@ -24,7 +42,30 @@
         "schemaVersion",
         "summary",
         "checks"
-      ]
+      ],
+      "minimumItems": {
+        "checks": 2
+      },
+      "arrayItemTypes": {
+        "checks": "object"
+      },
+      "pathTypes": {
+        "checks[*].kind": "non-empty-string",
+        "checks[*].status": "non-empty-string",
+        "checks[*].detail": "non-empty-string"
+      },
+      "enumValues": {
+        "checks[*].kind": [
+          "datasource",
+          "plugin"
+        ],
+        "checks[*].status": [
+          "ok"
+        ],
+        "checks[*].blocking": [
+          false
+        ]
+      }
     },
     {
       "name": "sync-source-bundle",

@@ -122,6 +122,9 @@ pub(crate) mod project_status_freshness;
 /// Internal runtime for live project-status aggregation and per-domain fanout.
 #[path = "commands/status/live.rs"]
 pub(crate) mod project_status_live_runtime;
+/// Shared internal status producer model used by multiple domain adapters.
+#[path = "commands/status/model.rs"]
+pub(crate) mod project_status_model;
 /// Shared staged status builder reused by overview and status staged entrypoints.
 #[path = "commands/status/staged.rs"]
 pub(crate) mod project_status_staged;

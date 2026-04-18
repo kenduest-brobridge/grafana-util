@@ -78,3 +78,11 @@
 - Impact: prompt-lane Rust conversion, raw-to-prompt regression coverage, dashboard export validation, maintainer prompt semantics docs, TODO backlog, and AI trace docs.
 - Rollback/Risk: medium prompt-lane behavior change. Rollback would remove constant variable prompt inputs and v2/library panel guardrails, returning those cases to less explicit conversion behavior.
 - Follow-up: full library panel external-export parity still needs live model lookup; dashboard v2 remains a future adapter rather than a prompt-lane format.
+
+## 2026-04-18 - Harden access user/team import preflight
+- Summary: aligned access user/team import preflight with Grafana legacy API behavior. Team import now resolves member/admin identities through live org users and sends only emails to the bulk membership endpoint, blocks missing-email identities, and blocks provisioned-team membership changes before live writes. User import dry-run/apply now blocks external or externally synced profile, org role, and Grafana-admin updates and carries target evidence in structured dry-run rows.
+- Tests: added focused regressions for team import email resolution, missing-email blocking, provisioned-team dry-run blocking, external user profile blocking, and externally synced org-role blocking.
+- Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all`; `cargo test --manifest-path rust/Cargo.toml --quiet team_import`; `cargo test --manifest-path rust/Cargo.toml --quiet user_import`; `cargo test --manifest-path rust/Cargo.toml --quiet access`; `cargo test --manifest-path rust/Cargo.toml --quiet`; `cargo clippy --manifest-path rust/Cargo.toml --all-targets -- -D warnings`; `make man`; `make html`; `make quality-docs-surface`; `make quality-ai-workflow`; `make man-check`; `make html-check`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `git diff --check`.
+- Impact: Rust access user/team import workflows, dry-run document summary, focused access tests, access command docs, generated man/html docs, and AI trace docs.
+- Rollback/Risk: medium access import behavior change. Rollback would again allow login-style values into Grafana's email-only bulk membership endpoint and defer provisioned/external blockers to live Grafana errors.
+- Follow-up: none.

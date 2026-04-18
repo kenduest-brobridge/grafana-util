@@ -1,0 +1,75 @@
+use serde_json::Value;
+
+use crate::common::{message, Result};
+use crate::sync::live::SyncApplyOperation;
+
+use super::sync_live_apply_result::{append_live_apply_result, finish_live_apply_response};
+
+pub(crate) fn execute_live_apply_phase<F>(
+    operations: &[SyncApplyOperation],
+    allow_policy_reset: bool,
+    mut apply_operation: F,
+) -> Result<Value>
+where
+    F: FnMut(&SyncApplyOperation) -> Result<Value>,
+{
+    let mut results = Vec::new();
+    for operation in operations {
+        if operation.kind == "alert-policy"
+            && operation.action == "would-delete"
+            && !allow_policy_reset
+        {
+            return Err(message(
+                "Refusing live notification policy reset without --allow-policy-reset.",
+            ));
+        }
+        let response = apply_operation(operation)?;
+        append_live_apply_result(&mut results, operation, response);
+    }
+    Ok(finish_live_apply_response(results))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    fn operation(kind: &str, action: &str, identity: &str) -> SyncApplyOperation {
+        SyncApplyOperation {
+            kind: kind.to_string(),
+            identity: identity.to_string(),
+            action: action.to_string(),
+            desired: serde_json::Map::new(),
+        }
+    }
+
+    #[test]
+    fn phase_preserves_operation_order_and_results() {
+        let operations = vec![operation("dashboard", "would-update", "dash-a")];
+        let result = execute_live_apply_phase(&operations, false, |op| {
+            Ok(json!({
+                "kind": op.kind,
+                "identity": op.identity,
+            }))
+        })
+        .unwrap();
+
+        assert_eq!(result["mode"], json!("live-apply"));
+        assert_eq!(result["appliedCount"], json!(1));
+        assert_eq!(result["results"][0]["kind"], json!("dashboard"));
+        assert_eq!(result["results"][0]["identity"], json!("dash-a"));
+    }
+
+    #[test]
+    fn phase_blocks_policy_reset_when_not_allowed() {
+        let operations = vec![operation("alert-policy", "would-delete", "policies")];
+        let result =
+            execute_live_apply_phase(&operations, false, |_| Ok(json!({"should_not_run": true})));
+
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "Refusing live notification policy reset without --allow-policy-reset."
+        );
+    }
+}

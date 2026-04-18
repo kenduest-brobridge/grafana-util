@@ -9,6 +9,17 @@ from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 REGISTRY_PATH = REPO_ROOT / "scripts" / "contracts" / "output-contracts.json"
+SUPPORTED_VALUE_TYPES = {
+    "object",
+    "array",
+    "non-empty-array",
+    "string",
+    "non-empty-string",
+    "integer",
+    "number",
+    "boolean",
+    "nullable-number",
+}
 
 
 def load_json(path: Path) -> Any:
@@ -27,85 +38,76 @@ def iter_field_paths(value: Any, path: tuple[str, ...] = ()):
             yield from iter_field_paths(item, path + (str(index),))
 
 
-def validate_required_path(value: Any, path: str) -> list[str]:
-    parts = path.split(".") if path else []
-    if not parts:
-        return ["path must not be empty"]
-
-    def walk(current: Any, remaining: list[str], prefix: str) -> list[str]:
-        if not remaining:
-            return []
-
-        part = remaining[0]
-        expects_array = part.endswith("[]")
-        key = part[:-2] if expects_array else part
-        current_path = f"{prefix}.{key}" if prefix else key
-
-        if not isinstance(current, dict):
-            return [f"{prefix or '<root>'} must be an object before {part!r}"]
-        if key not in current:
-            return [f"missing required path {current_path!r}"]
-
-        next_value = current[key]
-        if not expects_array:
-            return walk(next_value, remaining[1:], current_path)
-
-        if not isinstance(next_value, list):
-            return [f"required path {current_path!r} must be an array"]
-        if not next_value:
-            return [f"required path {current_path!r} must be a non-empty array"]
-
-        errors: list[str] = []
-        for item_index, item in enumerate(next_value):
-            item_path = f"{current_path}[{item_index}]"
-            errors.extend(walk(item, remaining[1:], item_path))
-        return errors
-
-    return walk(value, parts, "")
+def _parse_path_part(part: str) -> tuple[str, bool]:
+    if part.endswith("[*]"):
+        return part[:-3], True
+    if part.endswith("[]"):
+        return part[:-2], True
+    return part, False
 
 
-def values_for_path(value: Any, path: str) -> tuple[list[Any], list[str]]:
+def _is_scalar_json_value(value: Any) -> bool:
+    return value is None or isinstance(value, (str, int, float, bool))
+
+
+def _collect_path_matches(value: Any, path: str) -> tuple[list[tuple[str, Any]], list[str]]:
     parts = path.split(".") if path else []
     if not parts:
         return [], ["path must not be empty"]
 
-    def walk(current_values: list[Any], remaining: list[str], prefix: str) -> tuple[list[Any], list[str]]:
-        if not remaining:
-            return current_values, []
+    matches: list[tuple[str, Any]] = [("<root>", value)]
+    errors: list[str] = []
 
-        part = remaining[0]
-        expects_array = part.endswith("[]")
-        key = part[:-2] if expects_array else part
-        current_path = f"{prefix}.{key}" if prefix else key
-        next_values: list[Any] = []
-        errors: list[str] = []
+    for raw_part in parts:
+        key, expects_array = _parse_path_part(raw_part)
+        if not key:
+            return [], [f"path segment {raw_part!r} must include a field name"]
 
-        for item_index, current in enumerate(current_values):
-            item_prefix = prefix or "<root>"
-            if not isinstance(current, dict):
-                errors.append(f"{item_prefix} must be an object before {part!r}")
-                continue
-            if key not in current:
-                errors.append(f"missing required path {current_path!r}")
+        next_matches: list[tuple[str, Any]] = []
+        for current_path, current_value in matches:
+            if not isinstance(current_value, dict):
+                errors.append(f"{current_path} must be an object before {raw_part!r}")
                 continue
 
-            next_value = current[key]
-            if expects_array:
-                if not isinstance(next_value, list):
-                    errors.append(f"required path {current_path!r} must be an array")
-                    continue
-                if not next_value:
-                    errors.append(f"required path {current_path!r} must be a non-empty array")
-                    continue
-                next_values.extend(next_value)
-            else:
-                next_values.append(next_value)
+            next_path = f"{current_path}.{key}" if current_path != "<root>" else key
+            if key not in current_value:
+                errors.append(f"missing required path {next_path!r}")
+                continue
 
-        if errors:
-            return [], errors
-        return walk(next_values, remaining[1:], current_path)
+            next_value = current_value[key]
+            if not expects_array:
+                next_matches.append((next_path, next_value))
+                continue
 
-    return walk([value], parts, "")
+            if not isinstance(next_value, list):
+                errors.append(f"required path {next_path!r} must be an array")
+                continue
+            if not next_value:
+                errors.append(f"required path {next_path!r} must be a non-empty array")
+                continue
+
+            for item_index, item in enumerate(next_value):
+                next_matches.append((f"{next_path}[{item_index}]", item))
+
+        matches = next_matches
+
+    return matches, errors
+
+
+def validate_required_path(value: Any, path: str) -> list[str]:
+    _, errors = _collect_path_matches(value, path)
+    return errors
+
+
+def values_for_path(value: Any, path: str) -> tuple[list[Any], list[str]]:
+    matches, errors = _collect_path_matches(value, path)
+    if errors:
+        return [], errors
+    return [matched_value for _, matched_value in matches], []
+
+
+def _collect_path_values(value: Any, path: str) -> tuple[list[tuple[str, Any]], list[str]]:
+    return _collect_path_matches(value, path)
 
 
 def validate_value_type(value: Any, expected_type: str) -> bool:
@@ -192,19 +194,56 @@ def validate_registry(registry: dict[str, Any]) -> list[str]:
                         errors.append(
                             f"contracts[{index}].pathTypes keys must be non-empty strings"
                         )
-                    if expected_type not in {
-                        "object",
-                        "array",
-                        "non-empty-array",
-                        "string",
-                        "non-empty-string",
-                        "integer",
-                        "number",
-                        "boolean",
-                        "nullable-number",
-                    }:
+                    if not isinstance(expected_type, str) or expected_type not in SUPPORTED_VALUE_TYPES:
                         errors.append(
                             f"contracts[{index}].pathTypes[{path!r}] has unsupported type {expected_type!r}"
+                        )
+        if "arrayItemTypes" in entry:
+            array_item_types = entry["arrayItemTypes"]
+            if not isinstance(array_item_types, dict) or not array_item_types:
+                errors.append(f"contracts[{index}].arrayItemTypes must be a non-empty object")
+            else:
+                for path, expected_type in array_item_types.items():
+                    if not isinstance(path, str) or not path:
+                        errors.append(
+                            f"contracts[{index}].arrayItemTypes keys must be non-empty strings"
+                        )
+                    if not isinstance(expected_type, str) or expected_type not in SUPPORTED_VALUE_TYPES:
+                        errors.append(
+                            f"contracts[{index}].arrayItemTypes[{path!r}] has unsupported type {expected_type!r}"
+                        )
+        if "minimumItems" in entry:
+            minimum_items = entry["minimumItems"]
+            if not isinstance(minimum_items, dict) or not minimum_items:
+                errors.append(f"contracts[{index}].minimumItems must be a non-empty object")
+            else:
+                for path, minimum in minimum_items.items():
+                    if not isinstance(path, str) or not path:
+                        errors.append(
+                            f"contracts[{index}].minimumItems keys must be non-empty strings"
+                        )
+                    if not isinstance(minimum, int) or isinstance(minimum, bool) or minimum < 0:
+                        errors.append(
+                            f"contracts[{index}].minimumItems[{path!r}] must be a non-negative integer"
+                        )
+        if "enumValues" in entry:
+            enum_values = entry["enumValues"]
+            if not isinstance(enum_values, dict) or not enum_values:
+                errors.append(f"contracts[{index}].enumValues must be a non-empty object")
+            else:
+                for path, allowed_values in enum_values.items():
+                    if not isinstance(path, str) or not path:
+                        errors.append(
+                            f"contracts[{index}].enumValues keys must be non-empty strings"
+                        )
+                    if not isinstance(allowed_values, list) or not allowed_values:
+                        errors.append(
+                            f"contracts[{index}].enumValues[{path!r}] must be a non-empty list"
+                        )
+                        continue
+                    if any(not _is_scalar_json_value(value) for value in allowed_values):
+                        errors.append(
+                            f"contracts[{index}].enumValues[{path!r}] must contain only scalar JSON values"
                         )
         if "forbiddenFields" in entry and not isinstance(entry["forbiddenFields"], list):
             errors.append(f"contracts[{index}].forbiddenFields must be a list")
@@ -264,13 +303,55 @@ def validate_contract_fixtures(
                 errors.append(f"{name}: {error}")
 
         for path, expected_type in entry.get("pathTypes", {}).items():
-            values, path_errors = values_for_path(document, path)
+            matches, path_errors = _collect_path_values(document, path)
             for error in path_errors:
                 errors.append(f"{name}: {error}")
-            for value in values:
+            for _, value in matches:
                 if not validate_value_type(value, expected_type):
                     errors.append(
                         f"{name}: path {path!r} expected {expected_type} but found {type(value).__name__}"
+                    )
+
+        for path, expected_type in entry.get("arrayItemTypes", {}).items():
+            matches, path_errors = _collect_path_values(document, path)
+            for error in path_errors:
+                errors.append(f"{name}: {error}")
+            for matched_path, value in matches:
+                if not isinstance(value, list):
+                    errors.append(
+                        f"{name}: path {matched_path!r} expected an array for arrayItemTypes but found {type(value).__name__}"
+                    )
+                    continue
+                for item_index, item in enumerate(value):
+                    if not validate_value_type(item, expected_type):
+                        errors.append(
+                            f"{name}: path {matched_path}[{item_index}] expected {expected_type} but found {type(item).__name__}"
+                        )
+
+        for path, minimum_items in entry.get("minimumItems", {}).items():
+            matches, path_errors = _collect_path_values(document, path)
+            for error in path_errors:
+                errors.append(f"{name}: {error}")
+            for matched_path, value in matches:
+                if not isinstance(value, list):
+                    errors.append(
+                        f"{name}: path {matched_path!r} expected an array for minimumItems but found {type(value).__name__}"
+                    )
+                    continue
+                if len(value) < minimum_items:
+                    errors.append(
+                        f"{name}: path {matched_path!r} expected at least {minimum_items} items but found {len(value)}"
+                    )
+
+        for path, allowed_values in entry.get("enumValues", {}).items():
+            matches, path_errors = _collect_path_values(document, path)
+            for error in path_errors:
+                errors.append(f"{name}: {error}")
+            allowed_set = set(allowed_values)
+            for matched_path, value in matches:
+                if value not in allowed_set:
+                    errors.append(
+                        f"{name}: path {matched_path!r} expected one of {allowed_values!r} but found {value!r}"
                     )
 
         forbidden_fields = set(entry.get("forbiddenFields", []))

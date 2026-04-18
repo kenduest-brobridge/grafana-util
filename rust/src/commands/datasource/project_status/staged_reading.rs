@@ -9,9 +9,10 @@
 use serde_json::Value;
 
 use crate::project_status::{
-    status_finding, ProjectDomainStatusReading, PROJECT_STATUS_BLOCKED, PROJECT_STATUS_PARTIAL,
+    ProjectDomainStatusReading, PROJECT_STATUS_BLOCKED, PROJECT_STATUS_PARTIAL,
     PROJECT_STATUS_READY,
 };
+use crate::project_status_model::{StatusReading, StatusRecordCount};
 
 const DATASOURCE_DOMAIN_ID: &str = "datasource";
 const DATASOURCE_SCOPE: &str = "staged";
@@ -106,7 +107,7 @@ fn summary_source_label(source: Option<&str>, fallback: &str) -> String {
 }
 
 fn push_warning(
-    warnings: &mut Vec<crate::project_status::ProjectStatusFinding>,
+    warnings: &mut Vec<StatusRecordCount>,
     signal_keys: &mut Vec<String>,
     kind: &str,
     count: usize,
@@ -115,7 +116,7 @@ fn push_warning(
     if count == 0 {
         return;
     }
-    warnings.push(status_finding(kind, count, source));
+    warnings.push(StatusRecordCount::new(kind, count, source));
     append_signal_key(signal_keys, source);
 }
 
@@ -136,26 +137,29 @@ pub(crate) fn build_datasource_domain_status(
         .collect::<Vec<String>>();
 
     if datasources == 0 {
-        return Some(ProjectDomainStatusReading {
-            id: DATASOURCE_DOMAIN_ID.to_string(),
-            scope: DATASOURCE_SCOPE.to_string(),
-            mode: DATASOURCE_MODE.to_string(),
-            status: PROJECT_STATUS_PARTIAL.to_string(),
-            reason_code: DATASOURCE_REASON_PARTIAL_NO_DATA.to_string(),
-            primary_count: datasources,
-            source_kinds: DATASOURCE_SOURCE_KINDS
-                .iter()
-                .map(|item| (*item).to_string())
-                .collect(),
-            signal_keys,
-            blockers: Vec::new(),
-            warnings,
-            next_actions: DATASOURCE_EXPORT_AT_LEAST_ONE_ACTIONS
-                .iter()
-                .map(|item| (*item).to_string())
-                .collect(),
-            freshness: Default::default(),
-        });
+        return Some(
+            StatusReading {
+                id: DATASOURCE_DOMAIN_ID.to_string(),
+                scope: DATASOURCE_SCOPE.to_string(),
+                mode: DATASOURCE_MODE.to_string(),
+                status: PROJECT_STATUS_PARTIAL.to_string(),
+                reason_code: DATASOURCE_REASON_PARTIAL_NO_DATA.to_string(),
+                primary_count: datasources,
+                source_kinds: DATASOURCE_SOURCE_KINDS
+                    .iter()
+                    .map(|item| (*item).to_string())
+                    .collect(),
+                signal_keys,
+                blockers: Vec::new(),
+                warnings,
+                next_actions: DATASOURCE_EXPORT_AT_LEAST_ONE_ACTIONS
+                    .iter()
+                    .map(|item| (*item).to_string())
+                    .collect(),
+                freshness: Default::default(),
+            }
+            .into_project_domain_status_reading(),
+        );
     }
 
     let mut next_actions = if defaults == 0 {
@@ -320,7 +324,7 @@ pub(crate) fn build_datasource_domain_status(
     }
     if would_block > 0 {
         let source = summary_source_label(would_block_source, "wouldBlock");
-        blockers.push(status_finding(
+        blockers.push(StatusRecordCount::new(
             DATASOURCE_BLOCKER_IMPORT_PREVIEW_WOULD_BLOCK,
             would_block,
             &source,
@@ -393,7 +397,7 @@ pub(crate) fn build_datasource_domain_status(
         );
     }
 
-    let (status, reason_code) = if !blockers.is_empty() {
+    let (status, reason_code): (&str, &str) = if !blockers.is_empty() {
         (
             PROJECT_STATUS_BLOCKED,
             DATASOURCE_REASON_BLOCKED_BY_BLOCKERS,
@@ -402,23 +406,26 @@ pub(crate) fn build_datasource_domain_status(
         (PROJECT_STATUS_READY, DATASOURCE_REASON_READY)
     };
 
-    Some(ProjectDomainStatusReading {
-        id: DATASOURCE_DOMAIN_ID.to_string(),
-        scope: DATASOURCE_SCOPE.to_string(),
-        mode: DATASOURCE_MODE.to_string(),
-        status: status.to_string(),
-        reason_code: reason_code.to_string(),
-        primary_count: datasources,
-        source_kinds: DATASOURCE_SOURCE_KINDS
-            .iter()
-            .map(|item| (*item).to_string())
-            .collect(),
-        signal_keys,
-        blockers,
-        warnings,
-        next_actions,
-        freshness: Default::default(),
-    })
+    Some(
+        StatusReading {
+            id: DATASOURCE_DOMAIN_ID.to_string(),
+            scope: DATASOURCE_SCOPE.to_string(),
+            mode: DATASOURCE_MODE.to_string(),
+            status: status.to_string(),
+            reason_code: reason_code.to_string(),
+            primary_count: datasources,
+            source_kinds: DATASOURCE_SOURCE_KINDS
+                .iter()
+                .map(|item| (*item).to_string())
+                .collect(),
+            signal_keys,
+            blockers,
+            warnings,
+            next_actions,
+            freshness: Default::default(),
+        }
+        .into_project_domain_status_reading(),
+    )
 }
 
 #[cfg(test)]

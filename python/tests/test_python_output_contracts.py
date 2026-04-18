@@ -1,6 +1,8 @@
+import copy
 import io
 import json
 import sys
+import tempfile
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
@@ -29,6 +31,64 @@ class OutputContractTests(unittest.TestCase):
 
     def test_contract_fixtures_match_root_shape(self):
         self.assertEqual(output_contracts.check_output_contracts(), [])
+
+    def test_registry_accepts_collection_constraints(self):
+        registry = copy.deepcopy(self.registry)
+        registry["contracts"][0]["minimumItems"] = {"operations": 1}
+        registry["contracts"][0]["arrayItemTypes"] = {"operations": "object"}
+        registry["contracts"][0]["enumValues"] = {"operations[*].kind": ["folder"]}
+        registry["contracts"][0]["pathTypes"] = {"operations[*].kind": "non-empty-string"}
+
+        self.assertEqual(output_contracts.validate_registry(registry), [])
+
+    def test_validate_registry_rejects_invalid_collection_constraint_syntax(self):
+        registry = copy.deepcopy(self.registry)
+        registry["contracts"][0]["minimumItems"] = {"operations": -1}
+        registry["contracts"][0]["arrayItemTypes"] = {"operations": "unsupported"}
+        registry["contracts"][0]["enumValues"] = {"operations[*].kind": []}
+
+        errors = output_contracts.validate_registry(registry)
+        self.assertIn(
+            "contracts[0].minimumItems['operations'] must be a non-negative integer",
+            errors,
+        )
+        self.assertIn(
+            "contracts[0].arrayItemTypes['operations'] has unsupported type 'unsupported'",
+            errors,
+        )
+        self.assertIn(
+            "contracts[0].enumValues['operations[*].kind'] must be a non-empty list",
+            errors,
+        )
+
+    def test_check_output_contracts_reports_collection_constraint_failures(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_root = Path(temp_dir)
+            temp_registry_path = temp_root / "output-contracts.json"
+            temp_fixture_dir = temp_root / "output-fixtures"
+            temp_fixture_dir.mkdir(parents=True, exist_ok=True)
+
+            registry = copy.deepcopy(self.registry)
+            registry["contracts"][0]["fixture"] = "output-fixtures/sync-plan.json"
+            temp_fixture_path = temp_fixture_dir / "sync-plan.json"
+            fixture = json.loads(
+                (REGISTRY_PATH.parent / "output-fixtures" / "sync-plan.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            fixture["operations"][0]["kind"] = "dashboard"
+            temp_fixture_path.write_text(json.dumps(fixture, indent=2) + "\n", encoding="utf-8")
+            temp_registry_path.write_text(
+                json.dumps(registry, indent=2) + "\n",
+                encoding="utf-8",
+            )
+
+            errors = output_contracts.check_output_contracts(temp_registry_path)
+
+        self.assertTrue(
+            any("operations[0].kind" in error and "expected one of" in error for error in errors),
+            errors,
+        )
 
     def test_module_entrypoint_round_trip(self):
         stdout = io.StringIO()

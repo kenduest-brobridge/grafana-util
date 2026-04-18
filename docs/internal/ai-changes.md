@@ -15,6 +15,14 @@ Current AI change log only.
 - Older entries moved to [`ai-changes-archive-2026-04-17.md`](docs/internal/archive/ai-changes-archive-2026-04-17.md).
 - Older entries moved to [`ai-changes-archive-2026-04-18.md`](docs/internal/archive/ai-changes-archive-2026-04-18.md).
 
+## 2026-04-18 - Advance review and contract backlog
+- Summary: split dashboard browse detail rendering into a dedicated helper module, introduced a shared status producer model for staged datasource and alert adapters, extracted the sync live apply phase loop into a shared client/request helper, and extended output contract validation with collection-aware path matching plus array/enum constraints.
+- Tests: moved dashboard browse render tests into a dedicated module, added status model round-trip coverage, added sync live apply phase regressions, and expanded output contract checker tests for wildcard paths, array item types, minimum items, and enum values.
+- Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `cargo test --manifest-path rust/Cargo.toml --quiet browse_render --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet project_status --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet phase_ --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet sync_live --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet`; `make quality-output-contracts`; `PYTHONPATH=python python3 -m unittest -v python.tests.test_python_output_contracts`; `make quality-sync-rust`.
+- Impact: Rust dashboard browse rendering modules, staged project-status adapters, sync live apply orchestration modules, output contract checker/registry/tests, internal contract mapping docs, and AI trace docs. README files and generated user docs were intentionally left unchanged.
+- Rollback/Risk: low to medium internal refactor. Rollback should restore inline browse detail rendering, inline sync live apply loops, direct staged status construction, and the previous shallow output contract checker while preserving public command behavior.
+- Follow-up: split the pre-existing `rust/src/commands/datasource/plan/mod.rs` architecture hard blocker before treating `make quality-architecture` as a clean gate again.
+
 ## 2026-04-18 - Advance workspace review aggregation and cleanup
 - Summary: added an internal `WorkspaceReviewView` adapter so workspace preview and review TUI filtering share one action/domain/blocker normalization path while preserving the existing `grafana-utils-sync-plan` JSON shape. Split access team browse key dispatch and tests out of the input surface, reducing `team_browse_input.rs` to a small input/confirmation facade. Cleaned public dashboard summary/review wording and helper names without renaming true query analyzer internals.
 - Tests: added workspace review-view contract coverage and moved access team browse input tests into a dedicated module. Updated dashboard help/parser tests and live summary help fixtures for the summary/review wording.
@@ -86,11 +94,3 @@ Current AI change log only.
 - Impact: Rust access service-account, user, and org workflows; focused access tests; access command docs; generated man/html docs; and AI trace docs.
 - Rollback/Risk: medium access behavior change. Rollback would remove early blockers and return several Grafana-source constraints to live API failures, including externally synced user role changes and service-account import role validation.
 - Follow-up: decide separately whether IAM v0alpha1/resource-permission access surfaces deserve a dedicated command family instead of being folded into legacy user/team/service-account import.
-
-## 2026-04-18 - Harden access user/team import preflight
-- Summary: aligned access user/team import preflight with Grafana legacy API behavior. Team import now resolves member/admin identities through live org users and sends only emails to the bulk membership endpoint, blocks missing-email identities, and blocks provisioned-team membership changes before live writes. User import dry-run/apply now blocks external or externally synced profile, org role, and Grafana-admin updates and carries target evidence in structured dry-run rows.
-- Tests: added focused regressions for team import email resolution, missing-email blocking, provisioned-team dry-run blocking, external user profile blocking, and externally synced org-role blocking.
-- Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all`; `cargo test --manifest-path rust/Cargo.toml --quiet team_import`; `cargo test --manifest-path rust/Cargo.toml --quiet user_import`; `cargo test --manifest-path rust/Cargo.toml --quiet access`; `cargo test --manifest-path rust/Cargo.toml --quiet`; `cargo clippy --manifest-path rust/Cargo.toml --all-targets -- -D warnings`; `make man`; `make html`; `make quality-docs-surface`; `make quality-ai-workflow`; `make man-check`; `make html-check`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `git diff --check`.
-- Impact: Rust access user/team import workflows, dry-run document summary, focused access tests, access command docs, generated man/html docs, and AI trace docs.
-- Rollback/Risk: medium access import behavior change. Rollback would again allow login-style values into Grafana's email-only bulk membership endpoint and defer provisioned/external blockers to live Grafana errors.
-- Follow-up: none.

@@ -8,7 +8,7 @@ use crate::alert::{
 use crate::common::{message, Result};
 use crate::sync::live::SyncApplyOperation;
 
-use super::super::sync_live_apply_result::{append_live_apply_result, finish_live_apply_response};
+use super::super::sync_live_apply_phase::execute_live_apply_phase;
 
 pub(crate) fn execute_live_apply_with_request<F>(
     mut request_json: F,
@@ -19,37 +19,33 @@ pub(crate) fn execute_live_apply_with_request<F>(
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
-    let mut results = Vec::new();
-    for operation in operations {
-        let kind = operation.kind.as_str();
-        let response = match kind {
-            "folder" => apply_folder_operation_with_request(
-                &mut request_json,
-                operation,
-                allow_folder_delete,
-            )?,
-            "dashboard" => apply_dashboard_operation_with_request(&mut request_json, operation)?,
-            "datasource" => apply_datasource_operation_with_request(&mut request_json, operation)?,
-            "alert"
-            | "alert-contact-point"
-            | "alert-mute-timing"
-            | "alert-policy"
-            | "alert-template" => {
-                if operation.kind == "alert-policy"
-                    && operation.action == "would-delete"
-                    && !allow_policy_reset
-                {
-                    return Err(message(
-                        "Refusing live notification policy reset without --allow-policy-reset.",
-                    ));
-                }
-                apply_alert_operation_with_request(&mut request_json, operation)?
-            }
-            _ => return Err(message(format!("Unsupported sync resource kind {kind}."))),
-        };
-        append_live_apply_result(&mut results, operation, response);
+    execute_live_apply_phase(operations, allow_policy_reset, |operation| {
+        apply_live_operation_with_request(&mut request_json, operation, allow_folder_delete)
+    })
+}
+
+fn apply_live_operation_with_request<F>(
+    request_json: &mut F,
+    operation: &SyncApplyOperation,
+    allow_folder_delete: bool,
+) -> Result<Value>
+where
+    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
+{
+    let kind = operation.kind.as_str();
+    match kind {
+        "folder" => {
+            apply_folder_operation_with_request(request_json, operation, allow_folder_delete)
+        }
+        "dashboard" => apply_dashboard_operation_with_request(request_json, operation),
+        "datasource" => apply_datasource_operation_with_request(request_json, operation),
+        "alert"
+        | "alert-contact-point"
+        | "alert-mute-timing"
+        | "alert-policy"
+        | "alert-template" => apply_alert_operation_with_request(request_json, operation),
+        _ => Err(message(format!("Unsupported sync resource kind {kind}."))),
     }
-    Ok(finish_live_apply_response(results))
 }
 
 fn apply_folder_operation_with_request<F>(
