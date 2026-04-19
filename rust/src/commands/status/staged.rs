@@ -14,6 +14,10 @@ use crate::overview::{
     OVERVIEW_ARTIFACT_PROMOTION_PREFLIGHT_KIND, OVERVIEW_ARTIFACT_SYNC_SUMMARY_KIND,
 };
 use crate::project_status::build_project_status as build_shared_project_status;
+use crate::project_status_freshness::{
+    project_status_age_seconds_from_metadata, project_status_freshness_parts_from_ages,
+    ProjectStatusFreshnessParts,
+};
 use crate::sync::{
     build_promotion_domain_status, build_sync_domain_status, SyncDomainStatusInputs,
 };
@@ -22,10 +26,6 @@ use std::path::Path;
 use std::time::SystemTime;
 
 const OVERVIEW_PROJECT_DOMAIN_COUNT: usize = 6;
-const PROJECT_STATUS_FRESHNESS_CURRENT: &str = "current";
-const PROJECT_STATUS_FRESHNESS_STALE: &str = "stale";
-const PROJECT_STATUS_FRESHNESS_UNKNOWN: &str = "unknown";
-const PROJECT_STATUS_STALE_AGE_SECONDS: u64 = 7 * 24 * 60 * 60;
 
 fn artifact_input_ages_seconds(artifact: &OverviewArtifact) -> Vec<u64> {
     let now = SystemTime::now();
@@ -35,33 +35,19 @@ fn artifact_input_ages_seconds(artifact: &OverviewArtifact) -> Vec<u64> {
         .filter_map(|input| {
             let path = Path::new(&input.value);
             let metadata = fs::metadata(path).ok()?;
-            let modified = metadata.modified().ok()?;
-            now.duration_since(modified).ok().map(|age| age.as_secs())
+            project_status_age_seconds_from_metadata(now, &metadata)
         })
         .collect()
 }
 
-fn freshness_from_ages(ages: &[u64]) -> OverviewProjectStatusFreshness {
-    if ages.is_empty() {
-        return OverviewProjectStatusFreshness {
-            status: PROJECT_STATUS_FRESHNESS_UNKNOWN.to_string(),
-            source_count: 0,
-            newest_age_seconds: None,
-            oldest_age_seconds: None,
-        };
-    }
-    let newest_age_seconds = ages.iter().min().copied();
-    let oldest_age_seconds = ages.iter().max().copied();
-    let status = if oldest_age_seconds.unwrap_or(0) > PROJECT_STATUS_STALE_AGE_SECONDS {
-        PROJECT_STATUS_FRESHNESS_STALE
-    } else {
-        PROJECT_STATUS_FRESHNESS_CURRENT
-    };
+fn build_overview_project_status_freshness(
+    freshness: ProjectStatusFreshnessParts,
+) -> OverviewProjectStatusFreshness {
     OverviewProjectStatusFreshness {
-        status: status.to_string(),
-        source_count: ages.len(),
-        newest_age_seconds,
-        oldest_age_seconds,
+        status: freshness.status,
+        source_count: freshness.source_count,
+        newest_age_seconds: freshness.newest_age_seconds,
+        oldest_age_seconds: freshness.oldest_age_seconds,
     }
 }
 
@@ -75,7 +61,10 @@ fn domain_freshness(
             ages.extend(artifact_input_ages_seconds(artifact));
         }
     }
-    freshness_from_ages(&ages)
+    build_overview_project_status_freshness(project_status_freshness_parts_from_ages(
+        ages.len(),
+        &ages,
+    ))
 }
 
 fn attach_domain_freshness(
@@ -222,15 +211,17 @@ fn build_project_status_domains(
 }
 
 pub(crate) fn build_staged_project_status(artifacts: &[OverviewArtifact]) -> OverviewProjectStatus {
+    let ages = artifacts
+        .iter()
+        .flat_map(artifact_input_ages_seconds)
+        .collect::<Vec<_>>();
     build_shared_project_status(
         "staged-only",
         OVERVIEW_PROJECT_DOMAIN_COUNT,
-        freshness_from_ages(
-            &artifacts
-                .iter()
-                .flat_map(artifact_input_ages_seconds)
-                .collect::<Vec<_>>(),
-        ),
+        build_overview_project_status_freshness(project_status_freshness_parts_from_ages(
+            ages.len(),
+            &ages,
+        )),
         build_project_status_domains(artifacts),
     )
 }

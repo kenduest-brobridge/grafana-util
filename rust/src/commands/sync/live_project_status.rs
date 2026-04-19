@@ -10,6 +10,7 @@
 #![allow(dead_code)]
 
 use crate::project_status::ProjectDomainStatus;
+use crate::project_status_model::StatusReading;
 
 const LIVE_STATUS_UNKNOWN: &str = "unknown";
 const LIVE_REASON_LIVE_SUPPORT_UNAVAILABLE: &str = "live-support-unavailable";
@@ -39,15 +40,13 @@ fn build_unknown_live_domain_status(
     signal_keys: &[&str],
     next_actions: &[&str],
 ) -> ProjectDomainStatus {
-    ProjectDomainStatus {
+    StatusReading {
         id: id.to_string(),
         scope: LIVE_SCOPE.to_string(),
         mode: LIVE_MODE.to_string(),
         status: LIVE_STATUS_UNKNOWN.to_string(),
         reason_code: LIVE_REASON_LIVE_SUPPORT_UNAVAILABLE.to_string(),
         primary_count: 0,
-        blocker_count: 0,
-        warning_count: 0,
         source_kinds: vec![source_kind.to_string()],
         signal_keys: signal_keys.iter().map(|item| (*item).to_string()).collect(),
         blockers: Vec::new(),
@@ -58,6 +57,7 @@ fn build_unknown_live_domain_status(
             .collect(),
         freshness: Default::default(),
     }
+    .into_project_domain_status()
 }
 
 pub(crate) fn build_live_sync_domain_status() -> ProjectDomainStatus {

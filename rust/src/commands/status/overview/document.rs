@@ -2,14 +2,13 @@
 
 use super::{
     overview_kind::parse_overview_artifact_kind, overview_sections::build_overview_summary_item,
-    overview_summary_projection::build_overview_summary, OverviewArtifact, OverviewDocument,
-    OVERVIEW_KIND, OVERVIEW_SCHEMA_VERSION,
+    overview_summary_projection::{
+        build_overview_summary, render_overview_decision_order,
+        render_overview_finding_summary, render_overview_signal_summary,
+    },
+    OverviewArtifact, OverviewDocument, OVERVIEW_KIND, OVERVIEW_SCHEMA_VERSION,
 };
 use crate::common::{message, tool_version, Result};
-use crate::project_status::{
-    render_domain_finding_summary, render_project_status_decision_order,
-    render_project_status_signal_summary,
-};
 use crate::project_status_staged::build_staged_project_status;
 use crate::sync::render_discovery_summary_from_value;
 use serde_json::Value;
@@ -82,10 +81,10 @@ pub(crate) fn render_overview_text(document: &OverviewDocument) -> Result<Vec<St
             lines.push(summary);
         }
     }
-    if let Some(summary) = render_project_status_signal_summary(&document.project_status) {
+    if let Some(summary) = render_overview_signal_summary(&document.project_status) {
         lines.push(summary);
     }
-    if let Some(order) = render_project_status_decision_order(&document.project_status) {
+    if let Some(order) = render_overview_decision_order(&document.project_status) {
         lines.push("Decision order:".to_string());
         lines.extend(order);
     }
@@ -105,10 +104,10 @@ pub(crate) fn render_overview_text(document: &OverviewDocument) -> Result<Vec<St
             if let Some(action) = domain.next_actions.first() {
                 line.push_str(&format!(" next={action}"));
             }
-            if let Some(summary) = render_domain_finding_summary(&domain.blockers) {
+            if let Some(summary) = render_overview_finding_summary(&domain.blockers) {
                 line.push_str(&format!(" blockerKinds={summary}"));
             }
-            if let Some(summary) = render_domain_finding_summary(&domain.warnings) {
+            if let Some(summary) = render_overview_finding_summary(&domain.warnings) {
                 line.push_str(&format!(" warningKinds={summary}"));
             }
             lines.push(line);

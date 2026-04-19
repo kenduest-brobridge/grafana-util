@@ -15,9 +15,16 @@ use std::fs::Metadata;
 use std::time::SystemTime;
 
 const PROJECT_STATUS_FRESHNESS_CURRENT: &str = "current";
-const PROJECT_STATUS_FRESHNESS_STALE: &str = "stale";
-const PROJECT_STATUS_FRESHNESS_UNKNOWN: &str = "unknown";
-const PROJECT_STATUS_STALE_AGE_SECONDS: u64 = 7 * 24 * 60 * 60;
+pub(crate) const PROJECT_STATUS_FRESHNESS_STALE: &str = "stale";
+pub(crate) const PROJECT_STATUS_FRESHNESS_UNKNOWN: &str = "unknown";
+pub(crate) const PROJECT_STATUS_STALE_AGE_SECONDS: u64 = 7 * 24 * 60 * 60;
+
+pub(crate) struct ProjectStatusFreshnessParts {
+    pub(crate) status: String,
+    pub(crate) source_count: usize,
+    pub(crate) newest_age_seconds: Option<u64>,
+    pub(crate) oldest_age_seconds: Option<u64>,
+}
 
 #[allow(dead_code)]
 pub(crate) enum ProjectStatusFreshnessSample<'a> {
@@ -68,7 +75,10 @@ fn age_seconds_from_observed_at(now: SystemTime, observed_at: &str) -> Option<u6
 }
 
 #[allow(dead_code)]
-fn age_seconds_from_metadata(now: SystemTime, metadata: &Metadata) -> Option<u64> {
+pub(crate) fn project_status_age_seconds_from_metadata(
+    now: SystemTime,
+    metadata: &Metadata,
+) -> Option<u64> {
     let observed_at = metadata.modified().ok()?;
     age_seconds_from_system_time(now, observed_at)
 }
@@ -109,7 +119,7 @@ fn freshness_from_samples_at(
                 age_seconds_from_system_time(now, *observed_at)
             }
             ProjectStatusFreshnessSample::ObservedAtMetadata { metadata, .. } => {
-                age_seconds_from_metadata(now, metadata)
+                project_status_age_seconds_from_metadata(now, metadata)
             }
         })
         .collect::<Vec<_>>();
@@ -118,10 +128,10 @@ fn freshness_from_samples_at(
         .or_else(|| Some((PROJECT_STATUS_FRESHNESS_CURRENT.to_string(), None, None)))
 }
 
-pub(crate) fn build_live_project_status_freshness(
+pub(crate) fn project_status_freshness_parts_from_ages(
     source_count: usize,
     ages: &[u64],
-) -> ProjectStatusFreshness {
+) -> ProjectStatusFreshnessParts {
     let effective_source_count = if source_count > 0 {
         source_count
     } else {
@@ -129,30 +139,34 @@ pub(crate) fn build_live_project_status_freshness(
     };
 
     if effective_source_count == 0 {
-        return build_project_status_freshness(PROJECT_STATUS_FRESHNESS_UNKNOWN, 0, None, None);
+        return ProjectStatusFreshnessParts {
+            status: PROJECT_STATUS_FRESHNESS_UNKNOWN.to_string(),
+            source_count: 0,
+            newest_age_seconds: None,
+            oldest_age_seconds: None,
+        };
     }
 
     if let Some((status, newest_age_seconds, oldest_age_seconds)) = freshness_from_ages(ages) {
-        return build_project_status_freshness(
-            &status,
-            effective_source_count,
+        return ProjectStatusFreshnessParts {
+            status,
+            source_count: effective_source_count,
             newest_age_seconds,
             oldest_age_seconds,
-        );
+        };
     }
 
-    build_project_status_freshness(
-        PROJECT_STATUS_FRESHNESS_CURRENT,
-        effective_source_count,
-        None,
-        None,
-    )
+    ProjectStatusFreshnessParts {
+        status: PROJECT_STATUS_FRESHNESS_CURRENT.to_string(),
+        source_count: effective_source_count,
+        newest_age_seconds: None,
+        oldest_age_seconds: None,
+    }
 }
 
-#[allow(dead_code)]
-pub(crate) fn build_live_project_status_freshness_from_samples(
+pub(crate) fn project_status_freshness_parts_from_samples(
     samples: &[ProjectStatusFreshnessSample<'_>],
-) -> ProjectStatusFreshness {
+) -> ProjectStatusFreshnessParts {
     let effective_source_count = samples
         .iter()
         .map(|sample| match sample {
@@ -165,7 +179,12 @@ pub(crate) fn build_live_project_status_freshness_from_samples(
         .len();
 
     if effective_source_count == 0 {
-        return build_project_status_freshness(PROJECT_STATUS_FRESHNESS_UNKNOWN, 0, None, None);
+        return ProjectStatusFreshnessParts {
+            status: PROJECT_STATUS_FRESHNESS_UNKNOWN.to_string(),
+            source_count: 0,
+            newest_age_seconds: None,
+            oldest_age_seconds: None,
+        };
     }
 
     let freshness = freshness_from_samples_at(SystemTime::now(), samples).unwrap_or((
@@ -173,18 +192,53 @@ pub(crate) fn build_live_project_status_freshness_from_samples(
         None,
         None,
     ));
+    ProjectStatusFreshnessParts {
+        status: freshness.0,
+        source_count: effective_source_count,
+        newest_age_seconds: freshness.1,
+        oldest_age_seconds: freshness.2,
+    }
+}
+
+pub(crate) fn build_live_project_status_freshness_from_parts(
+    freshness: ProjectStatusFreshnessParts,
+) -> ProjectStatusFreshness {
     build_project_status_freshness(
-        &freshness.0,
-        effective_source_count,
-        freshness.1,
-        freshness.2,
+        &freshness.status,
+        freshness.source_count,
+        freshness.newest_age_seconds,
+        freshness.oldest_age_seconds,
     )
 }
 
+#[cfg(test)]
+pub(crate) fn build_live_project_status_freshness(
+    source_count: usize,
+    ages: &[u64],
+) -> ProjectStatusFreshness {
+    build_live_project_status_freshness_from_parts(project_status_freshness_parts_from_ages(
+        source_count,
+        ages,
+    ))
+}
+
+#[allow(dead_code)]
+pub(crate) fn build_live_project_status_freshness_from_samples(
+    samples: &[ProjectStatusFreshnessSample<'_>],
+) -> ProjectStatusFreshness {
+    build_live_project_status_freshness_from_parts(project_status_freshness_parts_from_samples(
+        samples,
+    ))
+}
+
+#[cfg(test)]
 pub(crate) fn build_live_project_status_freshness_from_source_count(
     source_count: usize,
 ) -> ProjectStatusFreshness {
-    build_live_project_status_freshness(source_count, &[])
+    build_live_project_status_freshness_from_parts(project_status_freshness_parts_from_ages(
+        source_count,
+        &[],
+    ))
 }
 
 #[cfg(test)]

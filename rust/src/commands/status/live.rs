@@ -26,8 +26,8 @@ use crate::project_status::{
 };
 use crate::project_status_command::{ProjectStatusLiveArgs, PROJECT_STATUS_DOMAIN_COUNT};
 use crate::project_status_freshness::{
-    build_live_project_status_freshness, build_live_project_status_freshness_from_samples,
-    build_live_project_status_freshness_from_source_count, ProjectStatusFreshnessSample,
+    build_live_project_status_freshness_from_parts, project_status_freshness_parts_from_ages,
+    project_status_freshness_parts_from_samples, ProjectStatusFreshnessSample,
 };
 use crate::project_status_model::{StatusReading, StatusRecordCount};
 use crate::project_status_support::{build_live_project_status_api_client, project_status_live};
@@ -90,11 +90,12 @@ fn stamp_live_domain_freshness(
     mut domain: ProjectDomainStatus,
     samples: &[ProjectStatusFreshnessSample<'_>],
 ) -> ProjectDomainStatus {
-    domain.freshness = if samples.is_empty() {
-        build_live_project_status_freshness_from_source_count(domain.source_kinds.len())
+    let freshness = if samples.is_empty() {
+        project_status_freshness_parts_from_ages(domain.source_kinds.len(), &[])
     } else {
-        build_live_project_status_freshness_from_samples(samples)
+        project_status_freshness_parts_from_samples(samples)
     };
+    domain.freshness = build_live_project_status_freshness_from_parts(freshness);
     domain
 }
 
@@ -110,7 +111,10 @@ fn build_live_overall_freshness(domains: &[ProjectDomainStatus]) -> ProjectStatu
             ages.push(age);
         }
     }
-    build_live_project_status_freshness(source_count, &ages)
+    build_live_project_status_freshness_from_parts(project_status_freshness_parts_from_ages(
+        source_count,
+        &ages,
+    ))
 }
 
 pub(crate) fn build_live_project_status(args: &ProjectStatusLiveArgs) -> Result<ProjectStatus> {

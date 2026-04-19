@@ -304,6 +304,7 @@ pub struct OverviewDocument {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub discovery: Option<Value>,
     pub summary: OverviewSummary,
+    // Overview only reports the shared status snapshot; status decisions stay in the status layer.
     pub project_status: OverviewProjectStatus,
     pub artifacts: Vec<OverviewArtifact>,
     pub selected_section_index: usize,

@@ -15,6 +15,7 @@ use crate::project_status::{
     status_finding, ProjectDomainStatus, PROJECT_STATUS_BLOCKED, PROJECT_STATUS_PARTIAL,
     PROJECT_STATUS_READY,
 };
+use crate::project_status_model::StatusReading;
 
 const SYNC_DOMAIN_ID: &str = "sync";
 const SYNC_SCOPE: &str = "live";
@@ -239,22 +240,23 @@ pub(crate) fn build_live_sync_domain_status(
             (resources, PROJECT_STATUS_PARTIAL, reason_code, next_actions)
         };
 
-    Some(ProjectDomainStatus {
+    Some(
+        StatusReading {
         id: SYNC_DOMAIN_ID.to_string(),
         scope: SYNC_SCOPE.to_string(),
         mode: SYNC_MODE.to_string(),
         status: status.to_string(),
         reason_code: reason_code.to_string(),
         primary_count: resources,
-        blocker_count: blockers.iter().map(|item| item.count).sum(),
-        warning_count: warnings.iter().map(|item| item.count).sum(),
         source_kinds,
         signal_keys,
-        blockers,
-        warnings,
+        blockers: blockers.into_iter().map(Into::into).collect(),
+        warnings: warnings.into_iter().map(Into::into).collect(),
         next_actions,
         freshness: Default::default(),
-    })
+        }
+        .into_project_domain_status(),
+    )
 }
 
 #[cfg(test)]
