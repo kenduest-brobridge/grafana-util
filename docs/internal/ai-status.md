@@ -17,6 +17,13 @@ Current AI-maintained status only.
 - Older entries moved to [`ai-status-archive-2026-04-19.md`](docs/internal/archive/ai-status-archive-2026-04-19.md).
 - Older entries moved to [`ai-status-archive-2026-04-20.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-04-20.md).
 
+## 2026-04-20 - Split dashboard artifact command routing
+- State: Done
+- Scope: Rust dashboard command artifact workspace routing, local artifact input materialization, focused Rust tests, and AI trace docs. Public CLI behavior, command docs, generated docs, Python implementation, and output contracts are out of scope.
+- Baseline: `dashboard command_runner.rs` still owned both top-level command dispatch and artifact workspace run/local-input resolution, keeping export orchestration coupled to artifact path materialization.
+- Current Update: Extracted dashboard artifact run selection, output lane routing, latest-run recording, and local input materialization into `command_artifacts.rs`; `command_runner.rs` now delegates those artifact concerns while keeping command execution routing.
+- Result: Focused dashboard parser/artifact command tests, full Rust tests, maintainability report, and AI workflow checks pass.
+
 ## 2026-04-20 - Complete Python artifact and plan parity
 - State: Done
 - Scope: Python artifact workspace resolver, datasource local/plan flows, access local/plan flows, snapshot local review, focused Python tests, and AI trace docs. Existing Rust worktree changes are out of scope and must not be modified.
@@ -51,10 +58,3 @@ Current AI-maintained status only.
 - Baseline: Export commands had per-domain default directories and profile config resolved connection settings from `grafana-util.yaml` or `GRAFANA_UTIL_CONFIG`; local browse/summary/review commands required explicit input directories.
 - Current Update: Added config-relative `artifact_root`, run-centric artifact resolver, root `--config`, artifact `--run`/`--run-id`, and selected `--local` consumers for dashboard, snapshot, datasource, and access lanes.
 - Result: Implementation completed without running validation by request. Known limitations: dashboard import/diff required-input flows and access import/diff still prefer explicit directories; snapshot review uses the default artifact scope until profile-aware review args are added.
-
-## 2026-04-18 - Fix Rust 1.95 sync review clippy failure
-- State: Done
-- Scope: Rust sync review TUI key handling, CI failure analysis, focused sync tests, full Rust test, clippy, formatting, architecture gate, and AI trace docs. Public CLI behavior, generated docs, README files, JSON contracts, and Python implementation are out of scope.
-- Baseline: GitHub Actions `rust-quality` passed cargo tests on commit `8a6b7d6b`, then failed under Rust 1.95 clippy because nested `if diff_mode` checks inside `review_tui` key handling triggered the new `collapsible_match` lint.
-- Current Update: Collapsed the nested diff-mode checks into guarded `match key.code` arms while preserving the same checklist and diff-view key behavior.
-- Result: Focused sync tests, full Rust tests, local clippy, formatting, and architecture checks pass. CI must rerun on pushed commits to verify the Rust 1.95 lint gate.

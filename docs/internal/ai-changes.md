@@ -17,6 +17,13 @@ Current AI change log only.
 - Older entries moved to [`ai-changes-archive-2026-04-19.md`](docs/internal/archive/ai-changes-archive-2026-04-19.md).
 - Older entries moved to [`ai-changes-archive-2026-04-20.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-changes-archive-2026-04-20.md).
 
+## 2026-04-20 - Split dashboard artifact command routing
+- Summary: moved dashboard artifact workspace run resolution and local input materialization out of the command runner into a focused Rust helper module while preserving existing dashboard CLI behavior.
+- Tests: verified the refactor with focused dashboard parser, artifact, and dashboard command scopes plus formatter and maintainability checks.
+- Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all`; `cargo test --manifest-path rust/Cargo.toml --quiet dashboard_cli_parser_help_workflow --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet dashboard_cli_parser_help_list_export --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet run_dashboard_cli --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet artifact --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet dashboard --lib`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `cargo test --manifest-path rust/Cargo.toml --quiet`; `python3 scripts/rust_maintainability_report.py`; `make quality-ai-workflow`.
+- Impact: `rust/src/commands/dashboard/command_runner.rs`, `rust/src/commands/dashboard/command_artifacts.rs`, dashboard module registration, and AI trace docs. Public CLI paths, flags, and output contracts are intentionally unchanged.
+- Rollback/Risk: low mechanical extraction. Rollback would re-inline the artifact helpers into the command runner; risk is import/visibility drift, covered by focused Rust tests.
+
 ## 2026-04-20 - Split Rust command orchestration modules
 - Summary: split the remaining oversized Rust production files for access dispatch, dashboard export, and dashboard prompt transformation into focused helper modules while preserving the existing public entrypoints.
 - Tests: kept the refactor behavior-preserving with focused access, export, and prompt test filters plus formatter and maintainability checks.
@@ -83,10 +90,3 @@ Current AI change log only.
 - Test Run: `python3 scripts/check_ai_workflow.py` initially reported that maintainer/contract/architecture docs changed without a matching trace update; the trace files were then updated to satisfy the repo’s workflow guard.
 - Impact: `docs/internal/contract-doc-map.md`, `docs/internal/ai-status.md`, and `docs/internal/ai-changes.md`. Runtime code, public CLI behavior, generated docs, README files, JSON contracts, and Python implementation were intentionally left unchanged.
 - Rollback/Risk: low documentation-only change. Rollback would return the contract map to the less explicit ownership wording.
-
-## 2026-04-19 - Advance status and review-governance cleanup
-- Summary: routed the alert live status producer through the shared status reading model while preserving the existing project-status output shape. Cleaned stale backlog entries, documented how runtime golden contracts and schema manifests should overlap, and added an internal inventory for future mutation review-envelope work without changing public JSON contracts.
-- Tests: preserved behavior for alert live project-status output and avoided public CLI or schema changes.
-- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet alert_live_project_status`; `cargo test --manifest-path rust/Cargo.toml --quiet project_status`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `make quality-output-contracts`; `make schema-check`; `make quality-architecture`; `cargo clippy --manifest-path rust/Cargo.toml --all-targets -- -D warnings`; `cargo test --manifest-path rust/Cargo.toml --quiet`; `make quality-ai-workflow`.
-- Impact: Rust alert live status internals, maintainer contract guidance, mutation review planning docs, TODO backlog, and AI trace docs. README files, generated docs, public CLI behavior, and Python implementation were intentionally left unchanged.
-- Rollback/Risk: low behavior-preserving status-model refactor plus maintainer docs. Rollback would restore direct alert live project-status construction and remove the new review-envelope planning note.

@@ -24,6 +24,7 @@ mod browse_support;
 mod browse_terminal;
 mod browse_tui;
 mod cli_defs;
+mod command_artifacts;
 mod command_runner;
 mod delete;
 mod delete_interactive;
