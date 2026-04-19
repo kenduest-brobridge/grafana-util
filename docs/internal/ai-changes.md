@@ -17,6 +17,13 @@ Current AI change log only.
 - Older entries moved to [`ai-changes-archive-2026-04-19.md`](docs/internal/archive/ai-changes-archive-2026-04-19.md).
 - Older entries moved to [`ai-changes-archive-2026-04-20.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-changes-archive-2026-04-20.md).
 
+## 2026-04-20 - Clarify sync project-status boundary
+- Summary: extracted shared sync project-status JSON helpers, reused them across staged sync and promotion domain-status producers, and moved sync domain-status tests into a dedicated Rust test module.
+- Tests: preserved existing sync and promotion project-status behavior while reducing production/test mixing in `sync/project_status.rs`.
+- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet sync_project_status --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet project_status_promotion --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet status --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet sync --lib`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `python3 scripts/rust_maintainability_report.py`; `cargo test --manifest-path rust/Cargo.toml --quiet`.
+- Impact: `rust/src/commands/sync/project_status.rs`, `rust/src/commands/sync/project_status_json.rs`, `rust/src/commands/sync/project_status_tests.rs`, `rust/src/commands/sync/project_status_promotion.rs`, `rust/src/commands/sync/mod.rs`, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are intentionally unchanged.
+- Rollback/Risk: low mechanical refactor inside sync-owned status producers. Rollback would restore local JSON helpers and inline sync tests; behavior should remain unchanged because focused and full Rust tests cover the moved paths.
+
 ## 2026-04-20 - Split Rust architecture hotspots
 - Summary: removed obsolete sync compatibility aliases, routed root preflight through canonical sync modules, and split large Rust command hotspots for resource, dashboard import validation, and access org workflows into focused facade-backed modules.
 - Tests: preserved public Rust command surfaces and behavior while narrowing module ownership for resource CLI/catalog/runtime/rendering, dashboard import validation auth/org/dependency validation, and access org live/sync/diff workflows.
@@ -81,11 +88,3 @@ Current AI change log only.
 - Test Run: `make man`; `make html`; `make man-check`; `make html-check`; `make quality-docs-surface`; `make quality-ai-workflow`.
 - Impact: `docs/user-guide/{en,zh-TW}/getting-started.md`, artifact-related command docs under `docs/commands/{en,zh-TW}/`, `scripts/contracts/command-surface.json`, and AI trace docs.
 - Rollback/Risk: low docs/contract clarification. Rollback would remove operator guidance for the already implemented artifact workspace behavior.
-
-## 2026-04-19 - Add artifact workspace run support
-- Summary: added run-centric artifact workspace primitives and profile config `artifact_root`, root `--config`, timestamp/latest/run-id routing for key export flows, and local artifact resolution for selected browse/list/summary/review/plan paths.
-- Tests: updated focused Rust parser/test literals for changed option shapes; no test execution.
-- Test Run: not run per user instruction.
-- Impact: `rust/src/common/artifact_workspace.rs`, `rust/src/commands/config/profile/config.rs`, `rust/src/cli/mod.rs`, `rust/src/cli/dispatch.rs`, Rust dashboard/snapshot/datasource/access command modules, selected Rust tests, and AI trace docs.
-- Rollback/Risk: medium CLI behavior expansion guarded by explicit artifact flags or `--local`; rollback by removing artifact resolver usage and keeping existing explicit `--input-dir`/`--output-dir` paths.
-- Follow-up: add generated docs/contracts and broaden artifact local support for dashboard import/diff and access import/diff if desired.

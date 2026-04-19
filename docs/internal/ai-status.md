@@ -17,6 +17,13 @@ Current AI-maintained status only.
 - Older entries moved to [`ai-status-archive-2026-04-19.md`](docs/internal/archive/ai-status-archive-2026-04-19.md).
 - Older entries moved to [`ai-status-archive-2026-04-20.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-04-20.md).
 
+## 2026-04-20 - Clarify sync project-status boundary
+- State: Done
+- Scope: Rust sync project-status producer boundaries, shared sync document JSON helpers, focused sync/status tests, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
+- Baseline: Sync staged and promotion domain-status producers each owned local JSON summary/section helper functions, and `sync/project_status.rs` mixed production status shaping with inline tests.
+- Current Update: Extracted shared sync project-status JSON helpers, reused them from staged sync and promotion status producers, and moved sync domain-status tests behind a dedicated test module.
+- Result: Focused sync/status tests, full Rust tests, formatter check, maintainability report, and AI workflow checks pass.
+
 ## 2026-04-20 - Split Rust architecture hotspots
 - State: Done
 - Scope: Rust-only architecture cleanup for sync compatibility exports, resource command module boundaries, dashboard import validation boundaries, access org workflow boundaries, focused Rust tests, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
@@ -51,10 +58,3 @@ Current AI-maintained status only.
 - Baseline: Python lacked Rust-public `dashboard history diff`, `dashboard plan`, and access browse entrypoints; topology interactive mode returned an unsupported error; status live silently swallowed several live read failures and called a missing dashboard client method.
 - Current Update: Added Python command wiring and runtime documents for dashboard plan/history diff, a deterministic topology interactive text browser, scoped live status all-org aggregation with blocked read-failure domains, access browse list/local-bundle flows, profile artifact lane resolution for access browse `--local/--run/--run-id`, dashboard plan `--use-export-org` routed review, and focused tests.
 - Result: Focused Python syntax/unit tests, full Python discovery, docs-surface, and AI workflow checks pass.
-
-## 2026-04-19 - Broaden artifact workspace local consumers
-- State: Done
-- Scope: Rust dashboard/access import and diff artifact input routing, command docs, command-surface contract, generated docs, and AI trace docs. Python implementation, README files, and live Grafana behavior beyond resolving local artifact input paths are out of scope.
-- Baseline: Dashboard import/diff and access import/diff required explicit input or diff directories even after export/list/browse flows could resolve profile artifact runs.
-- Current Update: Added `--local`, `--run`, and `--run-id` artifact input resolution for dashboard import/diff and access user/team/org/service-account import/diff.
-- Result: Rust formatting, generated docs, docs-surface, and AI workflow checks pass. Rust tests were not run.

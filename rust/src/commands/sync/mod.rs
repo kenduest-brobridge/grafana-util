@@ -41,6 +41,7 @@ mod output;
 mod plan_builder;
 pub mod preflight;
 mod project_status;
+mod project_status_json;
 mod project_status_promotion;
 pub mod promotion_preflight;
 pub mod review_tui;
@@ -168,6 +169,10 @@ mod sync_live_rust_tests;
 #[cfg(test)]
 #[path = "rust_tests.rs"]
 mod sync_rust_tests;
+
+#[cfg(test)]
+#[path = "project_status_tests.rs"]
+mod sync_project_status_rust_tests;
 
 #[cfg(test)]
 #[path = "workspace_preview_review_view_rust_tests.rs"]

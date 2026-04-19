@@ -14,6 +14,10 @@ use crate::project_status::{
 };
 use crate::project_status_model::StatusReading;
 
+use super::project_status_json::{
+    push_unique, section_bool, section_number, section_object, section_text, summary_number,
+};
+
 const PROMOTION_DOMAIN_ID: &str = "promotion";
 const PROMOTION_SCOPE: &str = "staged";
 const PROMOTION_MODE: &str = "artifact-summary";
@@ -79,57 +83,14 @@ const PROMOTION_REVIEW_FOLDER_REMAPS_ACTIONS: &[&str] =
 const PROMOTION_REVIEW_DATASOURCE_REMAPS_ACTIONS: &[&str] =
     &["review datasource remaps before promotion review"];
 
-fn summary_number(document: &Value, key: &str) -> usize {
-    document
-        .get("summary")
-        .and_then(|value| value.get(key))
-        .and_then(Value::as_u64)
-        .unwrap_or(0) as usize
-}
-
-fn nested_summary_object<'a>(document: Option<&'a Value>, key: &str) -> Option<&'a Value> {
-    document
-        .and_then(Value::as_object)
-        .and_then(|object| object.get(key))
-}
-
-fn summary_bool(document: Option<&Value>, section: &str, key: &str) -> bool {
-    nested_summary_object(document, section)
-        .and_then(|value| value.get(key))
-        .and_then(Value::as_bool)
-        .unwrap_or(false)
-}
-
-fn summary_text(document: Option<&Value>, section: &str, key: &str) -> Option<String> {
-    nested_summary_object(document, section)
-        .and_then(|value| value.get(key))
-        .and_then(Value::as_str)
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-        .map(str::to_string)
-}
-
-fn nested_number(document: Option<&Value>, section: &str, key: &str) -> usize {
-    nested_summary_object(document, section)
-        .and_then(|value| value.get(key))
-        .and_then(Value::as_u64)
-        .unwrap_or(0) as usize
-}
-
-fn push_unique(next_actions: &mut Vec<String>, action: &str) {
-    if !next_actions.iter().any(|item| item == action) {
-        next_actions.push(action.to_string());
-    }
-}
-
 fn handoff_warning_source(document: Option<&Value>) -> &'static str {
-    if summary_bool(document, "handoffSummary", "readyForReview")
-        && summary_text(document, "handoffSummary", "reviewInstruction").is_none()
+    if section_bool(document, "handoffSummary", "readyForReview")
+        && section_text(document, "handoffSummary", "reviewInstruction").is_none()
     {
         "handoffSummary.nextStage"
-    } else if summary_bool(document, "handoffSummary", "readyForReview") {
+    } else if section_bool(document, "handoffSummary", "readyForReview") {
         "handoffSummary.readyForReview"
-    } else if summary_text(document, "handoffSummary", "reviewInstruction").is_some() {
+    } else if section_text(document, "handoffSummary", "reviewInstruction").is_some() {
         "handoffSummary.reviewInstruction"
     } else {
         "handoffSummary.reviewRequired"
@@ -137,17 +98,17 @@ fn handoff_warning_source(document: Option<&Value>) -> &'static str {
 }
 
 fn continuation_warning_source(document: Option<&Value>) -> &'static str {
-    if summary_bool(document, "continuationSummary", "readyForContinuation")
-        && nested_number(document, "continuationSummary", "resolvedCount") > 0
+    if section_bool(document, "continuationSummary", "readyForContinuation")
+        && section_number(document, "continuationSummary", "resolvedCount") > 0
     {
         "continuationSummary.resolvedCount"
-    } else if summary_bool(document, "continuationSummary", "readyForContinuation")
-        && summary_text(document, "continuationSummary", "continuationInstruction").is_none()
+    } else if section_bool(document, "continuationSummary", "readyForContinuation")
+        && section_text(document, "continuationSummary", "continuationInstruction").is_none()
     {
         "continuationSummary.nextStage"
-    } else if summary_bool(document, "continuationSummary", "readyForContinuation") {
+    } else if section_bool(document, "continuationSummary", "readyForContinuation") {
         "continuationSummary.readyForContinuation"
-    } else if summary_text(document, "continuationSummary", "continuationInstruction").is_some() {
+    } else if section_text(document, "continuationSummary", "continuationInstruction").is_some() {
         "continuationSummary.continuationInstruction"
     } else {
         "continuationSummary.liveMutationAllowed"
@@ -155,7 +116,7 @@ fn continuation_warning_source(document: Option<&Value>) -> &'static str {
 }
 
 fn continuation_warning_count(document: Option<&Value>) -> usize {
-    let resolved = nested_number(document, "continuationSummary", "resolvedCount");
+    let resolved = section_number(document, "continuationSummary", "resolvedCount");
     if continuation_warning_source(document) == "continuationSummary.resolvedCount" {
         resolved.max(1)
     } else {
@@ -171,9 +132,9 @@ pub(crate) fn build_promotion_domain_status(
     let missing_mappings = summary_number(document, "missingMappingCount");
     let bundle_blocking = summary_number(document, "bundleBlockingCount");
     let summary_blocking = summary_number(document, "blockingCount");
-    let handoff_blocking = nested_number(Some(document), "handoffSummary", "blockingCount");
+    let handoff_blocking = section_number(Some(document), "handoffSummary", "blockingCount");
     let continuation_blocking =
-        nested_number(Some(document), "continuationSummary", "blockingCount");
+        section_number(Some(document), "continuationSummary", "blockingCount");
     let blocking = summary_blocking
         .max(handoff_blocking)
         .max(continuation_blocking);
@@ -212,21 +173,21 @@ pub(crate) fn build_promotion_domain_status(
         .iter()
         .map(|item| (*item).to_string())
         .collect::<Vec<_>>();
-    if nested_summary_object(Some(document), "handoffSummary").is_some() {
+    if section_object(Some(document), "handoffSummary").is_some() {
         signal_keys.extend(
             PROMOTION_HANDOFF_SIGNAL_KEYS
                 .iter()
                 .map(|item| (*item).to_string()),
         );
     }
-    if nested_summary_object(Some(document), "continuationSummary").is_some() {
+    if section_object(Some(document), "continuationSummary").is_some() {
         signal_keys.extend(
             PROMOTION_CONTINUATION_SIGNAL_KEYS
                 .iter()
                 .map(|item| (*item).to_string()),
         );
     }
-    if nested_summary_object(Some(document), "checkSummary").is_some() {
+    if section_object(Some(document), "checkSummary").is_some() {
         signal_keys.extend(
             PROMOTION_CHECK_SUMMARY_SIGNAL_KEYS
                 .iter()
@@ -244,11 +205,11 @@ pub(crate) fn build_promotion_domain_status(
         (PROJECT_STATUS_READY, PROMOTION_REASON_READY)
     };
     let mut warnings = Vec::new();
-    let folder_remaps = nested_number(Some(document), "checkSummary", "folderRemapCount");
+    let folder_remaps = section_number(Some(document), "checkSummary", "folderRemapCount");
     let datasource_uid_remaps =
-        nested_number(Some(document), "checkSummary", "datasourceUidRemapCount");
+        section_number(Some(document), "checkSummary", "datasourceUidRemapCount");
     let datasource_name_remaps =
-        nested_number(Some(document), "checkSummary", "datasourceNameRemapCount");
+        section_number(Some(document), "checkSummary", "datasourceNameRemapCount");
     if folder_remaps > 0 {
         warnings.push(status_finding(
             PROMOTION_WARNING_FOLDER_REMAPS,
@@ -282,16 +243,16 @@ pub(crate) fn build_promotion_domain_status(
             .collect::<Vec<_>>()
     } else {
         let mut actions = Vec::new();
-        if nested_summary_object(Some(document), "handoffSummary").is_some() {
+        if section_object(Some(document), "handoffSummary").is_some() {
             warnings.push(status_finding(
                 PROMOTION_WARNING_REVIEW_HANDOFF,
                 1,
                 handoff_warning_source(Some(document)),
             ));
-            let action = if summary_bool(Some(document), "handoffSummary", "readyForReview") {
+            let action = if section_bool(Some(document), "handoffSummary", "readyForReview") {
                 PROMOTION_REVIEW_READY_ACTIONS[0].to_string()
             } else {
-                summary_text(Some(document), "handoffSummary", "reviewInstruction")
+                section_text(Some(document), "handoffSummary", "reviewInstruction")
                     .unwrap_or_else(|| PROMOTION_REVIEW_HANDOFF_ACTIONS[0].to_string())
             };
             push_unique(&mut actions, &action);
@@ -302,20 +263,20 @@ pub(crate) fn build_promotion_domain_status(
         if datasource_uid_remaps > 0 || datasource_name_remaps > 0 {
             push_unique(&mut actions, PROMOTION_REVIEW_DATASOURCE_REMAPS_ACTIONS[0]);
         }
-        if nested_summary_object(Some(document), "continuationSummary").is_some() {
+        if section_object(Some(document), "continuationSummary").is_some() {
             warnings.push(status_finding(
                 PROMOTION_WARNING_APPLY_CONTINUATION,
                 continuation_warning_count(Some(document)),
                 continuation_warning_source(Some(document)),
             ));
-            let action = if summary_bool(
+            let action = if section_bool(
                 Some(document),
                 "continuationSummary",
                 "readyForContinuation",
             ) {
                 PROMOTION_APPLY_READY_ACTIONS[0].to_string()
             } else {
-                summary_text(
+                section_text(
                     Some(document),
                     "continuationSummary",
                     "continuationInstruction",

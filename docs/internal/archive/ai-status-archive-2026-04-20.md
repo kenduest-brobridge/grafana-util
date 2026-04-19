@@ -32,3 +32,10 @@
 - Baseline: artifact workspace support existed in Rust, but operator docs and the public command-surface contract did not yet spell out config-relative `artifact_root`, timestamp/latest/run-id behavior, or lane placement.
 - Current Update: Documented `grafana-util.yaml`, root `--config`, `artifact_root`, run layout, latest pointer, and dashboard/snapshot/datasource/access artifact lanes in English and zh-TW docs.
 - Result: Generated docs, docs-surface, and AI workflow checks pass.
+
+## 2026-04-19 - Broaden artifact workspace local consumers
+- State: Done
+- Scope: Rust dashboard/access import and diff artifact input routing, command docs, command-surface contract, generated docs, and AI trace docs. Python implementation, README files, and live Grafana behavior beyond resolving local artifact input paths are out of scope.
+- Baseline: Dashboard import/diff and access import/diff required explicit input or diff directories even after export/list/browse flows could resolve profile artifact runs.
+- Current Update: Added `--local`, `--run`, and `--run-id` artifact input resolution for dashboard import/diff and access user/team/org/service-account import/diff.
+- Result: Rust formatting, generated docs, docs-surface, and AI workflow checks pass. Rust tests were not run.
