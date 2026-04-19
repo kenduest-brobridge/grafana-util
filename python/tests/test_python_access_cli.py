@@ -455,6 +455,17 @@ class AccessCliTests(unittest.TestCase):
         self.assertEqual(args.per_page, 5)
         self.assertTrue(args.table)
 
+    def test_access_parse_args_supports_user_browse_timestamp_run_choice(self):
+        args = access_utils.parse_args(
+            ["user", "browse", "--local", "--run", "timestamp", "--json"]
+        )
+
+        self.assertEqual(args.resource, "user")
+        self.assertEqual(args.command, "browse")
+        self.assertTrue(args.local)
+        self.assertEqual(args.run, "timestamp")
+        self.assertTrue(args.json)
+
     def test_access_parse_args_supports_access_list_output_format(self):
         user_args = access_utils.parse_args(["user", "list", "--output-format", "json"])
         org_args = access_utils.parse_args(["org", "list", "--output-format", "table"])
@@ -476,20 +487,33 @@ class AccessCliTests(unittest.TestCase):
         args = access_utils.parse_args(
             [
                 "plan",
-                "--input-dir",
-                "./access-users",
+                "--local",
+                "--run-id",
+                "run-1",
                 "--resource",
-                "user",
+                "service-account",
                 "--prune",
+                "--output-columns",
+                "all",
+                "--list-columns",
+                "--no-header",
+                "--show-same",
+                "--interactive",
                 "--output-format",
                 "json",
             ]
         )
 
         self.assertEqual(args.resource, "plan")
-        self.assertEqual(args.input_dir, "./access-users")
-        self.assertEqual(args.plan_resource, "user")
+        self.assertTrue(args.local)
+        self.assertEqual(args.run_id, "run-1")
+        self.assertEqual(args.plan_resource, "service-account")
         self.assertTrue(args.prune)
+        self.assertEqual(args.output_columns, "all")
+        self.assertTrue(args.list_columns)
+        self.assertTrue(args.no_header)
+        self.assertTrue(args.show_same)
+        self.assertTrue(args.interactive)
         self.assertEqual(args.output_format, "json")
 
     def test_access_parse_args_rejects_access_output_format_with_legacy_flags(self):
@@ -642,6 +666,14 @@ class AccessCliTests(unittest.TestCase):
         self.assertTrue(args.replace_existing)
         self.assertTrue(args.dry_run)
         self.assertTrue(args.yes)
+
+    def test_access_parse_args_supports_org_diff_mode(self):
+        args = access_utils.parse_args(["org", "diff", "--local", "--run-id", "run-2"])
+
+        self.assertEqual(args.resource, "org")
+        self.assertEqual(args.command, "diff")
+        self.assertTrue(args.local)
+        self.assertEqual(args.run_id, "run-2")
 
     def test_access_org_help_uses_basic_auth_and_no_token_flags(self):
         parser = access_utils.build_parser()
@@ -3437,6 +3469,96 @@ class AccessCliTests(unittest.TestCase):
         self.assertEqual(result, 0)
         rows = json.loads(output.getvalue())
         self.assertEqual(rows[0]["name"], "Ops")
+
+    def test_access_user_list_input_dir_reads_local_bundle(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            bundle_dir = Path(temp_dir)
+            (bundle_dir / "users.json").write_text(
+                json.dumps(
+                    [
+                        {
+                            "login": "alice",
+                            "email": "alice@example.com",
+                            "name": "Alice",
+                            "orgRole": "Viewer",
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            args = access_utils.parse_args(
+                ["user", "list", "--input-dir", temp_dir, "--json"]
+            )
+
+            output = io.StringIO()
+            with redirect_stdout(output):
+                result = access_workflows.list_users_with_client(
+                    args,
+                    FakeAccessClient(org_users=[]),
+                )
+
+        self.assertEqual(result, 0)
+        rows = json.loads(output.getvalue())
+        self.assertEqual(rows[0]["login"], "alice")
+
+    def test_access_plan_local_run_id_reads_artifact_lane(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            config_path = root / "grafana-util.yaml"
+            config_path.write_text(
+                "artifact_root: artifacts\nprofiles: {}\n",
+                encoding="utf-8",
+            )
+            lane = root / "artifacts" / "default" / "runs" / "run-1" / "access" / "users"
+            lane.mkdir(parents=True)
+            (lane / "users.json").write_text(
+                json.dumps(
+                    [
+                        {
+                            "login": "alice",
+                            "email": "alice@example.com",
+                            "name": "Alice",
+                            "orgRole": "Viewer",
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            args = access_utils.parse_args(
+                [
+                    "plan",
+                    "--local",
+                    "--run-id",
+                    "run-1",
+                    "--interactive",
+                    "--output-format",
+                    "json",
+                ]
+            )
+
+            output = io.StringIO()
+            client = FakeAccessClient(
+                org_users=[
+                    {
+                        "login": "alice",
+                        "email": "alice@example.com",
+                        "name": "Alice",
+                        "role": "Viewer",
+                    }
+                ]
+            )
+            with (
+                mock.patch.dict("os.environ", {"GRAFANA_UTIL_CONFIG": str(config_path)}),
+                redirect_stdout(output),
+            ):
+                result = access_workflows.plan_access_with_client(args, client)
+
+        self.assertEqual(result, 0)
+        document = json.loads(output.getvalue())
+        self.assertEqual(document["mode"], "interactive")
+        self.assertEqual(document["resource"], "user")
+        self.assertEqual(document["actions"][0]["identity"], "alice")
+        self.assertEqual(document["actions"][0]["action"], "same")
 
 
 if __name__ == "__main__":
