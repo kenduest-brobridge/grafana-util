@@ -460,8 +460,32 @@ fn access_plan_interactive_browser_items_follow_review_projection() {
             action: "would-update".to_string(),
             status: "blocked".to_string(),
             changed_fields: vec!["orgRole".to_string(), "email".to_string()],
-            changes: Vec::new(),
-            target: None,
+            changes: vec![
+                AccessPlanChange {
+                    field: "orgRole".to_string(),
+                    before: json!("Editor"),
+                    after: json!("Viewer"),
+                },
+                AccessPlanChange {
+                    field: "email".to_string(),
+                    before: json!("alice@example.com"),
+                    after: json!("alice-old@example.com"),
+                },
+            ],
+            target: Some(
+                json!({
+                    "id": 12,
+                    "login": "alice",
+                    "email": "alice-old@example.com",
+                    "orgRole": "Viewer",
+                    "isExternal": false,
+                    "isProvisioned": false,
+                    "isExternallySynced": true,
+                })
+                .as_object()
+                .unwrap()
+                .clone(),
+            ),
             blocked_reason: Some("externally synced user".to_string()),
             review_hints: vec!["review identity source".to_string()],
             source_path: "./access-users/users.json".to_string(),
@@ -472,10 +496,22 @@ fn access_plan_interactive_browser_items_follow_review_projection() {
 
     assert_eq!(items.len(), 2);
     assert_eq!(items[0].kind, "resource");
-    assert!(items[0].details.iter().any(|line| line == "Note: review only"));
+    assert!(items[0]
+        .details
+        .iter()
+        .any(|line| line == "Note: review only"));
+    assert!(items[0].details.iter().any(|line| {
+        line == "Review focus: 1 blocked actions need operator resolution before this bundle can be applied cleanly."
+    }));
     assert_eq!(items[1].kind, "user");
     assert_eq!(items[1].title, "alice");
     assert!(items[1].meta.contains("blocked"));
+    assert!(items[1].details.iter().any(|line| {
+        line == "Narrative: changes this live user so it matches the reviewed bundle."
+    }));
+    assert!(items[1].details.iter().any(|line| {
+        line == "Why this matters: permission or administrative reach would change."
+    }));
     assert!(items[1]
         .details
         .iter()
@@ -483,7 +519,22 @@ fn access_plan_interactive_browser_items_follow_review_projection() {
     assert!(items[1]
         .details
         .iter()
+        .any(|line| line == "Change: orgRole bundle=Editor live=Viewer"));
+    assert!(items[1]
+        .details
+        .iter()
+        .any(|line| line == "Live target: orgRole=Viewer"));
+    assert!(items[1]
+        .details
+        .iter()
         .any(|line| line == "Blocked reason: externally synced user"));
+    assert!(items[1]
+        .details
+        .iter()
+        .any(|line| line == "Blocked context: externally synced user."));
+    assert!(items[1].details.iter().any(|line| {
+        line == "Blocked evidence: live target flags isExternal=false isProvisioned=false isExternallySynced=true."
+    }));
     assert!(items[1]
         .details
         .iter()
@@ -491,7 +542,117 @@ fn access_plan_interactive_browser_items_follow_review_projection() {
     assert!(items[1]
         .details
         .iter()
+        .any(|line| { line == "Check next: review identity source." }));
+    assert!(items[1].details.iter().any(|line| {
+        line == "Check next: confirm the blocker in Grafana and adjust the bundle or remote ownership before retrying."
+    }));
+    assert!(items[1]
+        .details
+        .iter()
         .any(|line| line == "Source path: ./access-users/users.json"));
+}
+
+#[test]
+fn access_plan_interactive_browser_items_include_warning_narrative_and_next_checks() {
+    let document = AccessPlanDocument {
+        kind: ACCESS_PLAN_KIND.to_string(),
+        schema_version: ACCESS_PLAN_SCHEMA_VERSION,
+        tool_version: "test".to_string(),
+        summary: AccessPlanSummary {
+            resource_count: 1,
+            checked: 1,
+            same: 0,
+            create: 0,
+            update: 1,
+            extra_remote: 0,
+            delete: 0,
+            blocked: 0,
+            warning: 1,
+            prune: false,
+        },
+        resources: vec![AccessPlanResourceReport {
+            resource_kind: "service-account".to_string(),
+            source_path: "./access-service-accounts".to_string(),
+            bundle_present: true,
+            source_count: 1,
+            live_count: 1,
+            checked: 1,
+            same: 0,
+            create: 0,
+            update: 1,
+            extra_remote: 0,
+            delete: 0,
+            blocked: 0,
+            warning: 1,
+            scope: None,
+            notes: Vec::new(),
+        }],
+        actions: vec![AccessPlanAction {
+            action_id: "access:service-account:deploy-bot".to_string(),
+            domain: "access".to_string(),
+            resource_kind: "service-account".to_string(),
+            identity: "deploy-bot".to_string(),
+            scope: Some("orgId=1".to_string()),
+            action: "would-update".to_string(),
+            status: "warning".to_string(),
+            changed_fields: vec!["role".to_string(), "disabled".to_string()],
+            changes: vec![
+                AccessPlanChange {
+                    field: "role".to_string(),
+                    before: json!("Admin"),
+                    after: json!("Editor"),
+                },
+                AccessPlanChange {
+                    field: "disabled".to_string(),
+                    before: json!(false),
+                    after: json!(true),
+                },
+            ],
+            target: Some(
+                json!({
+                    "id": 44,
+                    "name": "deploy-bot",
+                    "role": "Editor",
+                    "disabled": true,
+                    "orgId": 1,
+                })
+                .as_object()
+                .unwrap()
+                .clone(),
+            ),
+            blocked_reason: None,
+            review_hints: vec!["service-account admin role deserves manual review".to_string()],
+            source_path: "./access-service-accounts/service-accounts.json".to_string(),
+        }],
+    };
+
+    let items = build_access_plan_browser_items(&document);
+
+    assert_eq!(items.len(), 2);
+    assert!(items[1].details.iter().any(|line| {
+        line == "Narrative: changes this live service account so it matches the reviewed bundle."
+    }));
+    assert!(items[1].details.iter().any(|line| {
+        line == "Why this matters: permission or administrative reach would change."
+    }));
+    assert!(items[1].details.iter().any(|line| {
+        line == "Warning context: verify bundle fields role, disabled against the live target before approving."
+    }));
+    assert!(items[1]
+        .details
+        .iter()
+        .any(|line| line == "Change: disabled bundle=false live=true"));
+    assert!(items[1]
+        .details
+        .iter()
+        .any(|line| line == "Live target: disabled=true"));
+    assert!(items[1]
+        .details
+        .iter()
+        .any(|line| { line == "Check next: service-account admin role deserves manual review." }));
+    assert!(items[1].details.iter().any(|line| {
+        line == "Check next: compare the listed bundle fields against the live target evidence."
+    }));
 }
 
 #[test]

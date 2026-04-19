@@ -93,6 +93,34 @@ pub(super) fn render_plan_text(report: &DashboardPlanReport, show_same: bool) ->
             org.org_action
         ));
     }
+    if let Some(domains) = report
+        .review
+        .get("domains")
+        .and_then(|value| value.as_array())
+    {
+        if !domains.is_empty() {
+            let summary = domains
+                .iter()
+                .filter_map(|domain| {
+                    let object = domain.as_object()?;
+                    Some(format!(
+                        "{}={}",
+                        object
+                            .get("id")
+                            .and_then(|value| value.as_str())
+                            .unwrap_or("unknown"),
+                        object
+                            .get("checked")
+                            .and_then(|value| value.as_i64())
+                            .unwrap_or(0)
+                    ))
+                })
+                .collect::<Vec<String>>();
+            if !summary.is_empty() {
+                lines.push(format!("Domains: {}", summary.join("  ")));
+            }
+        }
+    }
     for action in &report.actions {
         if !show_same && action.action == REVIEW_ACTION_SAME {
             continue;
@@ -124,6 +152,15 @@ pub(super) fn render_plan_text(report: &DashboardPlanReport, show_same: bool) ->
                 action.changed_fields.join(",")
             }
         ));
+    }
+    if let Some(reasons) = report
+        .review
+        .get("blockedReasons")
+        .and_then(|value| value.as_array())
+    {
+        for reason in reasons.iter().filter_map(|value| value.as_str()) {
+            lines.push(format!("Blocked reason: {reason}"));
+        }
     }
     lines
 }

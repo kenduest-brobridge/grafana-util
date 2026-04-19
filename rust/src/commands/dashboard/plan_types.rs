@@ -5,6 +5,10 @@ use serde_json::{Map, Value};
 use std::path::PathBuf;
 
 use super::FolderInventoryItem;
+use crate::review_contract::{
+    build_review_mutation_envelope, review_action_group, review_action_rank,
+    review_operation_kind_rank, ReviewMutationAction,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -88,8 +92,174 @@ pub(super) struct DashboardPlanReport {
     pub(super) input_type: String,
     pub(super) prune: bool,
     pub(super) summary: DashboardPlanSummary,
+    pub(super) review: Value,
     pub(super) orgs: Vec<DashboardPlanOrgSummary>,
     pub(super) actions: Vec<DashboardPlanAction>,
+}
+
+#[derive(Debug, Clone)]
+pub(super) struct DashboardPlanReviewActionProjection {
+    pub(super) action_id: String,
+    pub(super) action: String,
+    pub(super) domain: String,
+    pub(super) resource_kind: String,
+    pub(super) identity: String,
+    pub(super) status: String,
+    pub(super) order_group: String,
+    pub(super) kind_order: usize,
+    pub(super) blocked_reason: Option<String>,
+    pub(super) details: Option<String>,
+    pub(super) review_hints: Vec<String>,
+    pub(super) raw: Value,
+}
+
+#[derive(Debug, Clone)]
+pub(super) struct DashboardPlanReviewProjection {
+    pub(super) domains: Vec<&'static str>,
+    pub(super) actions: Vec<DashboardPlanReviewActionProjection>,
+}
+
+impl DashboardPlanAction {
+    fn review_identity(&self) -> String {
+        if !self.dashboard_uid.trim().is_empty() {
+            self.dashboard_uid.clone()
+        } else if !self.title.trim().is_empty() {
+            self.title.clone()
+        } else {
+            self.source_file
+                .clone()
+                .unwrap_or_else(|| "dashboard".to_string())
+        }
+    }
+
+    fn to_review_projection(&self) -> DashboardPlanReviewActionProjection {
+        let raw = match serde_json::to_value(self) {
+            Ok(Value::Object(object)) => Value::Object(object),
+            Ok(other) => other,
+            Err(_) => Value::Null,
+        };
+        DashboardPlanReviewActionProjection {
+            action_id: self.action_id.clone(),
+            action: self.action.clone(),
+            domain: self.domain.clone(),
+            resource_kind: self.resource_kind.clone(),
+            identity: self.review_identity(),
+            status: self.status.clone(),
+            order_group: review_action_group(&self.action).to_string(),
+            kind_order: review_operation_kind_rank(&self.domain, &self.action),
+            blocked_reason: self.blocked_reason.clone(),
+            details: (!self.changed_fields.is_empty())
+                .then(|| format!("fields={}", self.changed_fields.join(","))),
+            review_hints: self.review_hints.clone(),
+            raw,
+        }
+    }
+}
+
+impl DashboardPlanReport {
+    pub(super) fn build_review_projection(&self) -> DashboardPlanReviewProjection {
+        let mut actions = self
+            .actions
+            .iter()
+            .map(DashboardPlanAction::to_review_projection)
+            .collect::<Vec<_>>();
+        actions.sort_by(|left, right| {
+            left.kind_order
+                .cmp(&right.kind_order)
+                .then_with(|| {
+                    review_action_rank(&left.action).cmp(&review_action_rank(&right.action))
+                })
+                .then_with(|| left.domain.cmp(&right.domain))
+                .then_with(|| left.identity.cmp(&right.identity))
+                .then_with(|| left.action_id.cmp(&right.action_id))
+        });
+        DashboardPlanReviewProjection {
+            domains: vec!["dashboard"],
+            actions,
+        }
+    }
+
+    pub(super) fn build_review_envelope(&self) -> Value {
+        let projection = self.build_review_projection();
+        let review = build_review_mutation_envelope(
+            projection
+                .actions
+                .into_iter()
+                .map(|action| ReviewMutationAction {
+                    action_id: action.action_id,
+                    action: action.action,
+                    domain: action.domain,
+                    resource_kind: action.resource_kind,
+                    identity: action.identity,
+                    status: action.status,
+                    order_group: action.order_group,
+                    kind_order: action.kind_order,
+                    blocked_reason: action.blocked_reason,
+                    details: action.details,
+                    review_hints: action.review_hints,
+                    raw: action.raw,
+                })
+                .collect(),
+            &projection.domains,
+        );
+        Value::Object(Map::from_iter(vec![
+            (
+                "actions".to_string(),
+                Value::Array(
+                    review
+                        .actions
+                        .into_iter()
+                        .map(|action| action.raw)
+                        .collect(),
+                ),
+            ),
+            (
+                "domains".to_string(),
+                Value::Array(
+                    review
+                        .domains
+                        .into_iter()
+                        .map(|domain| domain.raw)
+                        .collect(),
+                ),
+            ),
+            (
+                "blockedReasons".to_string(),
+                Value::Array(
+                    review
+                        .blocked_reasons
+                        .into_iter()
+                        .map(Value::String)
+                        .collect(),
+                ),
+            ),
+            (
+                "summary".to_string(),
+                Value::Object(Map::from_iter(vec![
+                    (
+                        "actionCount".to_string(),
+                        Value::Number((review.summary.action_count as i64).into()),
+                    ),
+                    (
+                        "domainCount".to_string(),
+                        Value::Number((review.summary.domain_count as i64).into()),
+                    ),
+                    (
+                        "sameCount".to_string(),
+                        Value::Number((review.summary.same_count as i64).into()),
+                    ),
+                    (
+                        "blockedCount".to_string(),
+                        Value::Number((review.summary.blocked_count as i64).into()),
+                    ),
+                    (
+                        "warningCount".to_string(),
+                        Value::Number((review.summary.warning_count as i64).into()),
+                    ),
+                ])),
+            ),
+        ]))
+    }
 }
 
 #[derive(Debug, Clone)]

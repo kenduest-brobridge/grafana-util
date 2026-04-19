@@ -36,7 +36,7 @@ pub(crate) fn build_dashboard_plan(input: DashboardPlanInput) -> DashboardPlanRe
         actions.extend(org_actions);
     }
     let summary = build_summary(&orgs, &actions);
-    DashboardPlanReport {
+    let mut report = DashboardPlanReport {
         kind: PLAN_KIND.to_string(),
         schema_version: PLAN_SCHEMA_VERSION,
         tool_version: tool_version().to_string(),
@@ -45,9 +45,12 @@ pub(crate) fn build_dashboard_plan(input: DashboardPlanInput) -> DashboardPlanRe
         input_type: input.input_type,
         prune: input.prune,
         summary,
+        review: Value::Null,
         orgs,
         actions,
-    }
+    };
+    report.review = report.build_review_envelope();
+    report
 }
 
 pub(crate) fn build_dashboard_plan_json(report: &DashboardPlanReport) -> Result<Value> {

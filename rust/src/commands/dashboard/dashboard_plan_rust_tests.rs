@@ -263,6 +263,11 @@ fn dashboard_plan_json_has_contract_shape() {
         .as_str()
         .unwrap()
         .starts_with("org:1/dashboard:"));
+    assert_eq!(json["review"]["summary"]["actionCount"], 3);
+    assert_eq!(json["review"]["summary"]["domainCount"], 1);
+    assert_eq!(json["review"]["domains"][0]["id"], "dashboard");
+    assert_eq!(json["review"]["domains"][0]["checked"], 3);
+    assert_eq!(json["review"]["blockedReasons"], json!([]));
 }
 
 #[test]
@@ -279,6 +284,20 @@ fn dashboard_plan_table_and_text_render_are_stable() {
     let text = render_plan_text(&report, false);
     assert!(text.iter().any(|line| line.contains("would-create")));
     assert!(text.iter().all(|line| !line.contains("action=same")));
+}
+
+#[test]
+fn dashboard_plan_text_includes_review_narrative() {
+    let report = build_dashboard_plan(sample_missing_org_input("missing"));
+
+    let text = render_plan_text(&report, true);
+
+    assert!(text
+        .iter()
+        .any(|line| line.contains("Domains: dashboard=1")));
+    assert!(text
+        .iter()
+        .any(|line| line.contains("Blocked reason: target-org-missing")));
 }
 
 #[test]
