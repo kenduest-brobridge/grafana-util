@@ -17,6 +17,13 @@ Current AI-maintained status only.
 - Older entries moved to [`ai-status-archive-2026-04-19.md`](docs/internal/archive/ai-status-archive-2026-04-19.md).
 - Older entries moved to [`ai-status-archive-2026-04-20.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-04-20.md).
 
+## 2026-04-20 - Split Rust architecture hotspots
+- State: Done
+- Scope: Rust-only architecture cleanup for sync compatibility exports, resource command module boundaries, dashboard import validation boundaries, access org workflow boundaries, focused Rust tests, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
+- Baseline: `lib.rs` still exposed old sync compatibility aliases, `resource/mod.rs` held CLI definitions, catalog logic, runtime reads, renderers, and tests in one file, and dashboard/access workflow modules still contained large mixed-responsibility import/org validation flows.
+- Current Update: Removed obsolete sync compatibility re-exports, switched root preflight to canonical sync module paths, split resource CLI/catalog/runtime/rendering, split dashboard import validation auth/org-scope/dependency logic, and split access org live/sync/diff workflows behind facade modules.
+- Result: Focused worker tests, full Rust tests, formatter check, maintainability report, and AI workflow checks pass.
+
 ## 2026-04-20 - Continue Rust architecture cleanup
 - State: Done
 - Scope: Rust dashboard test organization, dashboard facade re-export boundary, snapshot artifact-workspace coverage, focused Rust tests, and AI trace docs. Public CLI behavior, command docs, generated docs, Python implementation, and output contracts are out of scope.
@@ -51,10 +58,3 @@ Current AI-maintained status only.
 - Baseline: Dashboard import/diff and access import/diff required explicit input or diff directories even after export/list/browse flows could resolve profile artifact runs.
 - Current Update: Added `--local`, `--run`, and `--run-id` artifact input resolution for dashboard import/diff and access user/team/org/service-account import/diff.
 - Result: Rust formatting, generated docs, docs-surface, and AI workflow checks pass. Rust tests were not run.
-
-## 2026-04-19 - Formalize artifact workspace docs
-- State: Done
-- Scope: public command docs, getting-started handbook, command-surface contract, generated docs, and AI trace docs for artifact workspace export defaults. Runtime code, Python implementation, README files, and live Grafana behavior are out of scope.
-- Baseline: artifact workspace support existed in Rust, but operator docs and the public command-surface contract did not yet spell out config-relative `artifact_root`, timestamp/latest/run-id behavior, or lane placement.
-- Current Update: Documented `grafana-util.yaml`, root `--config`, `artifact_root`, run layout, latest pointer, and dashboard/snapshot/datasource/access artifact lanes in English and zh-TW docs.
-- Result: Generated docs, docs-surface, and AI workflow checks pass.

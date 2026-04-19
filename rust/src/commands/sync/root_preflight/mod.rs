@@ -10,8 +10,8 @@ use crate::common::{message, tool_version, Result};
 use crate::datasource_provider::{
     build_provider_plan, iter_provider_names, summarize_provider_plan,
 };
-use crate::sync_preflight::build_sync_preflight_document;
-use crate::sync_workbench::build_sync_summary_document;
+use crate::sync::preflight::build_sync_preflight_document;
+use crate::sync::workbench::build_sync_summary_document;
 use serde_json::{json, Map, Value};
 use std::collections::BTreeSet;
 

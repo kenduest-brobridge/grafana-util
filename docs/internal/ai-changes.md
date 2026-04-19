@@ -17,6 +17,13 @@ Current AI change log only.
 - Older entries moved to [`ai-changes-archive-2026-04-19.md`](docs/internal/archive/ai-changes-archive-2026-04-19.md).
 - Older entries moved to [`ai-changes-archive-2026-04-20.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-changes-archive-2026-04-20.md).
 
+## 2026-04-20 - Split Rust architecture hotspots
+- Summary: removed obsolete sync compatibility aliases, routed root preflight through canonical sync modules, and split large Rust command hotspots for resource, dashboard import validation, and access org workflows into focused facade-backed modules.
+- Tests: preserved public Rust command surfaces and behavior while narrowing module ownership for resource CLI/catalog/runtime/rendering, dashboard import validation auth/org/dependency validation, and access org live/sync/diff workflows.
+- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet --lib`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `python3 scripts/rust_maintainability_report.py`; `cargo test --manifest-path rust/Cargo.toml --quiet`.
+- Impact: `rust/src/lib.rs`, `rust/src/commands/sync/root_preflight/mod.rs`, `rust/src/commands/resource/`, `rust/src/commands/dashboard/import_validation*.rs`, `rust/src/commands/access/org_workflows*.rs`, and AI trace docs. Public CLI paths, generated docs, Python implementation, and output contracts are intentionally unchanged.
+- Rollback/Risk: medium mechanical architecture cleanup across several Rust command boundaries. Rollback would re-inline the facade modules and restore the removed compatibility aliases; focused and full Rust tests cover compile-time visibility and moved workflow paths.
+
 ## 2026-04-20 - Continue Rust architecture cleanup
 - Summary: split dashboard artifact workflow coverage into a dedicated Rust test module, moved dashboard facade re-exports into `facade_exports.rs`, and added snapshot artifact-workspace timestamp/latest-run coverage.
 - Tests: preserved behavior while narrowing test ownership and keeping the dashboard module root focused on module registration, constants, wrappers, and type definitions.
@@ -82,11 +89,3 @@ Current AI change log only.
 - Impact: `rust/src/common/artifact_workspace.rs`, `rust/src/commands/config/profile/config.rs`, `rust/src/cli/mod.rs`, `rust/src/cli/dispatch.rs`, Rust dashboard/snapshot/datasource/access command modules, selected Rust tests, and AI trace docs.
 - Rollback/Risk: medium CLI behavior expansion guarded by explicit artifact flags or `--local`; rollback by removing artifact resolver usage and keeping existing explicit `--input-dir`/`--output-dir` paths.
 - Follow-up: add generated docs/contracts and broaden artifact local support for dashboard import/diff and access import/diff if desired.
-
-## 2026-04-18 - Fix Rust 1.95 sync review clippy failure
-- Summary: fixed the GitHub Actions `rust-quality` failure by rewriting sync review TUI key handling to use guarded `match` arms instead of nested `if diff_mode` blocks that Rust 1.95 clippy reports as `collapsible_match`.
-- Tests: no behavior change; preserved existing sync review TUI key behavior.
-- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet sync --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet`; `cargo clippy --manifest-path rust/Cargo.toml --all-targets -- -D warnings`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `make quality-architecture`.
-- Impact: Rust sync review TUI internals and AI trace docs. Public CLI behavior, generated docs, README files, JSON contracts, and Python implementation were intentionally left unchanged.
-- Rollback/Risk: low behavior-preserving clippy compatibility refactor. Rollback would restore the Rust 1.95 CI failure.
-- Follow-up: verify GitHub Actions after pushing because local stable is older than the CI toolchain.

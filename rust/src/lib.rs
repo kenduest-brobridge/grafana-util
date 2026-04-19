@@ -38,6 +38,9 @@ pub mod artifact_workspace;
 #[cfg(test)]
 #[path = "commands/sync/root_preflight/mod.rs"]
 pub(crate) mod bundle_preflight;
+#[cfg(test)]
+#[path = "commands/sync/root_preflight/tests.rs"]
+mod bundle_preflight_rust_tests;
 /// Unified top-level CLI parsing and dispatch for the Rust binary.
 #[path = "cli/mod.rs"]
 pub mod cli;
@@ -83,12 +86,21 @@ pub(crate) mod datasource_project_status;
 /// Datasource provider resolution helpers used by sync/bundle validation.
 #[path = "commands/datasource/provider/mod.rs"]
 pub(crate) mod datasource_provider;
+#[cfg(test)]
+#[path = "commands/datasource/provider/tests.rs"]
+mod datasource_provider_rust_tests;
 /// Datasource secret placeholder planning helpers used by staged sync review.
 #[path = "commands/datasource/secret/mod.rs"]
 pub(crate) mod datasource_secret;
+#[cfg(test)]
+#[path = "commands/datasource/secret/tests.rs"]
+mod datasource_secret_rust_tests;
 /// Shared additive export-metadata contract helpers.
 #[path = "common/export_metadata.rs"]
 pub(crate) mod export_metadata;
+#[cfg(test)]
+#[path = "common/export_metadata_rust_tests.rs"]
+mod export_metadata_rust_tests;
 /// Shared internal Grafana connection/client layer used by live runtime paths.
 #[path = "grafana/api/mod.rs"]
 pub(crate) mod grafana_api;
@@ -104,6 +116,9 @@ pub(crate) mod interactive_browser;
 /// Artifact-driven project overview assembly for staged dashboard and sync inputs.
 #[path = "commands/status/overview/mod.rs"]
 pub mod overview;
+#[cfg(test)]
+#[path = "commands/status/overview/tests.rs"]
+mod overview_rust_tests;
 /// Repo-local profile namespace for listing, showing, and initializing config files.
 #[path = "commands/config/profile/mod.rs"]
 pub mod profile_cli;
@@ -116,6 +131,9 @@ pub(crate) mod profile_secret_store;
 /// Shared status contract shapes reused across overview and future status producers.
 #[path = "commands/status/contract.rs"]
 pub(crate) mod project_status;
+#[cfg(test)]
+#[path = "commands/status/tests.rs"]
+mod project_status_cli_rust_tests;
 /// Top-level status command surface for staged/live project-wide status.
 #[path = "commands/status/mod.rs"]
 pub mod project_status_command;
@@ -150,6 +168,9 @@ pub(crate) mod review_contract;
 /// Snapshot export/review wrappers for staged dashboard and datasource bundles.
 #[path = "commands/snapshot/mod.rs"]
 pub mod snapshot;
+#[cfg(test)]
+#[path = "commands/snapshot/tests.rs"]
+mod snapshot_rust_tests;
 /// Shared staged export scope resolution helpers for dashboard and datasource artifacts.
 #[path = "common/staged_export_scopes.rs"]
 pub(crate) mod staged_export_scopes;
@@ -162,33 +183,3 @@ pub(crate) mod tabular_output;
 #[cfg(feature = "tui")]
 #[path = "common/tui/shell.rs"]
 pub(crate) mod tui_shell;
-/// Re-exported alert bundle contract helpers for compatibility with older paths.
-pub use sync::bundle_alert_contracts as sync_bundle_alert_contracts;
-/// Re-exported sync bundle preflight helpers for compatibility with older paths.
-pub use sync::bundle_preflight as sync_bundle_preflight;
-/// Re-exported sync preflight helpers for compatibility with older paths.
-pub use sync::preflight as sync_preflight;
-/// Re-exported sync workbench helpers for compatibility with older paths.
-pub use sync::workbench as sync_workbench;
-
-#[cfg(test)]
-#[path = "commands/sync/root_preflight/tests.rs"]
-mod bundle_preflight_rust_tests;
-#[cfg(test)]
-#[path = "commands/datasource/provider/tests.rs"]
-mod datasource_provider_rust_tests;
-#[cfg(test)]
-#[path = "commands/datasource/secret/tests.rs"]
-mod datasource_secret_rust_tests;
-#[cfg(test)]
-#[path = "common/export_metadata_rust_tests.rs"]
-mod export_metadata_rust_tests;
-#[cfg(test)]
-#[path = "commands/status/overview/tests.rs"]
-mod overview_rust_tests;
-#[cfg(test)]
-#[path = "commands/status/tests.rs"]
-mod project_status_cli_rust_tests;
-#[cfg(test)]
-#[path = "commands/snapshot/tests.rs"]
-mod snapshot_rust_tests;
