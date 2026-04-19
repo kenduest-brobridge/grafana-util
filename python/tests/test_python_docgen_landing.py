@@ -27,18 +27,19 @@ class DocgenLandingTests(unittest.TestCase):
 
         page = module.load_landing_page("en")
 
-        self.assertEqual(page.title, "grafana-util")
-        self.assertEqual(page.search.title, "Quick jump")
-        self.assertEqual(len(page.sections), 4)
-        self.assertEqual(page.sections[0].title, "Quick Start")
-        self.assertEqual(page.sections[0].tasks[0].title, "What this tool is for")
-        self.assertEqual(page.sections[0].tasks[0].links[0].target, "../user-guide/en/what-is-grafana-util.md")
+        self.assertEqual(page.title, "Review Grafana changes before you apply them")
+        self.assertEqual(len(page.hero_links), 3)
+        self.assertEqual(page.hero_links[0].target, "../user-guide/en/index.md")
+        self.assertEqual(len(page.sections), 3)
+        self.assertEqual(page.sections[0].title, "Recommended Starts")
+        self.assertEqual(page.sections[0].tasks[0].title, "First time using the CLI")
+        self.assertEqual(page.sections[0].tasks[0].links[0].target, "../user-guide/en/getting-started.md")
         self.assertEqual(page.maintainer.links[0].target, "../DEVELOPER.md")
 
     def test_parse_landing_text_requires_search_and_maintainer_sections(self):
         module = load_module()
 
-        with self.assertRaisesRegex(ValueError, "Search and Maintainer sections"):
+        with self.assertRaisesRegex(ValueError, "content section and one Maintainer section"):
             module.parse_landing_text(
                 "# grafana-util\n\nSummary only.\n",
                 locale="en",
@@ -52,7 +53,7 @@ class DocgenLandingTests(unittest.TestCase):
             landing_root = Path(tmp_dir)
             page = module.load_landing_page("en", landing_root=landing_root)
 
-            self.assertEqual(page.title, "grafana-util")
+            self.assertEqual(page.title, "Review Grafana changes before you apply them")
             self.assertEqual(page.source_path, landing_root / "en.md")
             self.assertEqual(page.maintainer.links[0].target, "../DEVELOPER.md")
 

@@ -502,6 +502,50 @@ def build_parser(prog=None):
     add_common_cli_args(list_parser)
     add_user_list_cli_args(list_parser)
 
+    user_browse_parser = user_subparsers.add_parser(
+        "browse",
+        help="Browse Grafana users from live Grafana or an access export bundle.",
+        **subparser_kwargs(USER_LIST_HELP_EXAMPLES),
+    )
+    add_common_cli_args(
+        user_browse_parser,
+        allow_token_auth=True,
+        username_dest="auth_username",
+        password_dest="auth_password",
+    )
+    add_user_list_cli_args(user_browse_parser)
+    user_browse_parser.add_argument(
+        "--input-dir",
+        default=None,
+        help="Browse users from a local export bundle directory instead of live Grafana.",
+    )
+    user_browse_parser.add_argument(
+        "--local",
+        action="store_true",
+        help="Browse users from the artifact workspace instead of live Grafana.",
+    )
+    user_browse_parser.add_argument(
+        "--run",
+        choices=("latest", "previous"),
+        default=None,
+        help="With --local, select the artifact run to read from.",
+    )
+    user_browse_parser.add_argument(
+        "--run-id",
+        default=None,
+        help="With --local, read from this explicit artifact run id.",
+    )
+    user_browse_parser.add_argument(
+        "--all-orgs",
+        action="store_true",
+        help="Human-friendly alias for --scope global when browsing users across all organizations.",
+    )
+    user_browse_parser.add_argument(
+        "--current-org",
+        action="store_true",
+        help="Browse only the currently selected organization.",
+    )
+
     user_export_parser = user_subparsers.add_parser(
         "export",
         help="Export Grafana users to JSON files.",
@@ -611,6 +655,35 @@ def build_parser(prog=None):
     )
     add_common_cli_args(team_list_parser)
     add_team_list_cli_args(team_list_parser)
+
+    team_browse_parser = team_subparsers.add_parser(
+        "browse",
+        help="Browse Grafana teams from live Grafana or an access export bundle.",
+        **subparser_kwargs(TEAM_LIST_HELP_EXAMPLES),
+    )
+    add_common_cli_args(team_browse_parser)
+    add_team_list_cli_args(team_browse_parser)
+    team_browse_parser.add_argument(
+        "--input-dir",
+        default=None,
+        help="Browse teams from a local export bundle directory instead of live Grafana.",
+    )
+    team_browse_parser.add_argument(
+        "--local",
+        action="store_true",
+        help="Browse teams from the artifact workspace instead of live Grafana.",
+    )
+    team_browse_parser.add_argument(
+        "--run",
+        choices=("latest", "previous"),
+        default=None,
+        help="With --local, select the artifact run to read from.",
+    )
+    team_browse_parser.add_argument(
+        "--run-id",
+        default=None,
+        help="With --local, read from this explicit artifact run id.",
+    )
 
     team_add_parser = team_subparsers.add_parser(
         "add",

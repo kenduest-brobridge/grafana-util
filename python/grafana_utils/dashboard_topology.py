@@ -8,13 +8,12 @@ Purpose:
 Behavior notes:
 - This module mirrors the Rust dashboard topology behavior, including the same
   document and relationship shapes.
-- Interactive rendering is intentionally unsupported in Python at this time.
 """
 
 import argparse
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 from .dashboards.import_support import load_json_file
 from .dashboards.common import GrafanaError
@@ -372,6 +371,104 @@ def render_topology_dot(document: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def render_topology_interactive_text(
+    document: dict[str, Any],
+    query: Optional[str] = None,
+) -> str:
+    """Render a deterministic text view for topology interactive mode."""
+
+    normalized_query = str(query or "").strip().lower()
+    nodes = list(document.get("nodes") or [])
+    edges = list(document.get("edges") or [])
+    if normalized_query:
+        nodes = [
+            node
+            for node in nodes
+            if normalized_query in str(node.get("id") or "").lower()
+            or normalized_query in str(node.get("label") or "").lower()
+            or normalized_query in str(node.get("kind") or "").lower()
+        ]
+        node_ids = {str(node.get("id") or "") for node in nodes}
+        edges = [
+            edge
+            for edge in edges
+            if str(edge.get("from") or "") in node_ids
+            or str(edge.get("to") or "") in node_ids
+            or normalized_query in str(edge.get("relation") or "").lower()
+        ]
+    lines = [
+        "Dashboard topology interactive",
+        "Commands: /text filter, number select, r reset, q quit",
+    ]
+    if normalized_query:
+        lines.append(f"Filter: {query}")
+    lines.append(f"Nodes: {len(nodes)}")
+    for index, node in enumerate(nodes, start=1):
+        lines.append(
+            "%s. [%s] %s (%s)"
+            % (
+                index,
+                node.get("kind") or "-",
+                node.get("label") or node.get("id") or "-",
+                node.get("id") or "-",
+            )
+        )
+    lines.append(f"Edges: {len(edges)}")
+    for edge in edges[:20]:
+        lines.append(
+            "  %s --%s--> %s"
+            % (
+                edge.get("from") or "-",
+                edge.get("relation") or "-",
+                edge.get("to") or "-",
+            )
+        )
+    if len(edges) > 20:
+        lines.append(f"  ... {len(edges) - 20} more edge(s)")
+    return "\n".join(lines)
+
+
+def run_topology_interactive_loop(
+    document: dict[str, Any],
+    *,
+    input_reader=input,
+    output_writer=print,
+) -> int:
+    """Run a compact terminal browser over topology nodes and edges."""
+
+    query = ""
+    while True:
+        output_writer(render_topology_interactive_text(document, query=query))
+        choice = input_reader("topology> ").strip()
+        if choice in ("q", "quit", "\x1b"):
+            return 0
+        if choice in ("r", "reset"):
+            query = ""
+            continue
+        if choice.startswith("/"):
+            query = choice[1:].strip()
+            continue
+        if choice.isdigit():
+            nodes = list(document.get("nodes") or [])
+            index = int(choice) - 1
+            if 0 <= index < len(nodes):
+                node = nodes[index]
+                related = [
+                    edge
+                    for edge in document.get("edges") or []
+                    if edge.get("from") == node.get("id") or edge.get("to") == node.get("id")
+                ]
+                output_writer(
+                    "Node %s: %s (%s)\nRelated edges: %s"
+                    % (
+                        node.get("id") or "-",
+                        node.get("label") or "-",
+                        node.get("kind") or "-",
+                        len(related),
+                    )
+                )
+
+
 def _render_topology(document: dict[str, Any], output_format: str) -> str:
     if output_format == "json":
         return render_topology_json(document)
@@ -395,9 +492,10 @@ def run_dashboard_topology(args: argparse.Namespace) -> int:
         alert_contract,
     )
     if bool(getattr(args, "interactive", False)):
-        raise GrafanaError(
-            "Topology interactive mode is not supported in the Python CLI yet."
-        )
+        if not bool(getattr(args, "force_interactive", False)):
+            print(render_topology_interactive_text(topology_document))
+            return 0
+        return run_topology_interactive_loop(topology_document)
     output_format = str(getattr(args, "output_format", "text"))
     rendered = _render_topology(topology_document, output_format)
     output_file = getattr(args, "output_file", None)
@@ -408,4 +506,3 @@ def run_dashboard_topology(args: argparse.Namespace) -> int:
         output_path.write_text(f"{rendered}\n", encoding="utf-8")
     print(rendered)
     return 0
-

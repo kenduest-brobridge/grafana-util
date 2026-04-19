@@ -1,4 +1,5 @@
 import unittest
+from grafana_utils import project_status_live
 from grafana_utils.project_status import (
     build_project_status,
     ProjectStatusFreshness,
@@ -48,6 +49,56 @@ class TestProjectStatus(unittest.TestCase):
         self.assertEqual(status.overall.status, PROJECT_STATUS_PARTIAL)
         self.assertEqual(status.overall.domain_count, 2)
         self.assertEqual(status.overall.present_count, 0)
+
+    def test_live_read_failed_domain_is_blocked(self):
+        domain = project_status_live._read_failed_domain(
+            "dashboard",
+            source="live.dashboard",
+            error=RuntimeError("boom"),
+            next_action="restore dashboard access",
+        )
+
+        self.assertEqual(domain.id, "dashboard")
+        self.assertEqual(domain.status, "blocked")
+        self.assertEqual(domain.reason_code, "live-read-failed")
+        self.assertEqual(domain.blocker_count, 1)
+        self.assertIn("restore dashboard access", domain.next_actions)
+
+    def test_merge_live_domain_statuses_adds_all_org_mode_suffix(self):
+        first = StatusReading(
+            id="dashboard",
+            scope="live",
+            mode="live-list-surfaces",
+            status=PROJECT_STATUS_READY,
+            reason_code="ready",
+            primary_count=2,
+            source_kinds=["live-dashboard-search"],
+            signal_keys=["live.dashboards.count"],
+            blockers=[],
+            warnings=[],
+            next_actions=["review dashboards"],
+            freshness=ProjectStatusFreshness(status="current", source_count=1),
+        ).into_project_domain_status()
+        second = StatusReading(
+            id="dashboard",
+            scope="live",
+            mode="live-list-surfaces",
+            status=PROJECT_STATUS_READY,
+            reason_code="ready",
+            primary_count=3,
+            source_kinds=["live-dashboard-search"],
+            signal_keys=["live.dashboards.count"],
+            blockers=[],
+            warnings=[],
+            next_actions=["review dashboards"],
+            freshness=ProjectStatusFreshness(status="current", source_count=1),
+        ).into_project_domain_status()
+
+        merged = project_status_live.merge_live_domain_statuses([first, second])
+
+        self.assertEqual(merged.primary_count, 5)
+        self.assertEqual(merged.mode, "live-list-surfaces-all-orgs")
+        self.assertEqual(merged.freshness.source_count, 2)
 
 
 if __name__ == "__main__":

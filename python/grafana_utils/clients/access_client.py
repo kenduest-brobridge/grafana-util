@@ -32,12 +32,29 @@ class GrafanaAccessClient:
         #   Upstream callers: 無
         #   Downstream callees: 無
 
+        self.base_url = base_url
+        self.headers = dict(headers)
+        self.timeout = timeout
+        self.verify_ssl = verify_ssl
+        self.ca_cert = ca_cert
         self.transport = transport or build_json_http_transport(
             base_url=base_url,
             headers={"Accept": "application/json", **headers},
             timeout=timeout,
             verify_ssl=verify_ssl,
             ca_cert=ca_cert,
+        )
+
+    def with_org_id(self, org_id: str) -> "GrafanaAccessClient":
+        """Return a new client scoped to one explicit Grafana organization."""
+        headers = dict(self.headers)
+        headers["X-Grafana-Org-Id"] = str(org_id)
+        return GrafanaAccessClient(
+            base_url=self.base_url,
+            headers=headers,
+            timeout=self.timeout,
+            verify_ssl=self.verify_ssl,
+            ca_cert=self.ca_cert,
         )
 
     def request_json(

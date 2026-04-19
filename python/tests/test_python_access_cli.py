@@ -22,6 +22,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(PYTHON_ROOT))
 access_utils = importlib.import_module("grafana_utils.access_cli")
 access_client_module = importlib.import_module("grafana_utils.clients.access_client")
+access_workflows = importlib.import_module("grafana_utils.access.workflows")
 
 
 class FakeAccessClient:
@@ -3251,6 +3252,105 @@ class AccessCliTests(unittest.TestCase):
                 ["user", "list", "--scope", "global", "--token", "abc123"]
             )
         self.assertEqual(result, 1)
+
+    def test_access_user_browse_parser_accepts_rust_filters(self):
+        args = access_utils.parse_args(
+            [
+                "user",
+                "browse",
+                "--all-orgs",
+                "--query",
+                "alice",
+                "--login",
+                "alice",
+                "--page",
+                "2",
+                "--per-page",
+                "25",
+            ]
+        )
+
+        self.assertEqual(args.resource, "user")
+        self.assertEqual(args.command, "browse")
+        self.assertTrue(args.all_orgs)
+        self.assertEqual(args.query, "alice")
+        self.assertEqual(args.page, 2)
+
+    def test_access_team_browse_dispatches_to_browse_workflow(self):
+        args = argparse.Namespace(resource="team", command="browse")
+        client = FakeAccessClient()
+        with mock.patch(
+            "grafana_utils.access.workflows.browse_teams_with_client",
+            return_value=44,
+        ) as browse_teams:
+            result = access_utils.dispatch_access_command(args, client, "token")
+
+        self.assertEqual(result, 44)
+        browse_teams.assert_called_once_with(args, client)
+
+    def test_access_user_browse_local_run_id_reads_artifact_lane(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            config_path = root / "grafana-util.yaml"
+            config_path.write_text("artifact_root: artifacts\nprofiles: {}\n", encoding="utf-8")
+            lane = root / "artifacts" / "default" / "runs" / "run-1" / "access" / "users"
+            lane.mkdir(parents=True)
+            (lane / "users.json").write_text(
+                json.dumps(
+                    [
+                        {
+                            "login": "alice",
+                            "email": "alice@example.com",
+                            "name": "Alice",
+                            "orgRole": "Viewer",
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            args = access_utils.parse_args(
+                ["user", "browse", "--local", "--run-id", "run-1", "--json"]
+            )
+
+            output = io.StringIO()
+            with (
+                mock.patch.dict("os.environ", {"GRAFANA_UTIL_CONFIG": str(config_path)}),
+                redirect_stdout(output),
+            ):
+                result = access_workflows.browse_users_with_client(args, FakeAccessClient())
+
+        self.assertEqual(result, 0)
+        rows = json.loads(output.getvalue())
+        self.assertEqual(rows[0]["login"], "alice")
+
+    def test_access_team_browse_local_latest_reads_artifact_lane(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            config_path = root / "grafana-util.yaml"
+            config_path.write_text("artifact_root: artifacts\nprofiles: {}\n", encoding="utf-8")
+            scope = root / "artifacts" / "default"
+            lane = scope / "runs" / "run-2" / "access" / "teams"
+            lane.mkdir(parents=True)
+            (scope / "latest-run.json").write_text(
+                json.dumps({"runId": "run-2"}),
+                encoding="utf-8",
+            )
+            (lane / "teams.json").write_text(
+                json.dumps([{"name": "Ops", "email": "ops@example.com"}]),
+                encoding="utf-8",
+            )
+            args = access_utils.parse_args(["team", "browse", "--local", "--json"])
+
+            output = io.StringIO()
+            with (
+                mock.patch.dict("os.environ", {"GRAFANA_UTIL_CONFIG": str(config_path)}),
+                redirect_stdout(output),
+            ):
+                result = access_workflows.browse_teams_with_client(args, FakeAccessClient())
+
+        self.assertEqual(result, 0)
+        rows = json.loads(output.getvalue())
+        self.assertEqual(rows[0]["name"], "Ops")
 
 
 if __name__ == "__main__":

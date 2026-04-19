@@ -42,6 +42,10 @@ from .models import (
     render_user_csv,
     render_user_json,
     render_user_table,
+    team_matches_filters,
+    paginate_teams,
+    paginate_users,
+    user_matches_filters,
     service_account_matches_query,
     serialize_service_account_row,
     serialize_user_row,
@@ -52,6 +56,7 @@ from .pending_cli_staging import (
     resolve_team_id,
     validate_destructive_confirmed,
 )
+from ..profile_config import resolve_input_lane_path
 
 
 def validate_user_list_auth(args, auth_mode):
@@ -2398,6 +2403,10 @@ def format_deleted_service_account_token_summary_line(token):
 
 def list_users_with_client(args, client):
     """List users with client implementation."""
+    if getattr(args, "all_orgs", False):
+        args.scope = "global"
+    if getattr(args, "current_org", False):
+        args.scope = "org"
     users = build_user_rows(client, args)
     if args.csv:
         render_user_csv(users)
@@ -2414,6 +2423,60 @@ def list_users_with_client(args, client):
     print("")
     print("Listed %s user(s) from %s scope at %s" % (len(users), args.scope, args.url))
     return 0
+
+
+def _resolve_access_local_input_dir(args, lane_path):
+    """Resolve one read-only access artifact lane for --local browse/list flows."""
+    if getattr(args, "input_dir", None) and getattr(args, "local", False):
+        raise GrafanaError("--input-dir and --local cannot be combined.")
+    if not getattr(args, "local", False):
+        return Path(args.input_dir) if getattr(args, "input_dir", None) else None
+    try:
+        return resolve_input_lane_path(
+            lane_path,
+            run=getattr(args, "run", None),
+            run_id=getattr(args, "run_id", None),
+            profile_name=getattr(args, "profile", None),
+            config_path=getattr(args, "config", None),
+        )
+    except ValueError as exc:
+        raise GrafanaError(str(exc)) from exc
+
+
+def _render_browsed_users(args, users, source):
+    if args.csv:
+        render_user_csv(users)
+        return 0
+    if args.json:
+        print(render_user_json(users))
+        return 0
+    if args.table:
+        for line in render_user_table(users):
+            print(line)
+    else:
+        for user in users:
+            print(format_user_summary_line(user))
+    print("")
+    print("Browsed %s user(s) from %s" % (len(users), source))
+    return 0
+
+
+def browse_users_with_client(args, client):
+    """Browse users using the list renderer until the Python TTY browser is expanded."""
+    input_dir = _resolve_access_local_input_dir(args, "access/users")
+    if input_dir:
+        bundle = _build_user_import_records(input_dir)
+        users = [
+            _normalize_user_record(record)
+            for record in bundle["records"]
+        ]
+        users = [user for user in users if user_matches_filters(user, args)]
+        users.sort(
+            key=lambda item: (str(item.get("login") or ""), str(item.get("email") or ""))
+        )
+        users = paginate_users(users, args.page, args.per_page)
+        return _render_browsed_users(args, users, input_dir)
+    return list_users_with_client(args, client)
 
 
 def list_service_accounts_with_client(args, client):
@@ -2464,6 +2527,42 @@ def list_teams_with_client(args, client):
     print("")
     print("Listed %s team(s) at %s" % (len(teams), args.url))
     return 0
+
+
+def _render_browsed_teams(args, teams, source):
+    if args.csv:
+        render_team_csv(teams)
+        return 0
+    if args.json:
+        print(render_team_json(teams))
+        return 0
+    if args.table:
+        for line in render_team_table(teams):
+            print(line)
+    else:
+        for team in teams:
+            print(format_team_summary_line(team))
+    print("")
+    print("Browsed %s team(s) from %s" % (len(teams), source))
+    return 0
+
+
+def browse_teams_with_client(args, client):
+    """Browse teams using the list renderer until the Python TTY browser is expanded."""
+    input_dir = _resolve_access_local_input_dir(args, "access/teams")
+    if input_dir:
+        bundle = _build_team_import_records(input_dir)
+        teams = [
+            _normalize_team_record(record)
+            for record in bundle["records"]
+        ]
+        teams = [team for team in teams if team_matches_filters(team, args)]
+        teams.sort(
+            key=lambda item: (str(item.get("name") or ""), str(item.get("email") or ""))
+        )
+        teams = paginate_teams(teams, args.page, args.per_page)
+        return _render_browsed_teams(args, teams, input_dir)
+    return list_teams_with_client(args, client)
 
 
 def _build_org_rows(client, args):
@@ -3198,6 +3297,9 @@ def dispatch_access_command(args, client, auth_mode):
     if args.resource == "user" and args.command == "list":
         validate_user_list_auth(args, auth_mode)
         return list_users_with_client(args, client)
+    if args.resource == "user" and args.command == "browse":
+        validate_user_list_auth(args, auth_mode)
+        return browse_users_with_client(args, client)
     if args.resource == "user" and args.command == "export":
         return export_users_with_client(args, client)
     if args.resource == "user" and args.command == "import":
@@ -3216,6 +3318,8 @@ def dispatch_access_command(args, client, auth_mode):
         return diff_users_with_client(args, client)
     if args.resource == "team" and args.command == "list":
         return list_teams_with_client(args, client)
+    if args.resource == "team" and args.command == "browse":
+        return browse_teams_with_client(args, client)
     if args.resource == "team" and args.command == "add":
         return add_team_with_client(args, client)
     if args.resource == "team" and args.command == "modify":

@@ -1,0 +1,9 @@
+# ai-changes-archive-2026-04-20
+
+## 2026-04-18 - Advance review and contract backlog
+- Summary: split dashboard browse detail rendering into a dedicated helper module, introduced a shared status producer model for staged datasource and alert adapters, extracted the sync live apply phase loop into a shared client/request helper, and extended output contract validation with collection-aware path matching plus array/enum constraints.
+- Tests: moved dashboard browse render tests into a dedicated module, added status model round-trip coverage, added sync live apply phase regressions, and expanded output contract checker tests for wildcard paths, array item types, minimum items, and enum values.
+- Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `cargo test --manifest-path rust/Cargo.toml --quiet browse_render --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet project_status --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet phase_ --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet sync_live --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet`; `make quality-output-contracts`; `PYTHONPATH=python python3 -m unittest -v python.tests.test_python_output_contracts`; `make quality-sync-rust`.
+- Impact: Rust dashboard browse rendering modules, staged project-status adapters, sync live apply orchestration modules, output contract checker/registry/tests, internal contract mapping docs, and AI trace docs. README files and generated user docs were intentionally left unchanged.
+- Rollback/Risk: low to medium internal refactor. Rollback should restore inline browse detail rendering, inline sync live apply loops, direct staged status construction, and the previous shallow output contract checker while preserving public command behavior.
+- Follow-up: split the pre-existing `rust/src/commands/datasource/plan/mod.rs` architecture hard blocker before treating `make quality-architecture` as a clean gate again.

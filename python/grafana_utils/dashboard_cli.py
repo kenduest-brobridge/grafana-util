@@ -100,7 +100,10 @@ from .dashboards.import_support import (
     resolve_dashboard_uid_for_import,
     serialize_compare_document,
 )
-from .dashboards.import_workflow import run_import_dashboards
+from .dashboards.import_workflow import (
+    _resolve_multi_org_targets,
+    run_import_dashboards,
+)
 from .dashboards.import_runtime import (
     build_import_workflow_deps as build_import_workflow_deps_from_runtime,
 )
@@ -160,8 +163,10 @@ from .dashboards.transformer import (
 )
 from .dashboard_authoring import (
     build_dashboard_history_export_document,
+    build_dashboard_history_diff_document,
     build_dashboard_history_list_document_from_export,
     build_dashboard_history_list_document,
+    build_dashboard_plan_document,
     build_dashboard_review_document,
     build_history_inventory_document,
     clone_live_dashboard,
@@ -335,6 +340,7 @@ SCREENSHOT_FULL_PAGE_OUTPUT_CHOICES = ("single", "tiles", "manifest")
 SCREENSHOT_THEME_CHOICES = ("light", "dark")
 AUTHORING_OUTPUT_FORMAT_CHOICES = ("text", "table", "json", "yaml")
 HISTORY_OUTPUT_FORMAT_CHOICES = ("text", "table", "json", "yaml")
+PLAN_OUTPUT_FORMAT_CHOICES = ("text", "table", "json")
 VALIDATION_OUTPUT_FORMAT_CHOICES = ("text", "json")
 RAW_TO_PROMPT_OUTPUT_FORMAT_CHOICES = ("text", "table", "json", "yaml")
 IMPACT_OUTPUT_FORMAT_CHOICES = ("text", "json", "yaml")
@@ -1570,7 +1576,9 @@ def add_browse_cli_args(parser: argparse.ArgumentParser) -> None:
         ),
     )
     input_group.add_argument(
+        "--input",
         "--input-dir",
+        dest="input_dir",
         default=None,
         help=(
             "Browse dashboards from this local export tree instead of live Grafana. "
@@ -1608,6 +1616,11 @@ def add_browse_cli_args(parser: argparse.ArgumentParser) -> None:
         "--path",
         default=None,
         help="Optional folder path root to open instead of the full dashboard tree, for example 'Platform / Infra'.",
+    )
+    parser.add_argument(
+        "--open-browser",
+        action="store_true",
+        help="Open the preview URL in your default browser after the local browser starts.",
     )
 
 
@@ -1838,6 +1851,65 @@ def add_history_export_cli_args(parser: argparse.ArgumentParser) -> None:
     )
 
 
+def add_history_diff_cli_args(parser: argparse.ArgumentParser) -> None:
+    """Add history diff cli args implementation."""
+    add_common_cli_args(parser)
+    parser.add_argument(
+        "--base-dashboard-uid",
+        default=None,
+        help="Base-side dashboard UID for live history or --base-input-dir selection.",
+    )
+    parser.add_argument(
+        "--base-input",
+        default=None,
+        help="Base-side local history artifact JSON.",
+    )
+    parser.add_argument(
+        "--base-input-dir",
+        default=None,
+        help="Base-side dashboard export root produced with --include-history.",
+    )
+    parser.add_argument(
+        "--new-dashboard-uid",
+        default=None,
+        help="New-side dashboard UID for live history or --new-input-dir selection.",
+    )
+    parser.add_argument(
+        "--new-input",
+        default=None,
+        help="New-side local history artifact JSON.",
+    )
+    parser.add_argument(
+        "--new-input-dir",
+        default=None,
+        help="New-side dashboard export root produced with --include-history.",
+    )
+    parser.add_argument(
+        "--base-version",
+        type=int,
+        required=True,
+        help="Base-side dashboard history version number.",
+    )
+    parser.add_argument(
+        "--new-version",
+        type=int,
+        required=True,
+        help="New-side dashboard history version number.",
+    )
+    parser.add_argument(
+        "--output-format",
+        choices=DIFF_OUTPUT_FORMAT_CHOICES,
+        default="text",
+        help="Render history diff as text or json.",
+    )
+    parser.add_argument(
+        "--context-lines",
+        type=int,
+        default=3,
+        help="Number of unified diff context lines.",
+    )
+
+
 def add_history_restore_cli_args(parser: argparse.ArgumentParser) -> None:
     """Add history restore cli args implementation."""
     add_common_cli_args(parser)
@@ -1872,6 +1944,69 @@ def add_history_restore_cli_args(parser: argparse.ArgumentParser) -> None:
         "--yes",
         action="store_true",
         help="Confirm the live restore. Required unless --dry-run is set.",
+    )
+
+
+def add_plan_cli_args(parser: argparse.ArgumentParser) -> None:
+    """Add dashboard plan cli args implementation."""
+    add_common_cli_args(parser)
+    parser.add_argument(
+        "--input-dir",
+        required=True,
+        help="Build a dashboard plan from this local export root or dashboard variant directory.",
+    )
+    parser.add_argument(
+        "--input-type",
+        choices=("raw", "source"),
+        default="raw",
+        help="Interpret --input-dir as raw or source export files.",
+    )
+    parser.add_argument(
+        "--use-export-org",
+        action="store_true",
+        help="Route a combined multi-org export root back into matching target orgs.",
+    )
+    parser.add_argument(
+        "--only-org-id",
+        action="append",
+        default=[],
+        help="With --use-export-org, limit review to these exported source org IDs.",
+    )
+    parser.add_argument(
+        "--create-missing-orgs",
+        action="store_true",
+        help="With --use-export-org, mark missing destination orgs as would-create targets.",
+    )
+    parser.add_argument(
+        "--prune",
+        action="store_true",
+        help="Mark remote-only dashboards as would-delete candidates.",
+    )
+    parser.add_argument(
+        "--show-same",
+        action="store_true",
+        help="Show unchanged dashboards in text and table output.",
+    )
+    parser.add_argument(
+        "--output-columns",
+        default=None,
+        help="Render only these comma-separated plan columns. Use all to expand supported columns.",
+    )
+    parser.add_argument(
+        "--list-columns",
+        action="store_true",
+        help="Print the supported --output-columns values and exit.",
+    )
+    parser.add_argument(
+        "--no-header",
+        action="store_true",
+        help="Do not print table headers when rendering table output.",
+    )
+    parser.add_argument(
+        "--output-format",
+        choices=PLAN_OUTPUT_FORMAT_CHOICES,
+        default="text",
+        help="Render plan output as text, table, or json.",
     )
 
 
@@ -2274,6 +2409,11 @@ def browse_command(args: argparse.Namespace) -> int:
     if getattr(args, "org_id", None) or bool(getattr(args, "all_orgs", False)):
         if getattr(args, "workspace", None) or getattr(args, "input_dir", None):
             raise GrafanaError("Dashboard browse local mode does not support --org-id or --all-orgs.")
+    if bool(getattr(args, "open_browser", False)) and (
+        getattr(args, "workspace", None) or getattr(args, "input_dir", None)
+    ):
+        args.input = getattr(args, "input_dir", None) or getattr(args, "workspace", None)
+        return run_dashboard_serve(args)
     if not sys.stdin.isatty() or not sys.stdout.isatty():
         raise GrafanaError("Dashboard browse requires an interactive terminal (TTY).")
     if getattr(args, "workspace", None) or getattr(args, "input_dir", None):
@@ -2501,6 +2641,209 @@ def history_restore_command(args: argparse.Namespace) -> int:
     return 0
 
 
+PLAN_COLUMNS = (
+    "sourceOrgId",
+    "sourceOrgName",
+    "orgAction",
+    "targetOrgId",
+    "uid",
+    "title",
+    "action",
+    "status",
+    "reason",
+    "file",
+)
+
+
+def _parse_plan_columns(args: argparse.Namespace) -> list[str]:
+    requested = getattr(args, "output_columns", None)
+    if not requested or requested == "all":
+        return list(PLAN_COLUMNS)
+    columns = [item.strip() for item in str(requested).split(",") if item.strip()]
+    unsupported = [item for item in columns if item not in PLAN_COLUMNS]
+    if unsupported:
+        raise GrafanaError(
+            "Unsupported dashboard plan --output-columns value(s): %s. Supported values: %s."
+            % (", ".join(unsupported), ", ".join(("all",) + PLAN_COLUMNS))
+        )
+    return columns
+
+
+def _render_plan_table(document: dict[str, Any], columns: list[str], no_header: bool) -> list[str]:
+    rows = document.get("items") or []
+    output: list[str] = []
+    if not no_header:
+        output.append("  ".join(column.upper() for column in columns))
+    for row in rows:
+        output.append("  ".join(str(row.get(column) or "-") for column in columns))
+    if not output:
+        output.append("(no dashboard plan items)")
+    return output
+
+
+class _DashboardPlanCreateOnlyClient:
+    def fetch_dashboard_if_exists(self, uid: str) -> None:
+        return None
+
+
+class _DashboardPlanBlockedClient:
+    def __init__(self, reason: str) -> None:
+        self.reason = reason
+
+    def fetch_dashboard_if_exists(self, uid: str) -> None:
+        raise GrafanaError(self.reason)
+
+
+def _annotate_dashboard_plan_document(document: dict[str, Any], target: dict[str, Any]) -> None:
+    for item in document.get("items") or []:
+        item["sourceOrgId"] = target["source_org_id"]
+        item["sourceOrgName"] = target["source_org_name"]
+        item["orgAction"] = target["org_action"]
+        item["targetOrgId"] = target["target_org_id"]
+
+
+def _build_dashboard_multi_org_plan_document(
+    args: argparse.Namespace,
+    client: GrafanaClient,
+) -> dict[str, Any]:
+    auth_header = client.headers.get("Authorization", "")
+    if not auth_header.startswith("Basic "):
+        raise GrafanaError(
+            "Dashboard plan with --use-export-org does not support API token auth. "
+            "Use Grafana username/password login with --basic-user and --basic-password."
+        )
+    routed_args = argparse.Namespace(**vars(args))
+    routed_args.import_dir = args.input_dir
+    routed_args.dry_run = True
+    targets = _resolve_multi_org_targets(routed_args, _build_import_workflow_deps(), client)
+    documents: list[dict[str, Any]] = []
+    org_entries: list[dict[str, Any]] = []
+    all_items: list[dict[str, Any]] = []
+    blocked_count = 0
+    action_counts: dict[str, int] = {}
+    for target in targets:
+        target_org_id = str(target["target_org_id"] or "")
+        if target["org_action"] == "would-create-org":
+            scoped_client = _DashboardPlanCreateOnlyClient()
+        elif target["org_action"] == "missing-org":
+            scoped_client = _DashboardPlanBlockedClient(
+                "destination org is missing; use --create-missing-orgs to preview a new-org import"
+            )
+        else:
+            scoped_client = client.with_org_id(target_org_id)
+        document = build_dashboard_plan_document(
+            scoped_client,
+            input_dir=target["raw_dir"],
+            input_type=getattr(args, "input_type", "raw"),
+            show_same=bool(getattr(args, "show_same", False)),
+            prune=bool(getattr(args, "prune", False)),
+        )
+        _annotate_dashboard_plan_document(document, target)
+        documents.append(document)
+        org_entries.append(
+            {
+                "sourceOrgId": target["source_org_id"],
+                "sourceOrgName": target["source_org_name"],
+                "orgAction": target["org_action"],
+                "targetOrgId": target_org_id,
+                "dashboardCount": target["dashboard_count"],
+                "inputDir": str(target["raw_dir"]),
+            }
+        )
+        blocked_count += int(document.get("blockedCount") or 0)
+        for item in document.get("items") or []:
+            action = str(item.get("action") or "unknown")
+            action_counts[action] = action_counts.get(action, 0) + 1
+            all_items.append(item)
+    return {
+        "kind": "grafana-utils-dashboard-plan",
+        "mode": "routed-plan",
+        "inputDir": str(args.input_dir),
+        "inputType": getattr(args, "input_type", "raw"),
+        "useExportOrg": True,
+        "prune": bool(getattr(args, "prune", False)),
+        "orgCount": len(org_entries),
+        "orgs": org_entries,
+        "plans": documents,
+        "dashboardCount": len(all_items),
+        "blockedCount": blocked_count,
+        "actionCounts": action_counts,
+        "items": all_items,
+    }
+
+
+def dashboard_plan_command(args: argparse.Namespace) -> int:
+    """Build a dashboard import review plan."""
+    if bool(getattr(args, "create_missing_orgs", False)) and not bool(getattr(args, "use_export_org", False)):
+        raise GrafanaError("Dashboard plan --create-missing-orgs requires --use-export-org.")
+    if getattr(args, "only_org_id", None) and not bool(getattr(args, "use_export_org", False)):
+        raise GrafanaError("Dashboard plan --only-org-id requires --use-export-org.")
+    columns = _parse_plan_columns(args)
+    if bool(getattr(args, "list_columns", False)):
+        print("\n".join(PLAN_COLUMNS))
+        return 0
+    if (getattr(args, "output_columns", None) or bool(getattr(args, "no_header", False))) and getattr(args, "output_format", "text") != "table":
+        raise GrafanaError("--output-columns and --no-header are only supported with --output-format table for dashboard plan.")
+    client = build_client(args)
+    if getattr(args, "org_id", None):
+        client = client.with_org_id(args.org_id)
+    if bool(getattr(args, "use_export_org", False)):
+        document = _build_dashboard_multi_org_plan_document(args, client)
+    else:
+        document = build_dashboard_plan_document(
+            client,
+            input_dir=args.input_dir,
+            input_type=getattr(args, "input_type", "raw"),
+            show_same=bool(getattr(args, "show_same", False)),
+            prune=bool(getattr(args, "prune", False)),
+        )
+    output_format = getattr(args, "output_format", "text")
+    if output_format == "table":
+        dump_document(
+            document,
+            "text",
+            text_lines=_render_plan_table(document, columns, bool(getattr(args, "no_header", False))),
+        )
+    else:
+        dump_document(document, output_format)
+    return 0
+
+
+def history_diff_command(args: argparse.Namespace) -> int:
+    """Compare two dashboard history revisions."""
+    client = build_client(args)
+    if getattr(args, "org_id", None):
+        client = client.with_org_id(args.org_id)
+    document = build_dashboard_history_diff_document(
+        client,
+        base_dashboard_uid=getattr(args, "base_dashboard_uid", None),
+        base_input=getattr(args, "base_input", None),
+        base_input_dir=getattr(args, "base_input_dir", None),
+        base_version=int(args.base_version),
+        new_dashboard_uid=getattr(args, "new_dashboard_uid", None),
+        new_input=getattr(args, "new_input", None),
+        new_input_dir=getattr(args, "new_input_dir", None),
+        new_version=int(args.new_version),
+        context_lines=int(getattr(args, "context_lines", 3)),
+    )
+    output_format = getattr(args, "output_format", "text")
+    if output_format == "text":
+        lines = [
+            "Dashboard history diff: %s status=%s base-version=%s new-version=%s"
+            % (
+                document["base"].get("dashboardUid") or document["new"].get("dashboardUid") or "-",
+                document.get("status") or "-",
+                document["base"].get("version") or "-",
+                document["new"].get("version") or "-",
+            )
+        ]
+        lines.extend(document.get("diff") or [])
+        dump_document(document, "text", text_lines=lines)
+    else:
+        dump_document(document, output_format)
+    return 0
+
+
 def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
     """Build dashboard CLI parser and normalize mutually-exclusive dashboard subcommand input.
 
@@ -2617,6 +2960,13 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
     )
     add_common_cli_args(diff_parser)
     add_diff_cli_args(diff_parser)
+
+    plan_parser = subparsers.add_parser(
+        "plan",
+        help="Build a review-first dashboard import plan.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    add_plan_cli_args(plan_parser)
 
     summary_parser = subparsers.add_parser(
         "summary",
@@ -2756,8 +3106,16 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     add_history_restore_cli_args(history_restore_parser)
+    history_diff_parser = history_subparsers.add_parser(
+        "diff",
+        help="Compare two historical dashboard revisions from live Grafana or local history artifacts.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    add_history_diff_cli_args(history_diff_parser)
 
     args = parser.parse_args(argv)
+    if getattr(args, "command", None) == "browse":
+        args.input = getattr(args, "input_dir", None)
     _normalize_output_format_args(args, parser)
     _validate_import_routing_args(args, parser)
     _parse_dashboard_list_output_columns(args, parser)
@@ -3651,6 +4009,8 @@ def main(argv: Optional[list[str]] = None) -> int:
                 return history_export_command(args)
             if args.history_command == "restore":
                 return history_restore_command(args)
+            if args.history_command == "diff":
+                return history_diff_command(args)
             raise GrafanaError("Unsupported dashboard history command.")
         if args.command == "raw-to-prompt":
             return raw_to_prompt_command(args)
@@ -3676,6 +4036,8 @@ def main(argv: Optional[list[str]] = None) -> int:
             return import_dashboards(args)
         if args.command == "diff":
             return diff_dashboards(args)
+        if args.command == "plan":
+            return dashboard_plan_command(args)
         if args.command == "policy":
             return governance_gate_dashboards(args)
         if args.command == "dependencies":

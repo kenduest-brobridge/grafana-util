@@ -143,6 +143,42 @@ class DashboardTopologyTests(unittest.TestCase):
             self.assertIn("Dashboard topology:", rendered_file)
             self.assertIn("datasources=1", rendered_file)
 
+    def test_run_dashboard_topology_interactive_renders_non_tty_browser_view(self):
+        governance_document = {
+            "dashboardDatasourceEdges": [
+                {
+                    "datasourceUid": "prom-main",
+                    "datasource": "Prometheus Main",
+                    "dashboardUid": "dash-1",
+                }
+            ],
+            "dashboardGovernance": [
+                {"dashboardUid": "dash-1", "dashboardTitle": "CPU Overview"}
+            ],
+        }
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            governance_path = Path(tmpdir) / "governance.json"
+            governance_path.write_text(
+                json.dumps(governance_document),
+                encoding="utf-8",
+            )
+            args = argparse.Namespace(
+                governance=str(governance_path),
+                alert_contract=None,
+                output_format="text",
+                output_file=None,
+                interactive=True,
+            )
+
+            stream = io.StringIO()
+            with redirect_stdout(stream):
+                result = dashboard_topology.run_dashboard_topology(args)
+
+        self.assertEqual(result, 0)
+        self.assertIn("Dashboard topology interactive", stream.getvalue())
+        self.assertIn("Prometheus Main", stream.getvalue())
+
 
 if __name__ == "__main__":
     unittest.main()

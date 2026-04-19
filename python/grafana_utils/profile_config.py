@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping, Optional
@@ -10,8 +11,11 @@ from typing import Any, Mapping, Optional
 from . import yaml_compat as yaml
 
 DEFAULT_CONFIG_FILENAME = "grafana-util.yaml"
+PROFILE_CONFIG_ENV_VAR = "GRAFANA_UTIL_CONFIG"
 DEFAULT_SECRETS_DIRNAME = ".grafana-util-secrets"
 DEFAULT_PROFILE_VERSION = 1
+DEFAULT_PROFILE_SCOPE_NAME = "default"
+LATEST_RUN_POINTER_FILENAME = "latest-run.json"
 
 
 @dataclass(frozen=True)
@@ -31,8 +35,111 @@ class ProfileConnectionDetails:
 def resolve_config_path(config_path: Optional[Path | str] = None) -> Path:
     """Return the repo-local profile config path."""
     if config_path is None:
+        configured = os.environ.get(PROFILE_CONFIG_ENV_VAR)
+        if configured:
+            return Path(configured)
         return Path(DEFAULT_CONFIG_FILENAME)
     return Path(config_path)
+
+
+def default_artifact_root_path_for_config_path(config_path: Path | str) -> Path:
+    """Return the default artifact root beside one profile config file."""
+    path = Path(config_path)
+    config_dir = path.parent if str(path.parent) else Path(".")
+    return config_dir / ".grafana-util" / "artifacts"
+
+
+def resolve_artifact_root_path(
+    document: Optional[Mapping[str, Any]] = None,
+    config_path: Optional[Path | str] = None,
+) -> Path:
+    """Resolve artifact_root using the same config-relative rules as Rust."""
+    resolved_config_path = resolve_config_path(config_path)
+    default_root = default_artifact_root_path_for_config_path(resolved_config_path)
+    if not document:
+        return default_root
+    raw_root = document.get("artifact_root")
+    if raw_root is None:
+        return default_root
+    root = Path(str(raw_root))
+    if root.is_absolute():
+        return root
+    config_dir = resolved_config_path.parent if str(resolved_config_path.parent) else Path(".")
+    return config_dir / root
+
+
+def profile_scope_name(profile_name: Optional[str] = None) -> str:
+    """Return the artifact workspace profile scope name."""
+    return _normalize_text(profile_name, DEFAULT_PROFILE_SCOPE_NAME)
+
+
+def profile_scope_path(artifact_root: Path | str, profile_name: Optional[str] = None) -> Path:
+    """Return the artifact workspace scope root for one profile."""
+    return Path(artifact_root) / profile_scope_name(profile_name)
+
+
+def _validate_run_id(run_id: str) -> None:
+    if not run_id:
+        raise ValueError("Run id must not be empty.")
+    if run_id in {".", ".."}:
+        raise ValueError("Run id must not be '.' or '..'.")
+    if "/" in run_id or "\\" in run_id:
+        raise ValueError("Run id must not contain path separators.")
+
+
+def read_latest_run_id(scope_root: Path | str) -> str:
+    """Read the latest artifact run id from <scope>/latest-run.json."""
+    pointer_path = Path(scope_root) / LATEST_RUN_POINTER_FILENAME
+    if not pointer_path.is_file():
+        raise ValueError(f"No latest run recorded at {pointer_path}.")
+    raw = yaml.safe_load(pointer_path.read_text(encoding="utf-8"))
+    if not isinstance(raw, Mapping):
+        raise ValueError(f"Latest run pointer must be a JSON/YAML object: {pointer_path}")
+    run_id = _normalize_text(raw.get("run_id") or raw.get("runId"))
+    _validate_run_id(run_id)
+    return run_id
+
+
+def resolve_artifact_run_id(scope_root: Path | str, run: Optional[str], run_id: Optional[str]) -> str:
+    """Resolve a local artifact run selector for read-only consumers."""
+    if run_id:
+        selected = _normalize_text(run_id)
+        _validate_run_id(selected)
+        return selected
+    selector = _normalize_text(run, "latest")
+    if selector == "latest":
+        return read_latest_run_id(scope_root)
+    if selector == "previous":
+        runs_root = Path(scope_root) / "runs"
+        candidates = sorted(
+            path.name
+            for path in runs_root.iterdir()
+            if path.is_dir() and path.name not in {".", ".."}
+        ) if runs_root.is_dir() else []
+        if len(candidates) < 2:
+            raise ValueError(f"No previous run recorded under {runs_root}.")
+        selected = candidates[-2]
+        _validate_run_id(selected)
+        return selected
+    raise ValueError(f"Unsupported artifact run selector '{selector}'. Use latest or previous.")
+
+
+def resolve_input_lane_path(
+    lane_path: str,
+    *,
+    run: Optional[str] = None,
+    run_id: Optional[str] = None,
+    profile_name: Optional[str] = None,
+    config_path: Optional[Path | str] = None,
+) -> Path:
+    """Resolve a read-only artifact lane path from profile config workspace settings."""
+    document = load_profile_document(config_path)
+    scope_root = profile_scope_path(
+        resolve_artifact_root_path(document, config_path),
+        profile_name,
+    )
+    selected_run_id = resolve_artifact_run_id(scope_root, run, run_id)
+    return scope_root / "runs" / selected_run_id / lane_path
 
 
 def load_profile_document(config_path: Optional[Path | str] = None) -> dict[str, Any]:
@@ -311,15 +418,25 @@ def resolve_connection_details(
 
 __all__ = [
     "DEFAULT_CONFIG_FILENAME",
+    "DEFAULT_PROFILE_SCOPE_NAME",
     "DEFAULT_PROFILE_VERSION",
     "DEFAULT_SECRETS_DIRNAME",
+    "LATEST_RUN_POINTER_FILENAME",
+    "PROFILE_CONFIG_ENV_VAR",
     "ProfileConnectionDetails",
     "build_profile_example_document",
     "build_profile_summary",
+    "default_artifact_root_path_for_config_path",
     "list_profile_names",
     "load_profile_document",
+    "profile_scope_name",
+    "profile_scope_path",
+    "read_latest_run_id",
+    "resolve_artifact_root_path",
+    "resolve_artifact_run_id",
     "resolve_config_path",
     "resolve_connection_details",
+    "resolve_input_lane_path",
     "render_profile_summary_text",
     "save_profile_document",
     "select_profile",

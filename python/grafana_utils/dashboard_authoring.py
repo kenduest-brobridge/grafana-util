@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import difflib
 import json
 import os
 import shlex
@@ -32,6 +33,8 @@ HISTORY_EXPORT_KIND = "grafana-utils-dashboard-history-export"
 HISTORY_LIST_KIND = "grafana-utils-dashboard-history-list"
 HISTORY_RESTORE_KIND = "grafana-utils-dashboard-history-restore"
 HISTORY_INVENTORY_KIND = "grafana-utils-dashboard-history-inventory"
+HISTORY_DIFF_KIND = "grafana-utils-dashboard-history-diff"
+DASHBOARD_PLAN_KIND = "grafana-utils-dashboard-plan"
 DEFAULT_HISTORY_RESTORE_MESSAGE = "Restored by grafana-util dashboard history"
 
 
@@ -989,6 +992,315 @@ def load_history_artifacts(input_dir: Path) -> list[tuple[Path, dict[str, Any]]]
     for path in sorted(input_dir.rglob("*.history.json")):
         artifacts.append((path, load_history_export_document(path)))
     return artifacts
+
+
+def _history_dashboard_for_version(
+    document: dict[str, Any],
+    version: int,
+    *,
+    source: str,
+) -> dict[str, Any]:
+    for item in document.get("versions") or []:
+        if not isinstance(item, dict):
+            continue
+        if int(item.get("version") or 0) != int(version):
+            continue
+        dashboard = item.get("dashboard")
+        if not isinstance(dashboard, dict):
+            raise GrafanaError(
+                f"Dashboard history artifact {source} version {version} did not include dashboard data."
+            )
+        return dashboard
+    raise GrafanaError(
+        f"Dashboard history artifact {source} does not contain version {version}."
+    )
+
+
+def _select_history_artifact_from_dir(
+    input_dir: Path,
+    dashboard_uid: str,
+    *,
+    side: str,
+) -> tuple[Path, dict[str, Any]]:
+    matches = [
+        (path, document)
+        for path, document in load_history_artifacts(input_dir)
+        if _normalize_text(document.get("dashboardUid")) == dashboard_uid
+    ]
+    if not matches:
+        raise GrafanaError(
+            f"dashboard history diff {side} side could not find dashboard UID {dashboard_uid} under {input_dir}."
+        )
+    if len(matches) > 1:
+        paths = ", ".join(str(path) for path, _document in matches)
+        raise GrafanaError(
+            f"dashboard history diff {side} side found multiple artifacts for dashboard UID {dashboard_uid}: {paths}"
+        )
+    return matches[0]
+
+
+def _history_diff_source_count(
+    *,
+    dashboard_uid: Optional[str],
+    input_path: Optional[Path | str],
+    input_dir: Optional[Path | str],
+) -> int:
+    return sum(
+        1
+        for value in (dashboard_uid, input_path, input_dir)
+        if value not in (None, "")
+    )
+
+
+def _resolve_history_diff_dashboard(
+    client: GrafanaClient,
+    *,
+    side: str,
+    dashboard_uid: Optional[str],
+    input_path: Optional[Path | str],
+    input_dir: Optional[Path | str],
+    version: int,
+) -> dict[str, Any]:
+    source_count = _history_diff_source_count(
+        dashboard_uid=dashboard_uid,
+        input_path=input_path,
+        input_dir=input_dir,
+    )
+    if input_dir and not dashboard_uid:
+        raise GrafanaError(
+            f"dashboard history diff {side} side requires --{side}-dashboard-uid when --{side}-input-dir is set."
+        )
+    if source_count == 0:
+        raise GrafanaError(
+            f"dashboard history diff {side} side requires exactly one source: --{side}-dashboard-uid, --{side}-input, or --{side}-input-dir with --{side}-dashboard-uid."
+        )
+    if source_count > 1 and not (dashboard_uid and input_dir and not input_path):
+        raise GrafanaError(
+            f"dashboard history diff {side} side must choose exactly one source."
+        )
+    if input_path:
+        path = Path(input_path)
+        document = load_history_export_document(path)
+        uid = _normalize_text(document.get("dashboardUid"))
+        return {
+            "dashboardUid": uid,
+            "version": int(version),
+            "source": "input",
+            "path": str(path),
+            "dashboard": _history_dashboard_for_version(
+                document,
+                int(version),
+                source=str(path),
+            ),
+        }
+    if input_dir:
+        path, document = _select_history_artifact_from_dir(
+            Path(input_dir),
+            str(dashboard_uid),
+            side=side,
+        )
+        return {
+            "dashboardUid": str(dashboard_uid),
+            "version": int(version),
+            "source": "input-dir",
+            "path": str(path),
+            "dashboard": _history_dashboard_for_version(
+                document,
+                int(version),
+                source=str(path),
+            ),
+        }
+    return {
+        "dashboardUid": str(dashboard_uid),
+        "version": int(version),
+        "source": "live",
+        "dashboard": _fetch_dashboard_history_version_dashboard(
+            client,
+            str(dashboard_uid),
+            int(version),
+        ),
+    }
+
+
+def build_dashboard_history_diff_document(
+    client: GrafanaClient,
+    *,
+    base_dashboard_uid: Optional[str],
+    base_input: Optional[Path | str],
+    base_input_dir: Optional[Path | str],
+    base_version: int,
+    new_dashboard_uid: Optional[str],
+    new_input: Optional[Path | str],
+    new_input_dir: Optional[Path | str],
+    new_version: int,
+    context_lines: int = 3,
+) -> dict[str, Any]:
+    """Compare two dashboard history revisions from live or local artifacts."""
+
+    base = _resolve_history_diff_dashboard(
+        client,
+        side="base",
+        dashboard_uid=base_dashboard_uid,
+        input_path=base_input,
+        input_dir=base_input_dir,
+        version=int(base_version),
+    )
+    new = _resolve_history_diff_dashboard(
+        client,
+        side="new",
+        dashboard_uid=new_dashboard_uid,
+        input_path=new_input,
+        input_dir=new_input_dir,
+        version=int(new_version),
+    )
+    base_json = json.dumps(base["dashboard"], indent=2, sort_keys=True, ensure_ascii=False)
+    new_json = json.dumps(new["dashboard"], indent=2, sort_keys=True, ensure_ascii=False)
+    diff_lines = list(
+        difflib.unified_diff(
+            base_json.splitlines(),
+            new_json.splitlines(),
+            fromfile=f"{base['dashboardUid']}@{base['version']}",
+            tofile=f"{new['dashboardUid']}@{new['version']}",
+            lineterm="",
+            n=max(0, int(context_lines)),
+        )
+    )
+    status = "same" if base_json == new_json else "different"
+    return {
+        "kind": HISTORY_DIFF_KIND,
+        "status": status,
+        "base": {k: v for k, v in base.items() if k != "dashboard"},
+        "new": {k: v for k, v in new.items() if k != "dashboard"},
+        "diffLineCount": len(diff_lines),
+        "diff": diff_lines,
+    }
+
+
+def _discover_plan_dashboard_files(input_dir: Path) -> list[Path]:
+    excluded_names = {
+        "index.json",
+        "export-metadata.json",
+        "folders.json",
+        "datasources.json",
+        "permissions.json",
+    }
+    return [
+        path
+        for path in sorted(input_dir.rglob("*.json"))
+        if path.name not in excluded_names
+        and path.name != ".inspect-source-root"
+        and not path.name.endswith(".history.json")
+    ]
+
+
+def _plan_row_for_dashboard(
+    client: GrafanaClient,
+    path: Path,
+    document: dict[str, Any],
+    *,
+    show_same: bool,
+) -> Optional[dict[str, Any]]:
+    dashboard = _dashboard_object(document)
+    uid = _normalize_text(dashboard.get("uid"))
+    title = _normalize_text(dashboard.get("title"), DEFAULT_DASHBOARD_TITLE)
+    if not uid:
+        return {
+            "uid": "",
+            "title": title,
+            "action": "blocked",
+            "status": "blocked",
+            "reason": "missing-dashboard-uid",
+            "file": str(path),
+        }
+    existing = client.fetch_dashboard_if_exists(uid)
+    if existing is None:
+        return {
+            "uid": uid,
+            "title": title,
+            "action": "create",
+            "status": "would-create",
+            "reason": "missing-live-dashboard",
+            "file": str(path),
+        }
+    existing_dashboard = _dashboard_object(existing)
+    desired_json = json.dumps(dashboard, sort_keys=True, ensure_ascii=False)
+    existing_json = json.dumps(existing_dashboard, sort_keys=True, ensure_ascii=False)
+    if desired_json == existing_json:
+        if not show_same:
+            return None
+        return {
+            "uid": uid,
+            "title": title,
+            "action": "same",
+            "status": "same",
+            "reason": "matches-live-dashboard",
+            "file": str(path),
+        }
+    return {
+        "uid": uid,
+        "title": title,
+        "action": "update",
+        "status": "would-update",
+        "reason": "dashboard-json-differs",
+        "file": str(path),
+    }
+
+
+def build_dashboard_plan_document(
+    client: GrafanaClient,
+    *,
+    input_dir: Path | str,
+    input_type: str = "raw",
+    show_same: bool = False,
+    prune: bool = False,
+) -> dict[str, Any]:
+    """Build a review-first dashboard import plan from a local export tree."""
+
+    root = Path(input_dir)
+    if not root.exists():
+        raise GrafanaError(f"Input directory does not exist: {root}")
+    if not root.is_dir():
+        raise GrafanaError(f"Input path is not a directory: {root}")
+    rows: list[dict[str, Any]] = []
+    blocked = 0
+    for path in _discover_plan_dashboard_files(root):
+        try:
+            row = _plan_row_for_dashboard(
+                client,
+                path,
+                load_json_file(path),
+                show_same=show_same,
+            )
+            if row:
+                rows.append(row)
+                if row.get("status") == "blocked":
+                    blocked += 1
+        except Exception as exc:  # noqa: BLE001 - keep plan output per-file.
+            blocked += 1
+            rows.append(
+                {
+                    "uid": "",
+                    "title": "",
+                    "action": "blocked",
+                    "status": "blocked",
+                    "reason": str(exc),
+                    "file": str(path),
+                }
+            )
+    action_counts: dict[str, int] = {}
+    for row in rows:
+        action = _normalize_text(row.get("action"), "unknown")
+        action_counts[action] = action_counts.get(action, 0) + 1
+    return {
+        "kind": DASHBOARD_PLAN_KIND,
+        "inputDir": str(root),
+        "inputType": input_type,
+        "prune": bool(prune),
+        "dashboardCount": len(rows),
+        "blockedCount": blocked,
+        "actionCounts": action_counts,
+        "items": rows,
+    }
 
 
 def restore_dashboard_history_version(

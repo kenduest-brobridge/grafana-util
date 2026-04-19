@@ -8403,6 +8403,215 @@ class ExporterTests(unittest.TestCase):
         with self.assertRaisesRegex(exporter.GrafanaError, "requires a TTY"):
             dashboard_delete_workflow.run_delete_dashboards(args, deps)
 
+    def test_dashboard_history_diff_parses_rust_style_local_args(self):
+        args = exporter.parse_args(
+            [
+                "history",
+                "diff",
+                "--base-input",
+                "cpu.history.json",
+                "--base-version",
+                "1",
+                "--new-input",
+                "cpu.history.json",
+                "--new-version",
+                "2",
+                "--output-format",
+                "json",
+            ]
+        )
+
+        self.assertEqual(args.command, "history")
+        self.assertEqual(args.history_command, "diff")
+        self.assertEqual(args.base_input, "cpu.history.json")
+        self.assertEqual(args.new_version, 2)
+
+    def test_dashboard_history_diff_local_artifact_does_not_call_grafana(self):
+        artifact = {
+            "kind": "grafana-utils-dashboard-history-export",
+            "dashboardUid": "cpu-main",
+            "currentVersion": 2,
+            "currentTitle": "CPU",
+            "versionCount": 2,
+            "versions": [
+                {"version": 1, "dashboard": {"uid": "cpu-main", "title": "CPU"}},
+                {"version": 2, "dashboard": {"uid": "cpu-main", "title": "CPU v2"}},
+            ],
+        }
+        with tempfile.TemporaryDirectory() as tmpdir:
+            artifact_path = Path(tmpdir) / "cpu-main.history.json"
+            artifact_path.write_text(json.dumps(artifact), encoding="utf-8")
+            args = exporter.parse_args(
+                [
+                    "history",
+                    "diff",
+                    "--base-input",
+                    str(artifact_path),
+                    "--base-version",
+                    "1",
+                    "--new-input",
+                    str(artifact_path),
+                    "--new-version",
+                    "2",
+                    "--output-format",
+                    "json",
+                ]
+            )
+            client = mock.Mock()
+            with mock.patch.object(exporter, "build_client", return_value=client):
+                stream = io.StringIO()
+                with redirect_stdout(stream):
+                    result = exporter.history_diff_command(args)
+
+        self.assertEqual(result, 0)
+        client.request_json.assert_not_called()
+        payload = json.loads(stream.getvalue())
+        self.assertEqual(payload["kind"], "grafana-utils-dashboard-history-diff")
+        self.assertEqual(payload["status"], "different")
+        self.assertGreater(payload["diffLineCount"], 0)
+
+    def test_dashboard_plan_parser_supports_rust_review_flags(self):
+        args = exporter.parse_args(
+            [
+                "plan",
+                "--input-dir",
+                "./dashboards/raw",
+                "--input-type",
+                "source",
+                "--show-same",
+                "--output-format",
+                "table",
+                "--output-columns",
+                "uid,action,status",
+                "--no-header",
+            ]
+        )
+
+        self.assertEqual(args.command, "plan")
+        self.assertEqual(args.input_type, "source")
+        self.assertTrue(args.show_same)
+        self.assertEqual(args.output_columns, "uid,action,status")
+
+    def test_dashboard_plan_document_marks_create_update_and_same(self):
+        class FakePlanClient:
+            def fetch_dashboard_if_exists(self, uid):
+                if uid == "new-dashboard":
+                    return None
+                if uid == "same-dashboard":
+                    return {"dashboard": {"uid": uid, "title": "Same"}}
+                return {"dashboard": {"uid": uid, "title": "Old"}}
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            (root / "new.json").write_text(
+                json.dumps({"uid": "new-dashboard", "title": "New"}),
+                encoding="utf-8",
+            )
+            (root / "same.json").write_text(
+                json.dumps({"uid": "same-dashboard", "title": "Same"}),
+                encoding="utf-8",
+            )
+            (root / "update.json").write_text(
+                json.dumps({"uid": "update-dashboard", "title": "New"}),
+                encoding="utf-8",
+            )
+
+            document = exporter.build_dashboard_plan_document(
+                FakePlanClient(),
+                input_dir=root,
+                show_same=True,
+            )
+
+        actions = {item["uid"]: item["action"] for item in document["items"]}
+        self.assertEqual(actions["new-dashboard"], "create")
+        self.assertEqual(actions["same-dashboard"], "same")
+        self.assertEqual(actions["update-dashboard"], "update")
+
+    def test_dashboard_plan_use_export_org_routes_to_scoped_client(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            raw_dir = root / "org_1_Main_Org" / "raw"
+            raw_dir.mkdir(parents=True)
+            (raw_dir / "index.json").write_text(
+                json.dumps({"items": [{"orgId": "1", "org": "Main Org"}]}),
+                encoding="utf-8",
+            )
+            (raw_dir / "cpu.json").write_text(
+                json.dumps({"uid": "cpu-main", "title": "CPU Main"}),
+                encoding="utf-8",
+            )
+            scoped_client = FakeDashboardWorkflowClient(
+                dashboards={"cpu-main": {"dashboard": {"uid": "cpu-main", "title": "Old"}}}
+            )
+            base_client = FakeDashboardWorkflowClient(
+                orgs=[{"id": 1, "name": "Main Org"}],
+                org_clients={"1": scoped_client},
+            )
+            args = exporter.parse_args(
+                [
+                    "plan",
+                    "--input-dir",
+                    str(root),
+                    "--use-export-org",
+                    "--output-format",
+                    "json",
+                ]
+            )
+
+            stream = io.StringIO()
+            with (
+                mock.patch.object(exporter, "build_client", return_value=base_client),
+                redirect_stdout(stream),
+            ):
+                result = exporter.dashboard_plan_command(args)
+
+        self.assertEqual(result, 0)
+        payload = json.loads(stream.getvalue())
+        self.assertEqual(payload["mode"], "routed-plan")
+        self.assertEqual(payload["orgs"][0]["sourceOrgId"], "1")
+        self.assertEqual(payload["items"][0]["sourceOrgId"], "1")
+        self.assertEqual(payload["items"][0]["targetOrgId"], "1")
+        self.assertEqual(payload["items"][0]["action"], "update")
+
+    def test_dashboard_plan_use_export_org_create_missing_marks_creates(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            raw_dir = root / "org_2_Ops" / "raw"
+            raw_dir.mkdir(parents=True)
+            (raw_dir / "index.json").write_text(
+                json.dumps({"items": [{"orgId": "2", "org": "Ops"}]}),
+                encoding="utf-8",
+            )
+            (raw_dir / "ops.json").write_text(
+                json.dumps({"uid": "ops-main", "title": "Ops Main"}),
+                encoding="utf-8",
+            )
+            base_client = FakeDashboardWorkflowClient(orgs=[{"id": 1, "name": "Main Org"}])
+            args = exporter.parse_args(
+                [
+                    "plan",
+                    "--input-dir",
+                    str(root),
+                    "--use-export-org",
+                    "--create-missing-orgs",
+                    "--output-format",
+                    "json",
+                ]
+            )
+
+            stream = io.StringIO()
+            with (
+                mock.patch.object(exporter, "build_client", return_value=base_client),
+                redirect_stdout(stream),
+            ):
+                result = exporter.dashboard_plan_command(args)
+
+        self.assertEqual(result, 0)
+        payload = json.loads(stream.getvalue())
+        self.assertEqual(payload["orgs"][0]["orgAction"], "would-create-org")
+        self.assertEqual(payload["items"][0]["action"], "create")
+        self.assertEqual(payload["items"][0]["targetOrgId"], "<new>")
+
 
 if __name__ == "__main__":
     unittest.main()

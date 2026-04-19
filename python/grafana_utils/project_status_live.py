@@ -17,6 +17,7 @@ from .project_status import (
     ProjectStatusFreshness,
     ProjectStatusFreshnessSample,
     build_project_status,
+    build_live_project_status_freshness,
     build_live_project_status_freshness_from_samples,
     build_live_project_status_freshness_from_source_count,
 )
@@ -118,6 +119,161 @@ def merge_live_domain_statuses(statuses: List[ProjectDomainStatus]) -> Optional[
     ).into_project_domain_status()
 
 
+def _org_id_from_record(org: Any) -> Optional[str]:
+    if not isinstance(org, dict):
+        return None
+    value = org.get("id") or org.get("orgId")
+    text = str(value or "").strip()
+    return text or None
+
+
+def _read_failed_domain(
+    domain_id: str,
+    *,
+    source: str,
+    error: Exception,
+    next_action: str,
+    mode: str = "live-read-failed",
+) -> ProjectDomainStatus:
+    from .status_model import StatusReading, StatusRecordCount
+
+    return StatusReading(
+        id=domain_id,
+        scope="live",
+        mode=mode,
+        status="blocked",
+        reason_code="live-read-failed",
+        primary_count=0,
+        source_kinds=[source],
+        signal_keys=[f"live.{domain_id}.read_failed"],
+        blockers=[
+            StatusRecordCount(
+                kind="live-read-failed",
+                count=1,
+                source=f"{source}: {error}",
+            )
+        ],
+        warnings=[],
+        next_actions=[next_action],
+        freshness=build_live_project_status_freshness_from_source_count(0),
+    ).into_project_domain_status()
+
+
+def _scope_clients(
+    org_id: Optional[str],
+    dashboard_client: GrafanaClient,
+    datasource_client: GrafanaDatasourceClient,
+    alert_client: GrafanaAlertClient,
+    access_client: GrafanaAccessClient,
+) -> tuple[GrafanaClient, GrafanaDatasourceClient, GrafanaAlertClient, GrafanaAccessClient]:
+    if not org_id:
+        return dashboard_client, datasource_client, alert_client, access_client
+    return (
+        dashboard_client.with_org_id(org_id),
+        datasource_client.with_org_id(org_id),
+        alert_client.with_org_id(org_id),
+        access_client.with_org_id(org_id),
+    )
+
+
+def _build_live_grafana_domains_for_scope(
+    dashboard_client: GrafanaClient,
+    datasource_client: GrafanaDatasourceClient,
+    alert_client: GrafanaAlertClient,
+    access_client: GrafanaAccessClient,
+    *,
+    all_orgs: bool,
+) -> list[ProjectDomainStatus]:
+    domains: list[ProjectDomainStatus] = []
+    next_action_suffix = " --all-orgs" if all_orgs else ""
+
+    try:
+        rules = alert_client.list_alert_rules()
+        alert_status = build_alert_live_project_status_domain(
+            rules_document=rules,
+            contact_points_document=alert_client.list_contact_points(),
+            mute_timings_document=alert_client.list_mute_timings(),
+            policies_document=alert_client.get_notification_policies(),
+            templates_document=alert_client.list_templates(),
+        )
+        if alert_status:
+            domains.append(stamp_live_domain_freshness(alert_status, []))
+    except Exception as exc:  # noqa: BLE001 - convert live read failures into status.
+        domains.append(
+            _read_failed_domain(
+                "alert",
+                source="live.alert",
+                error=exc,
+                next_action=f"restore alert/org read access, then re-run live status{next_action_suffix}",
+            )
+        )
+
+    try:
+        summaries = dashboard_client.iter_dashboard_summaries(500)
+        dashboard_status = build_live_dashboard_domain_status(
+            dashboard_summaries=summaries,
+            datasources=datasource_client.list_datasources(),
+        )
+        if dashboard_status:
+            domains.append(stamp_live_domain_freshness(dashboard_status, []))
+    except Exception as exc:  # noqa: BLE001 - convert live read failures into status.
+        domains.append(
+            _read_failed_domain(
+                "dashboard",
+                source="live.dashboard",
+                error=exc,
+                next_action=f"restore dashboard/org read access, then re-run live status{next_action_suffix}",
+            )
+        )
+
+    try:
+        datasource_status = build_datasource_live_project_status(
+            datasource_list=datasource_client.list_datasources(),
+            current_org=access_client.get_current_org(),
+        )
+        if datasource_status:
+            domains.append(stamp_live_domain_freshness(datasource_status, []))
+    except Exception as exc:  # noqa: BLE001 - convert live read failures into status.
+        domains.append(
+            _read_failed_domain(
+                "datasource",
+                source="live.datasource",
+                error=exc,
+                next_action=f"restore datasource/org read access, then re-run live status{next_action_suffix}",
+            )
+        )
+
+    try:
+        from .status_model import StatusReading
+
+        users = access_client.list_org_users()
+        access_domain = StatusReading(
+            id="access",
+            scope="live",
+            mode="live-list-surfaces",
+            status="ready",
+            reason_code="ready",
+            primary_count=len(users),
+            source_kinds=["live-org-users"],
+            signal_keys=["live.users.count"],
+            blockers=[],
+            warnings=[],
+            next_actions=["re-run access export after membership changes"],
+        ).into_project_domain_status()
+        domains.append(stamp_live_domain_freshness(access_domain, []))
+    except Exception as exc:  # noqa: BLE001 - convert live read failures into status.
+        domains.append(
+            _read_failed_domain(
+                "access",
+                source="live.access",
+                error=exc,
+                next_action=f"restore access/org read access, then re-run live status{next_action_suffix}",
+            )
+        )
+
+    return domains
+
+
 def build_live_project_status(
     dashboard_client: GrafanaClient,
     datasource_client: GrafanaDatasourceClient,
@@ -133,83 +289,55 @@ def build_live_project_status(
 ) -> Any:
     domains: List[ProjectDomainStatus] = []
 
-    # If all_orgs is requested, we need to iterate through all orgs and merge
-    orgs = []
+    orgs: list[dict[str, Any]] = []
     if all_orgs:
         try:
             orgs = access_client.list_organizations()
-        except Exception:
-            pass
-    
-    if not orgs:
-        # Fallback to current org only
-        orgs = [access_client.get_current_org()]
+        except Exception as exc:  # noqa: BLE001 - org discovery is a domain blocker.
+            domains.append(
+                _read_failed_domain(
+                    "access",
+                    source="live.orgs",
+                    error=exc,
+                    next_action="restore org list access, then re-run live status --all-orgs",
+                )
+            )
 
-    # In a real implementation, we'd loop over orgs and switch X-Grafana-Org-Id
-    # For this parity pass, we'll implement the merge logic but keep it scoped to current if multi-org fails
-    
-    # Alerts
-    try:
-        rules = alert_client.list_alert_rules()
-        alert_status = build_alert_live_project_status_domain(
-            rules_document=rules,
-            contact_points_document=alert_client.list_contact_points(),
-            mute_timings_document=alert_client.list_mute_timings(),
-            policies_document=alert_client.get_notification_policies(),
-            templates_document=alert_client.list_templates(),
+    if all_orgs and orgs:
+        grouped: dict[str, list[ProjectDomainStatus]] = {
+            "alert": [],
+            "dashboard": [],
+            "datasource": [],
+            "access": [],
+        }
+        for org in orgs:
+            org_id = _org_id_from_record(org)
+            scoped_clients = _scope_clients(
+                org_id,
+                dashboard_client,
+                datasource_client,
+                alert_client,
+                access_client,
+            )
+            for domain in _build_live_grafana_domains_for_scope(
+                *scoped_clients,
+                all_orgs=True,
+            ):
+                grouped.setdefault(domain.id, []).append(domain)
+        for domain_id in ("alert", "dashboard", "datasource", "access"):
+            merged = merge_live_domain_statuses(grouped.get(domain_id, []))
+            if merged:
+                domains.append(merged)
+    elif not all_orgs:
+        domains.extend(
+            _build_live_grafana_domains_for_scope(
+                dashboard_client,
+                datasource_client,
+                alert_client,
+                access_client,
+                all_orgs=False,
+            )
         )
-        if alert_status:
-            alert_status = stamp_live_domain_freshness(alert_status, [])
-            domains.append(alert_status)
-    except Exception:
-        pass
-
-    # Dashboards
-    try:
-        summaries = dashboard_client.search_dashboards("")
-        dashboard_status = build_live_dashboard_domain_status(
-            dashboard_summaries=summaries,
-            datasources=datasource_client.list_datasources(),
-        )
-        if dashboard_status:
-            dashboard_status = stamp_live_domain_freshness(dashboard_status, [])
-            domains.append(dashboard_status)
-    except Exception:
-        pass
-
-    # Datasource
-    try:
-        datasource_status = build_datasource_live_project_status(
-            datasource_list=datasource_client.list_datasources(),
-            current_org=access_client.get_current_org(),
-        )
-        if datasource_status:
-            datasource_status = stamp_live_domain_freshness(datasource_status, [])
-            domains.append(datasource_status)
-    except Exception:
-        pass
-
-    # Access
-    try:
-        from .status_model import StatusReading
-        users = access_client.list_org_users()
-        access_domain = StatusReading(
-            id="access",
-            scope="live",
-            mode="live-list-surfaces",
-            status="ready",
-            reason_code="ready",
-            primary_count=len(users),
-            source_kinds=["live-org-users"],
-            signal_keys=["live.users.count"],
-            blockers=[],
-            warnings=[],
-            next_actions=["re-run access export after membership changes"],
-        ).into_project_domain_status()
-        access_domain = stamp_live_domain_freshness(access_domain, [])
-        domains.append(access_domain)
-    except Exception:
-        pass
 
     # Sync
     try:
