@@ -2,7 +2,9 @@
 
 import json
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any, Optional
+
+from grafana_utils import __version__ as TOOL_VERSION
 
 from .common import (
     ALERT_DELETE_PREVIEW_KIND,
@@ -10,18 +12,26 @@ from .common import (
     ALERT_PLAN_KIND,
     ALERT_PLAN_SCHEMA_VERSION,
     CONTACT_POINT_KIND,
+    LINKED_DASHBOARD_ANNOTATION_KEY,
+    LINKED_PANEL_ANNOTATION_KEY,
     MUTE_TIMING_KIND,
     POLICIES_KIND,
     RULE_KIND,
     TEMPLATE_KIND,
+    value_to_string,
     GrafanaError,
+    GrafanaApiError,
     RESOURCE_SUBDIR_BY_KIND,
 )
 from .provisioning import (
     build_compare_document,
     build_import_operation,
+    build_contact_point_import_payload,
+    build_mute_timing_import_payload,
     build_resource_identity,
-    detect_document_kind,
+    build_rule_import_payload,
+    build_template_import_payload,
+    build_policies_import_payload,
     fetch_live_compare_document,
     strip_server_managed_fields,
 )
@@ -73,6 +83,84 @@ def compare_field_changes(
     return changed_fields, changes
 
 
+def build_rule_review_hints(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    """Build rule review hints implementation."""
+    annotations = payload.get("annotations")
+    if not isinstance(annotations, dict):
+        return []
+
+    hints = []
+    dashboard_uid = value_to_string(annotations.get(LINKED_DASHBOARD_ANNOTATION_KEY))
+    if dashboard_uid:
+        hints.append(
+            {
+                "code": "linked-dashboard-reference",
+                "field": "annotations.__dashboardUid__",
+                "before": dashboard_uid,
+                "after": dashboard_uid,
+            }
+        )
+
+    if LINKED_PANEL_ANNOTATION_KEY in annotations:
+        panel_id = annotations.get(LINKED_PANEL_ANNOTATION_KEY)
+        if panel_id is not None:
+            panel_value = value_to_string(panel_id)
+            hints.append(
+                {
+                    "code": "linked-panel-reference",
+                    "field": "annotations.__panelId__",
+                    "before": panel_value,
+                    "after": panel_value,
+                }
+            )
+
+    return hints
+
+
+def build_alert_delete_preview_document(
+    rows: list[dict[str, Any]],
+    allow_policy_reset: bool,
+) -> dict[str, Any]:
+    """Build a delete-preview document implementation."""
+
+    def count(action: str) -> int:
+        return len([row for row in rows if str(row.get("action")) == action])
+
+    return {
+        "kind": ALERT_DELETE_PREVIEW_KIND,
+        "schemaVersion": ALERT_DELETE_PREVIEW_SCHEMA_VERSION,
+        "toolVersion": TOOL_VERSION,
+        "reviewRequired": True,
+        "reviewed": False,
+        "allowPolicyReset": bool(allow_policy_reset),
+        "summary": {
+            "processed": len(rows),
+            "delete": count("delete"),
+            "blocked": count("blocked"),
+        },
+        "rows": rows,
+    }
+
+
+def init_alert_runtime_layout(root: Path) -> dict[str, Any]:
+    """Create a scaffolded desired-state tree and return a bootstrap document."""
+
+    created: list[str] = []
+    root = Path(root)
+    root.mkdir(parents=True, exist_ok=True)
+    created.append(str(root))
+    for _, subdir in RESOURCE_SUBDIR_BY_KIND.items():
+        path = root / subdir
+        path.mkdir(parents=True, exist_ok=True)
+        created.append(str(path))
+
+    return {
+        "kind": "grafana-util-alert-init",
+        "root": str(root),
+        "created": created,
+    }
+
+
 def build_plan_row(
     kind: str,
     identity: str,
@@ -121,6 +209,7 @@ def build_alert_plan_document(rows: list[dict[str, Any]], allow_prune: bool) -> 
     return {
         "kind": ALERT_PLAN_KIND,
         "schemaVersion": ALERT_PLAN_SCHEMA_VERSION,
+        "toolVersion": TOOL_VERSION,
         "reviewRequired": True,
         "reviewed": False,
         "allowPrune": allow_prune,
@@ -135,7 +224,7 @@ def build_alert_plan(
     allow_prune: bool,
 ) -> dict[str, Any]:
     """Build an alert plan by comparing local desired state with live Grafana."""
-    from .provisioning import discover_alert_resource_files
+    from grafana_utils.alert_cli import discover_alert_resource_files
 
     resource_files = discover_alert_resource_files(desired_dir)
     rows = []
@@ -170,15 +259,17 @@ def build_alert_plan(
             action = "update"
             reason = "drift-detected"
 
+        review_hints = build_rule_review_hints(payload) if kind == RULE_KIND else []
         rows.append(
             build_plan_row(
                 kind=kind,
                 identity=identity,
                 action=action,
                 reason=reason,
-                path=path.relative_to(desired_dir) if desired_dir in path.parents else path,
+                path=path,
                 desired=payload,
-                live=remote_compare.get("spec") if remote_compare else None,
+                live=remote_compare,
+                review_hints=review_hints,
             )
         )
 
@@ -221,6 +312,15 @@ def build_alert_plan(
     return build_alert_plan_document(rows, allow_prune)
 
 
+SUPPORTED_ALERT_PLAN_KINDS = (
+    RULE_KIND,
+    CONTACT_POINT_KIND,
+    MUTE_TIMING_KIND,
+    POLICIES_KIND,
+    TEMPLATE_KIND,
+)
+
+
 def execute_alert_plan(
     client: Any,
     plan_document: dict[str, Any],
@@ -229,59 +329,132 @@ def execute_alert_plan(
     """Execute the operations defined in an alert plan."""
     if plan_document.get("kind") != ALERT_PLAN_KIND:
         raise GrafanaError("Alert plan document kind is not supported.")
+    rows = plan_document.get("rows")
+    if not isinstance(rows, list):
+        raise GrafanaError("Alert plan document is missing rows.")
 
-    rows = plan_document.get("rows", [])
     results = []
     applied_count = 0
 
     for row in rows:
+        if not isinstance(row, dict):
+            raise GrafanaError("Alert plan row is not an object.")
         action = row.get("action")
         if action not in ("create", "update", "delete"):
             continue
 
         kind = row.get("kind")
+        if not isinstance(kind, str):
+            raise GrafanaError("Alert plan row is missing kind.")
         identity = row.get("identity")
-        desired = row.get("desired")
+        if kind not in SUPPORTED_ALERT_PLAN_KINDS:
+            raise GrafanaError("Unsupported alert plan row kind: %r" % (kind,))
+        response = None
 
         if action == "create":
+            desired = row.get("desired")
+            if not isinstance(desired, dict):
+                raise GrafanaError("Alert plan row is missing desired.")
             if kind == RULE_KIND:
-                response = client.create_alert_rule(desired)
+                response = client.create_alert_rule(
+                    build_rule_import_payload(desired)
+                )
             elif kind == CONTACT_POINT_KIND:
-                response = client.create_contact_point(desired)
+                response = client.create_contact_point(
+                    build_contact_point_import_payload(desired)
+                )
             elif kind == MUTE_TIMING_KIND:
-                response = client.create_mute_timing(desired)
+                response = client.create_mute_timing(
+                    build_mute_timing_import_payload(desired)
+                )
             elif kind == TEMPLATE_KIND:
-                # Templates use update for both create/update in some cases,
-                # but let's follow standard client if available.
-                response = client.update_template(identity, desired)
-            else:
-                response = client.update_notification_policies(desired)
+                payload = build_template_import_payload(desired)
+                template_name = str(identity or payload.get("name") or "")
+                payload.pop("name", None)
+                payload["version"] = ""
+                response = client.request_json(
+                    f"/api/v1/provisioning/templates/{template_name}",
+                    method="PUT",
+                    payload=payload,
+                )
+            elif kind == POLICIES_KIND:
+                response = client.update_notification_policies(
+                    build_policies_import_payload(desired)
+                )
         elif action == "update":
+            desired = row.get("desired")
+            if not isinstance(desired, dict):
+                raise GrafanaError("Alert plan row is missing desired.")
             if kind == RULE_KIND:
-                response = client.update_alert_rule(identity, desired)
+                payload = build_rule_import_payload(desired)
+                if not payload.get("uid") and identity:
+                    payload["uid"] = str(identity)
+                response = client.update_alert_rule(str(payload.get("uid", "") or ""), payload)
             elif kind == CONTACT_POINT_KIND:
-                response = client.update_contact_point(identity, desired)
+                payload = build_contact_point_import_payload(desired)
+                if not payload.get("uid") and identity:
+                    payload["uid"] = str(identity)
+                response = client.update_contact_point(
+                    str(payload.get("uid", "") or ""),
+                    payload,
+                )
             elif kind == MUTE_TIMING_KIND:
-                response = client.update_mute_timing(identity, desired)
+                response = client.update_mute_timing(
+                    identity, build_mute_timing_import_payload(desired)
+                )
             elif kind == TEMPLATE_KIND:
-                response = client.update_template(identity, desired)
-            else:
-                response = client.update_notification_policies(desired)
+                payload = build_template_import_payload(desired)
+                payload.pop("name", None)
+                template_name = str(identity or payload.get("name") or "")
+                existing = None
+                try:
+                    existing = client.get_template(template_name)
+                except GrafanaApiError as exc:
+                    if getattr(exc, "status_code", None) != 404:
+                        raise
+                payload["version"] = str(
+                    existing.get("version", "") if isinstance(existing, dict) else ""
+                )
+                response = client.request_json(
+                    f"/api/v1/provisioning/templates/{template_name}",
+                    method="PUT",
+                    payload=payload,
+                )
+            elif kind == POLICIES_KIND:
+                response = client.update_notification_policies(
+                    build_policies_import_payload(desired)
+                )
         elif action == "delete":
-            if kind == POLICIES_KIND and not allow_policy_reset:
-                continue # Should have been blocked in plan
-            
             if kind == RULE_KIND:
                 response = client.request_json(f"/api/v1/provisioning/alert-rules/{identity}", method="DELETE")
             elif kind == CONTACT_POINT_KIND:
                 response = client.request_json(f"/api/v1/provisioning/contact-points/{identity}", method="DELETE")
             elif kind == MUTE_TIMING_KIND:
-                response = client.request_json(f"/api/v1/provisioning/mute-timings/{identity}", method="DELETE")
+                response = client.request_json(
+                    f"/api/v1/provisioning/mute-timings/{identity}",
+                    params={"version": ""},
+                    method="DELETE",
+                )
             elif kind == TEMPLATE_KIND:
-                response = client.request_json(f"/api/v1/provisioning/templates/{identity}", method="DELETE")
+                response = client.request_json(
+                    f"/api/v1/provisioning/templates/{identity}",
+                    params={"version": ""},
+                    method="DELETE",
+                )
+            elif kind == POLICIES_KIND:
+                if not allow_policy_reset:
+                    raise GrafanaError(
+                        "Refusing live notification policy reset without --allow-policy-reset."
+                    )
+                response = client.request_json(
+                    "/api/v1/provisioning/policies",
+                    method="DELETE",
+                )
             else:
-                 # Policy reset usually means applying a default policy
-                 continue 
+                raise GrafanaError("Unsupported alert delete kind: %r" % (kind,))
+
+        if response is None:
+            response = {}
 
         applied_count += 1
         results.append(

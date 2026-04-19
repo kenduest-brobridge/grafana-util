@@ -11,6 +11,7 @@ from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest import mock
 
+from grafana_utils import __version__ as TOOL_VERSION
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PYTHON_ROOT = REPO_ROOT / "python"
 MODULE_PATH = PYTHON_ROOT / "grafana_utils" / "alert_cli.py"
@@ -21,6 +22,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(PYTHON_ROOT))
 transport_module = importlib.import_module("grafana_utils.http_transport")
 alert_utils = importlib.import_module("grafana_utils.alert_cli")
+alert_runtime = importlib.import_module("grafana_utils.alerts.runtime")
 
 
 def sample_rule(**overrides):
@@ -324,6 +326,66 @@ class AlertUtilsTests(unittest.TestCase):
         self.assertEqual(args.diff_dir, "alerts/raw")
         self.assertFalse(args.dry_run)
 
+    def test_alert_parse_args_supports_apply_subcommand(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            plan_file = Path(tmpdir) / "plan.json"
+            plan_file.write_text("{}", encoding="utf-8")
+
+            args = alert_utils.parse_args(["apply", "--plan-file", str(plan_file), "--approve"])
+
+            self.assertEqual(args.alert_command, "apply")
+            self.assertTrue(args.approve)
+            self.assertEqual(args.plan_file, str(plan_file))
+
+    def test_alert_parse_args_requires_apply_approval(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            plan_file = Path(tmpdir) / "plan.json"
+            plan_file.write_text("{}", encoding="utf-8")
+
+            with self.assertRaises(SystemExit):
+                alert_utils.parse_args(["apply", "--plan-file", str(plan_file)])
+
+    def test_alert_parse_args_supports_init_subcommand(self):
+        args = alert_utils.parse_args(["init", "--desired-dir", "alerts/stage"])
+
+        self.assertEqual(args.alert_command, "init")
+        self.assertEqual(args.desired_dir, "alerts/stage")
+
+    def test_alert_parse_args_supports_delete_subcommand(self):
+        args = alert_utils.parse_args(
+            ["delete", "--kind", "policy-tree", "--identity", "root"]
+        )
+
+        self.assertEqual(args.alert_command, "delete")
+        self.assertEqual(args.kind, "policy-tree")
+        self.assertEqual(args.identity, "root")
+        self.assertFalse(args.allow_policy_reset)
+
+    def test_alert_parse_args_supports_new_rule_subcommand(self):
+        args = alert_utils.parse_args(["new-rule", "--desired-dir", "alerts/stage", "--name", "cpu"])
+
+        self.assertEqual(args.alert_command, "new-rule")
+        self.assertEqual(args.desired_dir, "alerts/stage")
+        self.assertEqual(args.name, "cpu")
+
+    def test_alert_parse_args_supports_new_contact_point_subcommand(self):
+        args = alert_utils.parse_args(
+            ["new-contact-point", "--desired-dir", "alerts/stage", "--name", "webhook-main"]
+        )
+
+        self.assertEqual(args.alert_command, "new-contact-point")
+        self.assertEqual(args.desired_dir, "alerts/stage")
+        self.assertEqual(args.name, "webhook-main")
+
+    def test_alert_parse_args_supports_new_template_subcommand(self):
+        args = alert_utils.parse_args(
+            ["new-template", "--desired-dir", "alerts/stage", "--name", "tpl"]
+        )
+
+        self.assertEqual(args.alert_command, "new-template")
+        self.assertEqual(args.desired_dir, "alerts/stage")
+        self.assertEqual(args.name, "tpl")
+
     def test_alert_parse_args_supports_list_rules_subcommand(self):
         args = alert_utils.parse_args(["list-rules", "--json"])
 
@@ -438,6 +500,317 @@ class AlertUtilsTests(unittest.TestCase):
 
         self.assertEqual(result, 1)
         self.assertIn("requires --approve", stream.getvalue())
+
+    def test_alert_main_requires_approve_for_live_apply(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            plan_file = Path(tmpdir) / "plan.json"
+            plan_file.write_text(
+                json.dumps(
+                    {
+                        "kind": alert_runtime.ALERT_PLAN_KIND,
+                        "rows": [],
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            with self.assertRaises(SystemExit):
+                alert_utils.main(["apply", "--plan-file", str(plan_file)])
+
+    def test_alert_main_runs_init_and_builds_runtime_layout(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            stream = io.StringIO()
+            with redirect_stdout(stream):
+                result = alert_utils.main(["init", "--desired-dir", tmpdir])
+
+            self.assertEqual(result, 0)
+            self.assertIn("Alert init", stream.getvalue())
+            self.assertTrue((Path(tmpdir) / "rules").is_dir())
+            self.assertTrue((Path(tmpdir) / "contact-points").is_dir())
+            self.assertTrue((Path(tmpdir) / "mute-timings").is_dir())
+            self.assertTrue((Path(tmpdir) / "policies").is_dir())
+            self.assertTrue((Path(tmpdir) / "templates").is_dir())
+
+    def test_alert_main_runs_init_delete_blocked_and_allowed(self):
+        stream = io.StringIO()
+        with redirect_stdout(stream):
+            result = alert_utils.main(
+                ["delete", "--kind", "policy-tree", "--identity", "root"]
+            )
+
+        self.assertEqual(result, 0)
+        blocked_output = stream.getvalue()
+        self.assertIn("Alert delete preview", blocked_output)
+        self.assertIn("action=blocked", blocked_output)
+        self.assertIn(
+            "reason=policy-reset-requires-allow-policy-reset",
+            blocked_output,
+        )
+
+        stream = io.StringIO()
+        with redirect_stdout(stream):
+            result = alert_utils.main(
+                ["delete", "--kind", "policy-tree", "--identity", "root", "--allow-policy-reset"]
+            )
+
+        self.assertEqual(result, 0)
+        allowed = stream.getvalue()
+        self.assertIn("Alert delete preview", allowed)
+        self.assertIn("action=delete", allowed)
+        self.assertIn("reason=explicit-delete-request", allowed)
+
+    def test_alert_main_runs_new_rule_contact_point_and_template(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            stream = io.StringIO()
+            with redirect_stdout(stream):
+                result = alert_utils.main(
+                    [
+                        "new-rule",
+                        "--desired-dir",
+                        tmpdir,
+                        "--name",
+                        "CPU High",
+                    ]
+                )
+
+            self.assertEqual(result, 0)
+            result_path = Path(tmpdir) / "rules" / "CPU_High.yaml"
+            self.assertIn("Alert new-rule", stream.getvalue())
+            self.assertTrue(result_path.is_file())
+            payload = json.loads(result_path.read_text(encoding="utf-8"))
+            self.assertEqual("grafana-alert-rule", payload["kind"])
+            self.assertTrue(result_path.is_file())
+
+            stream = io.StringIO()
+            with redirect_stdout(stream):
+                result = alert_utils.main(
+                    [
+                        "new-contact-point",
+                        "--desired-dir",
+                        tmpdir,
+                        "--name",
+                        "Webhook Main",
+                    ]
+                )
+
+            self.assertEqual(result, 0)
+            self.assertIn("Alert new-contact-point", stream.getvalue())
+            result_path = Path(tmpdir) / "contact-points" / "Webhook_Main.yaml"
+            self.assertTrue(result_path.is_file())
+            payload = json.loads(result_path.read_text(encoding="utf-8"))
+            self.assertEqual("grafana-contact-point", payload["kind"])
+
+            stream = io.StringIO()
+            with redirect_stdout(stream):
+                result = alert_utils.main(
+                    ["new-template", "--desired-dir", tmpdir, "--name", "tpl"]
+                )
+
+            self.assertEqual(result, 0)
+            self.assertIn("Alert new-template", stream.getvalue())
+            result_path = Path(tmpdir) / "templates" / "tpl.yaml"
+            self.assertTrue(result_path.is_file())
+            payload = json.loads(result_path.read_text(encoding="utf-8"))
+            self.assertEqual("grafana-notification-template", payload["kind"])
+            self.assertTrue((Path(tmpdir) / "templates" / "tpl.yaml").is_file())
+
+    def test_alert_main_rejects_add_rule_without_receiver(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            stream = io.StringIO()
+            with redirect_stderr(stream):
+                result = alert_utils.main(
+                    [
+                        "add-rule",
+                        "--desired-dir",
+                        tmpdir,
+                        "--name",
+                        "CPU-Load",
+                        "--folder",
+                        "infra",
+                        "--rule-group",
+                        "cpu",
+                    ]
+                )
+
+            self.assertEqual(result, 1)
+            self.assertIn("requires --receiver", stream.getvalue())
+
+    def test_alert_main_rejects_add_rule_with_receiver_and_no_route(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            stream = io.StringIO()
+            with redirect_stderr(stream):
+                result = alert_utils.main(
+                    [
+                        "add-rule",
+                        "--desired-dir",
+                        tmpdir,
+                        "--name",
+                        "CPU-Load",
+                        "--folder",
+                        "infra",
+                        "--rule-group",
+                        "cpu",
+                        "--receiver",
+                        "pagerduty-primary",
+                        "--no-route",
+                    ]
+                )
+
+            self.assertEqual(result, 1)
+            self.assertIn(
+                "cannot use --receiver when --no-route", stream.getvalue()
+            )
+
+    def test_alert_main_runs_add_rule_no_route_without_receiver(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            stream = io.StringIO()
+            with redirect_stdout(stream):
+                result = alert_utils.main(
+                    [
+                        "add-rule",
+                        "--desired-dir",
+                        tmpdir,
+                        "--name",
+                        "CPU-Load",
+                        "--folder",
+                        "infra",
+                        "--rule-group",
+                        "cpu",
+                        "--no-route",
+                    ]
+                )
+
+            self.assertEqual(result, 0)
+            output = stream.getvalue()
+            self.assertIn("Alert add-rule", output)
+            payload = json.loads((Path(tmpdir) / "rules" / "CPU-Load.yaml").read_text(encoding="utf-8"))
+            self.assertEqual(
+                payload["metadata"]["uid"], "CPU-Load"
+            )
+            self.assertTrue((Path(tmpdir) / "rules" / "CPU-Load.yaml").is_file())
+
+    def test_alert_main_rejects_clone_rule_without_receiver(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            stream = io.StringIO()
+            with redirect_stdout(stream):
+                alert_utils.main(
+                    [
+                        "new-rule",
+                        "--desired-dir",
+                        tmpdir,
+                        "--name",
+                        "source-rule",
+                    ]
+                )
+
+            stream = io.StringIO()
+            with redirect_stderr(stream):
+                result = alert_utils.main(
+                    [
+                        "clone-rule",
+                        "--desired-dir",
+                        tmpdir,
+                        "--source",
+                        "source-rule",
+                        "--name",
+                        "clone-rule",
+                    ]
+                )
+
+            self.assertEqual(result, 1)
+            self.assertIn("requires --receiver", stream.getvalue())
+
+    def test_alert_main_runs_clone_rule_no_route(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            stream = io.StringIO()
+            with redirect_stdout(stream):
+                alert_utils.main(
+                    [
+                        "new-rule",
+                        "--desired-dir",
+                        tmpdir,
+                        "--name",
+                        "source-rule",
+                    ]
+                )
+
+            stream = io.StringIO()
+            with redirect_stdout(stream):
+                result = alert_utils.main(
+                    [
+                        "clone-rule",
+                        "--desired-dir",
+                        tmpdir,
+                        "--source",
+                        "source-rule",
+                        "--name",
+                        "clone-rule",
+                        "--no-route",
+                    ]
+                )
+
+            self.assertEqual(result, 0)
+            output = stream.getvalue()
+            self.assertIn("Alert clone-rule", output)
+            payload = json.loads((Path(tmpdir) / "rules" / "clone-rule.yaml").read_text(encoding="utf-8"))
+            self.assertEqual(
+                payload["metadata"]["uid"], "clone-rule"
+            )
+
+    def test_alert_main_runs_preview_route_with_strict_route_matchers(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            desired_dir = Path(tmpdir)
+            policy_doc = alert_utils.build_policies_export_document(
+                sample_policies(
+                    receiver="Webhook Main",
+                    routes=[
+                        {
+                            "receiver": "route-eq",
+                            "object_matchers": [
+                                ["app", "=", "billing"],
+                                ["severity", "=", "warning"],
+                                ["grafana_utils_route", "=", "managed-route"],
+                            ],
+                        },
+                        {
+                            "receiver": "route-op",
+                            "object_matchers": [
+                                ["app", "=", "billing"],
+                                ["severity", "!=", "warning"],
+                            ],
+                        },
+                        {
+                            "receiver": "route-managed-only",
+                            "object_matchers": [["grafana_utils_route", "=", "managed-route"]],
+                        },
+                    ],
+                )
+            )
+            desired_dir.joinpath("policies").mkdir(parents=True, exist_ok=True)
+            alert_utils.write_json(
+                policy_doc,
+                desired_dir.joinpath("policies") / "notification-policies.yaml",
+                overwrite=True,
+            )
+
+            stream = io.StringIO()
+            with redirect_stdout(stream):
+                result = alert_utils.main(
+                    [
+                        "preview-route",
+                        "--desired-dir",
+                        tmpdir,
+                        "--label",
+                        "app=billing",
+                        "--severity",
+                        "warning",
+                    ]
+                )
+
+            self.assertEqual(result, 0)
+            payload = json.loads(stream.getvalue())
+            matched = {entry["receiver"] for entry in payload["matches"]}
+            self.assertEqual(matched, {"route-eq", "route-managed-only"})
 
     def test_alert_parse_args_disables_ssl_verification_by_default(self):
         args = alert_utils.parse_args([])
@@ -944,6 +1317,315 @@ class AlertUtilsTests(unittest.TestCase):
             with self.assertRaises(alert_utils.GrafanaError):
                 alert_utils.discover_alert_resource_files(root)
 
+    def test_alert_execute_alert_plan_propagates_template_error_exceptions(self):
+        class FailingTemplateClient:
+            def request_json(self, path, method="GET", params=None, payload=None):
+                return {}
+
+            def get_template(self, name):
+                raise alert_utils.GrafanaApiError(500, "https://grafana/templates/%s" % name, "error")
+
+        plan = {
+            "kind": alert_runtime.ALERT_PLAN_KIND,
+            "rows": [
+                {
+                    "kind": alert_utils.TEMPLATE_KIND,
+                    "identity": "codex.message",
+                    "action": "update",
+                    "desired": {
+                        "name": "codex.message",
+                        "template": "hello",
+                    },
+                }
+            ],
+        }
+        with self.assertRaises(alert_utils.GrafanaApiError):
+            alert_runtime.execute_alert_plan(FailingTemplateClient(), plan, False)
+
+    def test_alert_execute_alert_plan_rejects_missing_rows(self):
+        with self.assertRaisesRegex(
+            alert_utils.GrafanaError,
+            "Alert plan document is missing rows.",
+        ):
+            alert_runtime.execute_alert_plan(
+                FakeAlertClient(),
+                {
+                    "kind": alert_runtime.ALERT_PLAN_KIND,
+                    "rows": {},
+                },
+                False,
+            )
+
+    def test_alert_execute_alert_plan_rejects_unsupported_kind(self):
+        with self.assertRaisesRegex(
+            alert_utils.GrafanaError,
+            "Unsupported alert plan row kind",
+        ):
+            alert_runtime.execute_alert_plan(
+                FakeAlertClient(),
+                {
+                    "kind": alert_runtime.ALERT_PLAN_KIND,
+                    "rows": [
+                        {
+                            "kind": "grafana-unsupported-kind",
+                            "identity": "unknown",
+                            "action": "create",
+                            "desired": {},
+                        }
+                    ],
+                },
+                False,
+            )
+
+    def test_alert_execute_alert_plan_rejects_non_dict_desired_payload(self):
+        with self.assertRaisesRegex(
+            alert_utils.GrafanaError,
+            "Alert plan row is missing desired.",
+        ):
+            alert_runtime.execute_alert_plan(
+                FakeAlertClient(),
+                {
+                    "kind": alert_runtime.ALERT_PLAN_KIND,
+                    "rows": [
+                        {
+                            "kind": alert_utils.RULE_KIND,
+                            "identity": "rule-uid",
+                            "action": "update",
+                            "desired": [],
+                        }
+                    ],
+                },
+                False,
+            )
+
+    def test_alert_execute_alert_plan_supports_policy_create_and_update_with_plan_rows(self):
+        class PolicyClient(FakeAlertClient):
+            def __init__(self):
+                super().__init__()
+                self.policy_updates = []
+
+            def update_notification_policies(self, payload):
+                self.policy_updates.append(payload)
+                return {"updated": payload}
+
+        client = PolicyClient()
+        alert_runtime.execute_alert_plan(
+            client,
+            {
+                "kind": alert_runtime.ALERT_PLAN_KIND,
+                "rows": [
+                    {
+                        "kind": alert_utils.POLICIES_KIND,
+                        "identity": "ignore",
+                        "action": "create",
+                        "desired": {"receiver": "main"},
+                    },
+                    {
+                        "kind": alert_utils.POLICIES_KIND,
+                        "identity": "ignore",
+                        "action": "update",
+                        "desired": {"receiver": "main"},
+                    },
+                ],
+            },
+            False,
+        )
+
+        self.assertEqual(len(client.policy_updates), 2)
+        self.assertEqual(client.policy_updates[0], {"receiver": "main"})
+        self.assertEqual(client.policy_updates[1], {"receiver": "main"})
+
+    def test_alert_execute_alert_plan_adds_missing_uid_for_rule_update(self):
+        class RuleClient(FakeAlertClient):
+            def __init__(self):
+                super().__init__()
+                self.updated_rules = []
+
+            def update_alert_rule(self, uid, payload):
+                self.updated_rules.append((uid, payload))
+                return {"uid": uid}
+
+        client = RuleClient()
+        desired = sample_rule(title="Updated")
+        desired.pop("uid", None)
+        alert_runtime.execute_alert_plan(
+            client,
+            {
+                "kind": alert_runtime.ALERT_PLAN_KIND,
+                "rows": [
+                    {
+                        "kind": alert_utils.RULE_KIND,
+                        "identity": "rule-uid",
+                        "action": "update",
+                        "desired": desired,
+                    }
+                ],
+            },
+            False,
+        )
+
+        expected_payload = alert_utils.build_rule_import_payload(desired)
+        expected_payload["uid"] = "rule-uid"
+        self.assertEqual(client.updated_rules, [("rule-uid", expected_payload)])
+
+    def test_alert_run_alert_apply_cli_rejects_missing_approve(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            plan_file = Path(tmpdir) / "plan.json"
+            plan_file.write_text(
+                json.dumps(
+                    {
+                        "kind": alert_runtime.ALERT_PLAN_KIND,
+                        "rows": [],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            args = argparse.Namespace(
+                plan_file=str(plan_file),
+                output_format="json",
+                allow_policy_reset=False,
+                approve=False,
+            )
+
+            with self.assertRaisesRegex(
+                alert_utils.GrafanaError,
+                "Alert apply requires --approve before live execution is allowed.",
+            ):
+                alert_utils.run_alert_apply_cli(args)
+
+    def test_alert_build_alert_plan_document_records_tool_version(self):
+        document = alert_runtime.build_alert_plan_document(
+            [],
+            allow_prune=False,
+        )
+        self.assertEqual(document["toolVersion"], TOOL_VERSION)
+
+    def test_alert_build_alert_delete_preview_document_records_tool_version(self):
+        document = alert_runtime.build_alert_delete_preview_document(
+            [
+                {
+                    "path": None,
+                    "kind": alert_utils.TEMPLATE_KIND,
+                    "identity": "tpl",
+                    "action": "delete",
+                    "reason": "explicit-delete-request",
+                    "desired": None,
+                }
+            ],
+            allow_policy_reset=True,
+        )
+        self.assertEqual(document["toolVersion"], TOOL_VERSION)
+
+    def test_alert_build_alert_plan_records_full_path_for_rows(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            desired_dir = Path(tmpdir)
+            rule_path = desired_dir / "rules" / "rule.json"
+            alert_utils.write_json(
+                alert_utils.build_rule_export_document(sample_rule(uid="rule-uid")),
+                rule_path,
+                overwrite=True,
+            )
+
+            plan_client = FakeAlertClient(
+                rules=[sample_rule(uid="rule-uid")],
+                existing_rules={"rule-uid": sample_rule(uid="rule-uid")},
+                policies=sample_policies(),
+            )
+            document = alert_runtime.build_alert_plan(plan_client, desired_dir, False)
+            rule_rows = [
+                row
+                for row in document.get("rows", [])
+                if row.get("kind") == alert_utils.RULE_KIND
+            ]
+
+            self.assertEqual(len(rule_rows), 1)
+            self.assertEqual(rule_rows[0]["path"], str(rule_path))
+
+    def test_alert_build_alert_plan_rows_include_full_live_compare_payload(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            desired_dir = Path(tmpdir)
+            contact_path = desired_dir / "contact-points" / "cp.json"
+            alert_utils.write_json(
+                alert_utils.build_contact_point_export_document(
+                    sample_contact_point(settings={"url": "http://127.0.0.1/new"})
+                ),
+                contact_path,
+                overwrite=True,
+            )
+
+            plan_client = FakeAlertClient(
+                contact_points=[
+                    sample_contact_point(uid="cp-uid", settings={"url": "http://127.0.0.1/old"})
+                ],
+                policies=sample_policies(),
+            )
+            document = alert_runtime.build_alert_plan(plan_client, desired_dir, False)
+            contact_rows = [
+                row
+                for row in document.get("rows", [])
+                if row.get("kind") == alert_utils.CONTACT_POINT_KIND
+            ]
+
+            self.assertEqual(len(contact_rows), 1)
+            row = contact_rows[0]
+            self.assertEqual(row["action"], "update")
+            live = row["live"]
+            self.assertIsInstance(live, dict)
+            self.assertEqual(live.get("kind"), alert_utils.CONTACT_POINT_KIND)
+            spec = live.get("spec")
+            self.assertIsInstance(spec, dict)
+            self.assertEqual(spec.get("name"), "Webhook Main")
+            self.assertEqual(spec.get("settings", {}).get("url"), "http://127.0.0.1/old")
+
+    def test_alert_build_rule_review_hints_detects_linked_dashboard_and_panel(self):
+        hints = alert_runtime.build_rule_review_hints(sample_linked_rule())
+
+        self.assertEqual(
+            hints,
+            [
+                {
+                    "code": "linked-dashboard-reference",
+                    "field": "annotations.__dashboardUid__",
+                    "before": "source-dashboard-uid",
+                    "after": "source-dashboard-uid",
+                },
+                {
+                    "code": "linked-panel-reference",
+                    "field": "annotations.__panelId__",
+                    "before": "7",
+                    "after": "7",
+                },
+            ],
+        )
+
+    def test_alert_build_alert_plan_rows_are_warning_when_linked_rule_refs_present(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            desired_dir = Path(tmpdir)
+            rule_path = desired_dir / "rules" / "rule.json"
+            alert_utils.write_json(
+                alert_utils.build_rule_export_document(sample_linked_rule(uid="rule-uid")),
+                rule_path,
+                overwrite=True,
+            )
+
+            plan_client = FakeAlertClient(
+                rules=[sample_linked_rule(uid="rule-uid")],
+                existing_rules={"rule-uid": sample_linked_rule(uid="rule-uid")},
+                policies=sample_policies(),
+            )
+            document = alert_runtime.build_alert_plan(plan_client, desired_dir, False)
+            rule_rows = [
+                row
+                for row in document.get("rows", [])
+                if row.get("kind") == alert_utils.RULE_KIND
+            ]
+
+            self.assertEqual(len(rule_rows), 1)
+            self.assertEqual(rule_rows[0]["status"], "warning")
+            self.assertEqual(rule_rows[0]["action"], "noop")
+            self.assertEqual(rule_rows[0]["path"], str(rule_path))
+            self.assertEqual(len(rule_rows[0]["reviewHints"]), 2)
+
     def test_alert_build_rule_export_document_strips_server_managed_fields(self):
         document = alert_utils.build_rule_export_document(sample_rule())
 
@@ -1076,6 +1758,49 @@ class AlertUtilsTests(unittest.TestCase):
 
         self.assertEqual(kind, alert_utils.RULE_KIND)
         self.assertEqual(payload["uid"], "rule-uid")
+
+    def test_alert_build_compare_document_normalizes_rule_payload_for_plan_comparison(self):
+        document = alert_utils.build_compare_document(
+            alert_utils.RULE_KIND,
+            {
+                "uid": "rule-uid",
+                "orgID": 1,
+                "id": "should-strip",
+                "updated": "2026-04-01T00:00:00Z",
+                "provenance": "api",
+                "isPaused": False,
+                "for": "1m",
+                "keep_firing_for": "0s",
+                "notification_settings": None,
+                "record": None,
+                "annotations": {},
+                "data": [{"queryType": ""}, {"queryType": "A"}],
+            },
+        )
+
+        self.assertEqual(document["spec"]["for"], "60s")
+        self.assertNotIn("keep_firing_for", document["spec"])
+        self.assertNotIn("isPaused", document["spec"])
+        self.assertNotIn("orgID", document["spec"])
+        self.assertNotIn("id", document["spec"])
+        self.assertNotIn("updated", document["spec"])
+        self.assertNotIn("provenance", document["spec"])
+        self.assertNotIn("notification_settings", document["spec"])
+        self.assertNotIn("record", document["spec"])
+        self.assertNotIn("annotations", document["spec"])
+        self.assertEqual(document["spec"]["data"][0], {})
+        self.assertEqual(document["spec"]["data"][1], {"queryType": "A"})
+
+    def test_alert_build_compare_document_normalizes_template_payload_for_plan_comparison(self):
+        document = alert_utils.build_compare_document(
+            alert_utils.TEMPLATE_KIND,
+            {
+                "name": "codex.message",
+                "template": "line1\r\nline2\r\n\r\n",
+            },
+        )
+
+        self.assertEqual(document["spec"]["template"], "line1\nline2\n")
 
     def test_alert_rewrite_rule_dashboard_linkage_uses_fallback_match(self):
         fake_client = FakeAlertClient()

@@ -2,6 +2,7 @@
 
 import copy
 import json
+import re
 from pathlib import Path
 from typing import Any, Optional
 
@@ -24,6 +25,7 @@ from .common import (
     TEMPLATES_SUBDIR,
     TOOL_API_VERSION,
     TOOL_SCHEMA_VERSION,
+    value_to_string,
     GrafanaApiError,
     GrafanaError,
 )
@@ -35,6 +37,199 @@ def strip_server_managed_fields(kind: str, payload: dict[str, Any]) -> dict[str,
     for field in SERVER_MANAGED_FIELDS_BY_KIND.get(kind, set()):
         normalized.pop(field, None)
     return normalized
+
+
+def normalize_compare_value(value: Any) -> Any:
+    """Normalize a value for compare-document generation."""
+    if isinstance(value, dict):
+        normalized = {}
+        for key, entry in value.items():
+            normalized[key] = normalize_compare_value(entry)
+        return normalized
+    if isinstance(value, list):
+        return [normalize_compare_value(entry) for entry in value]
+    if isinstance(value, float) and value.is_integer():
+        min_int = -(2**63)
+        max_int = 2**63 - 1
+        int_value = int(value)
+        if min_int <= int_value <= max_int:
+            return int_value
+        return value
+    return value
+
+
+def remove_null_field(payload: dict[str, Any], key: str) -> None:
+    """Remove a map field if value is null."""
+    if payload.get(key) is None:
+        payload.pop(key, None)
+
+
+def remove_empty_object_field(payload: dict[str, Any], key: str) -> None:
+    """Remove a map field if value is an empty object."""
+    field = payload.get(key)
+    if isinstance(field, dict) and not field:
+        payload.pop(key, None)
+
+
+def remove_string_field_when(payload: dict[str, Any], key: str, expected: str) -> None:
+    """Remove a string field when it equals expected."""
+    if str(payload.get(key) or "") == expected:
+        payload.pop(key, None)
+
+
+def remove_bool_field_when(payload: dict[str, Any], key: str, expected: bool) -> None:
+    """Remove a bool field when it equals expected."""
+    if payload.get(key) is True and expected is True:
+        payload.pop(key, None)
+    if payload.get(key) is False and expected is False:
+        payload.pop(key, None)
+
+
+def sort_string_array_field(payload: dict[str, Any], key: str) -> None:
+    """Sort and dedupe string-key-stable array fields."""
+    values = payload.get(key)
+    if not isinstance(values, list):
+        return
+
+    values.sort(key=value_to_string)
+    deduped = []
+    seen = set()
+    for value in values:
+        marker = value_to_string(value)
+        if marker in seen:
+            continue
+        seen.add(marker)
+        deduped.append(value)
+    payload[key] = deduped
+
+
+def sort_matcher_values(values: list[Any]) -> None:
+    """Sort and dedupe matcher arrays."""
+    values.sort(key=value_to_string)
+    deduped = []
+    seen = set()
+    for value in values:
+        marker = value_to_string(value)
+        if marker in seen:
+            continue
+        seen.add(marker)
+        deduped.append(value)
+    del values[:]
+    values.extend(deduped)
+
+
+def parse_duration_seconds(value: str) -> Optional[int]:
+    """Parse Grafana duration strings into seconds."""
+    match = re.match(r"^\s*(\d+)\s*([smhdw]?)\s*$", str(value))
+    if not match:
+        return None
+    quantity_text, unit = match.groups()
+    quantity = int(quantity_text)
+    multiplier = {
+        "": 1,
+        "s": 1,
+        "m": 60,
+        "h": 60 * 60,
+        "d": 60 * 60 * 24,
+        "w": 60 * 60 * 24 * 7,
+    }.get(unit)
+    if multiplier is None:
+        return None
+    return quantity * multiplier
+
+
+def normalize_rule_duration_field(payload: dict[str, Any], field: str) -> None:
+    """Normalize duration strings used in rule compare payloads."""
+    duration_value = payload.get(field)
+    if not isinstance(duration_value, str):
+        return
+
+    duration_seconds = parse_duration_seconds(duration_value)
+    if duration_seconds is None:
+        return
+
+    if duration_seconds == 0:
+        payload.pop(field, None)
+    else:
+        payload[field] = f"{duration_seconds}s"
+
+
+def normalize_rule_compare_payload(payload: dict[str, Any]) -> None:
+    """Normalize rule compare payload fields."""
+    payload.pop("orgID", None)
+    remove_bool_field_when(payload, "isPaused", False)
+    normalize_rule_duration_field(payload, "for")
+    normalize_rule_duration_field(payload, "keep_firing_for")
+    remove_null_field(payload, "notification_settings")
+    remove_null_field(payload, "record")
+    remove_empty_object_field(payload, "annotations")
+
+    data = payload.get("data")
+    if not isinstance(data, list):
+        return
+    for entry in data:
+        if not isinstance(entry, dict):
+            continue
+        remove_string_field_when(entry, "queryType", "")
+
+
+def normalize_contact_point_compare_payload(payload: dict[str, Any]) -> None:
+    """Normalize contact point compare payload fields."""
+    remove_bool_field_when(payload, "disableResolveMessage", False)
+
+
+def normalize_policy_route_for_compare(route: dict[str, Any]) -> None:
+    """Normalize nested route object fields for policy compare."""
+    remove_bool_field_when(route, "continue", False)
+    sort_string_array_field(route, "group_by")
+
+    matchers = route.get("object_matchers")
+    if isinstance(matchers, list):
+        sort_matcher_values(matchers)
+
+    routes = route.get("routes")
+    if isinstance(routes, list):
+        for nested in routes:
+            if isinstance(nested, dict):
+                normalize_policy_route_for_compare(nested)
+
+
+def normalize_policy_compare_payload(payload: dict[str, Any]) -> None:
+    """Normalize policy compare payload."""
+    sort_string_array_field(payload, "group_by")
+    routes = payload.get("routes")
+    if isinstance(routes, list):
+        for route in routes:
+            if isinstance(route, dict):
+                normalize_policy_route_for_compare(route)
+
+
+def normalize_template_compare_payload(payload: dict[str, Any]) -> None:
+    """Normalize template compare payload."""
+    template = payload.get("template")
+    if not isinstance(template, str):
+        return
+    normalized = template.replace("\r\n", "\n")
+    while normalized.endswith("\n"):
+        normalized = normalized[:-1]
+    if normalized:
+        normalized += "\n"
+    payload["template"] = normalized
+
+
+def normalize_compare_payload(kind: str, payload: dict[str, Any]) -> dict[str, Any]:
+    """Normalize compare payload for kind-specific comparison."""
+    normalized = strip_server_managed_fields(kind, payload)
+    if kind == RULE_KIND:
+        normalize_rule_compare_payload(normalized)
+    elif kind == CONTACT_POINT_KIND:
+        normalize_contact_point_compare_payload(normalized)
+    elif kind == POLICIES_KIND:
+        normalize_policy_compare_payload(normalized)
+    elif kind == TEMPLATE_KIND:
+        normalize_template_compare_payload(normalized)
+
+    return normalize_compare_value(normalized)
 
 
 def get_rule_linkage(rule: dict[str, Any]) -> Optional[dict[str, str]]:
@@ -690,7 +885,7 @@ def prepare_import_payload_for_target(
 
 def build_compare_document(kind: str, payload: dict[str, Any]) -> dict[str, Any]:
     """Build compare document implementation."""
-    return {"kind": kind, "spec": payload}
+    return {"kind": kind, "spec": normalize_compare_payload(kind, payload)}
 
 
 def serialize_compare_document(document: dict[str, Any]) -> str:

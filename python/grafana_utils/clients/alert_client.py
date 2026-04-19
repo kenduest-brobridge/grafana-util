@@ -65,6 +65,18 @@ class GrafanaAlertClient:
         except HttpTransportError as exc:
             raise GrafanaError(str(exc)) from exc
 
+    def with_org_id(self, org_id: str) -> "GrafanaAlertClient":
+        """Return a new client scoped to one explicit Grafana organization."""
+        headers = dict(self.headers)
+        headers["X-Grafana-Org-Id"] = str(org_id)
+        return GrafanaAlertClient(
+            base_url=self.base_url,
+            headers=headers,
+            timeout=self.timeout,
+            verify_ssl=self.verify_ssl,
+            ca_cert=self.ca_cert,
+        )
+
     def list_alert_rules(self) -> list[dict[str, Any]]:
         # Purpose: implementation note.
         # Args: see function signature.

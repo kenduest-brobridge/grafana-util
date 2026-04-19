@@ -28,7 +28,6 @@ import getpass
 import json
 import re
 import sys
-import yaml
 from pathlib import Path
 from typing import Any, Callable, Optional
 
@@ -36,6 +35,7 @@ from .auth_staging import AuthConfigError, resolve_cli_auth_from_namespace
 from .alerts.common import (
     CONTACT_POINT_KIND,
     CONTACT_POINTS_SUBDIR,
+    MANAGED_ROUTE_LABEL_KEY,
     GrafanaApiError,
     GrafanaError,
     MUTE_TIMING_KIND,
@@ -59,6 +59,7 @@ from .alerts.provisioning import (
     build_diff_label,
     build_empty_root_index,
     build_import_operation,
+    detect_document_kind,
     build_linked_dashboard_metadata,
     build_mute_timing_import_payload,
     build_mute_timing_export_document,
@@ -81,15 +82,20 @@ from .alerts.scaffold import (
     build_contact_point_scaffold_document,
     build_managed_policy_route_preview,
     build_new_contact_point_scaffold_document,
+    build_new_rule_scaffold_document,
     build_new_rule_scaffold_document_with_route,
     build_new_template_scaffold_document,
     build_route_preview,
     build_stable_route_label_value,
     remove_managed_policy_subtree,
     upsert_managed_policy_subtree,
-    route_matches_stable_label,
 )
-from .alerts.runtime import build_alert_plan, execute_alert_plan
+from .alerts.runtime import (
+    build_alert_delete_preview_document,
+    build_alert_plan,
+    execute_alert_plan,
+    init_alert_runtime_layout,
+)
 from .clients.alert_client import GrafanaAlertClient
 from .http_transport import build_json_http_transport
 
@@ -592,6 +598,94 @@ def build_parser(prog: Optional[str] = None) -> argparse.ArgumentParser:
     )
     apply_parser.set_defaults(alert_command="apply")
 
+    init_parser = subparsers.add_parser(
+        "init",
+        help="Initialize a staged alerting runtime directory layout.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    add_common_args(init_parser)
+    init_parser.add_argument(
+        "--desired-dir",
+        required=True,
+        help="Directory to initialize with the managed alert staging structure.",
+    )
+    init_parser.set_defaults(alert_command="init")
+
+    delete_parser = subparsers.add_parser(
+        "delete",
+        help="Preview a runtime delete action for one staged alert resource.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    add_common_args(delete_parser)
+    delete_parser.add_argument(
+        "--kind",
+        required=True,
+        help="Resource kind to delete (rule, contact-point, mute-timing, template, or policy-tree).",
+    )
+    delete_parser.add_argument(
+        "--identity",
+        required=True,
+        help="Resource identity to delete.",
+    )
+    delete_parser.add_argument(
+        "--allow-policy-reset",
+        action="store_true",
+        help="Allow deleting the notification policy tree.",
+    )
+    delete_parser.add_argument(
+        "--output-format",
+        choices=("text", "json"),
+        default="text",
+        help="Render delete-preview output as text or json.",
+    )
+    delete_parser.set_defaults(alert_command="delete", output_format="text")
+
+    new_rule_parser = subparsers.add_parser(
+        "new-rule",
+        help="Author a blank staged alert rule scaffold.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    add_common_args(new_rule_parser)
+    new_rule_parser.add_argument(
+        "--desired-dir",
+        required=True,
+        help="Directory containing the staged alert desired-state layout.",
+    )
+    new_rule_parser.add_argument("--name", required=True, help="Rule name to author.")
+    new_rule_parser.set_defaults(alert_command="new-rule")
+
+    new_contact_point_parser = subparsers.add_parser(
+        "new-contact-point",
+        help="Author a blank staged contact-point scaffold.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    add_common_args(new_contact_point_parser)
+    new_contact_point_parser.add_argument(
+        "--desired-dir",
+        required=True,
+        help="Directory containing the staged alert desired-state layout.",
+    )
+    new_contact_point_parser.add_argument(
+        "--name", required=True, help="Contact point name to author."
+    )
+    new_contact_point_parser.set_defaults(
+        alert_command="new-contact-point",
+    )
+
+    new_template_parser = subparsers.add_parser(
+        "new-template",
+        help="Author a blank staged notification template scaffold.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    add_common_args(new_template_parser)
+    new_template_parser.add_argument(
+        "--desired-dir",
+        required=True,
+        help="Directory containing the staged alert desired-state layout.",
+    )
+    new_template_parser.add_argument("--name", required=True, help="Template name to author.")
+    new_template_parser.set_defaults(alert_command="new-template")
+
     add_rule_parser = subparsers.add_parser(
         "add-rule",
         help="Author a staged alert rule from the higher-level authoring surface.",
@@ -809,10 +903,22 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
         "export",
         "import",
         "diff",
+        "plan",
+        "apply",
         "list-rules",
         "list-contact-points",
         "list-mute-timings",
         "list-templates",
+        "add-rule",
+        "clone-rule",
+        "add-contact-point",
+        "set-route",
+        "preview-route",
+        "init",
+        "delete",
+        "new-rule",
+        "new-contact-point",
+        "new-template",
     ):
         parser = build_parser()
         args = parser.parse_args(argv)
@@ -1020,7 +1126,11 @@ def discover_alert_resource_files(import_dir: Path) -> list[Path]:
         )
 
     files = [
-        path for path in sorted(import_dir.rglob("*.json")) if path.name != "index.json"
+        path
+        for path in sorted(import_dir.rglob("*"))
+        if path.is_file()
+        and path.suffix.lower() in {".json", ".yaml", ".yml"}
+        and path.name not in {"index.json", "index.yaml", "index.yml"}
     ]
     if not files:
         raise GrafanaError(f"No alerting resource JSON files found in {import_dir}")
@@ -1075,6 +1185,78 @@ def render_alert_list_csv(rows: list[dict[str, Any]], fields: list[str]) -> None
 def render_alert_list_json(rows: list[dict[str, Any]]) -> str:
     """Render alert list json implementation."""
     return json.dumps(rows, indent=2, ensure_ascii=False)
+
+
+def render_alert_action_text(title: str, document: dict[str, Any]) -> str:
+    """Render a compact text view used by alert mutation actions."""
+    lines = [title]
+
+    if "reviewRequired" in document or "reviewed" in document:
+        review_required = bool(document.get("reviewRequired", False))
+        reviewed = bool(document.get("reviewed", False))
+        lines.append(f"Review: required={review_required} reviewed={reviewed}")
+
+    summary = document.get("summary")
+    if isinstance(summary, dict):
+        summary_line = " ".join(f"{key}={value}" for key, value in summary.items())
+        if summary_line:
+            lines.append(f"Summary: {summary_line}")
+
+    rows = document.get("rows")
+    if isinstance(rows, list):
+        lines.append("Rows:")
+        for row in rows[:20]:
+            if not isinstance(row, dict):
+                lines.append("- <invalid row>")
+                continue
+            kind = str(row.get("kind") or "unknown")
+            identity = str(row.get("identity") or "unknown")
+            action = str(row.get("action") or "unknown")
+            status = str(row.get("status") or "")
+            blocked_reason = row.get("blockedReason")
+            reason = row.get("reason")
+            line = f"- {kind} {identity} action={action}"
+            if status:
+                line += f" status={status}"
+            if blocked_reason:
+                line += f" blockedReason={blocked_reason}"
+            elif reason:
+                line += f" reason={reason}"
+            review_hints = row.get("reviewHints")
+            if isinstance(review_hints, list):
+                codes = [
+                    str(hint.get("code")) for hint in review_hints[:3] if isinstance(hint, dict) and hint.get("code")
+                ]
+                if codes:
+                    line += f" reviewHints={','.join(codes)}"
+            lines.append(line)
+
+        if len(rows) > 20:
+            lines.append(f"- ... {len(rows) - 20} more rows")
+
+    results = document.get("results")
+    if isinstance(results, list):
+        lines.append("Results:")
+        for result in results[:20]:
+            if not isinstance(result, dict):
+                lines.append("- <invalid result>")
+                continue
+            kind = str(result.get("kind") or "unknown")
+            identity = str(result.get("identity") or "unknown")
+            action = str(result.get("action") or "unknown")
+            lines.append(f"- {kind} {identity} action={action}")
+        if len(results) > 20:
+            lines.append(f"- ... {len(results) - 20} more results")
+
+    return "\n".join(lines)
+
+
+def print_alert_action_document(document: dict[str, Any], title: str, output_format: str = "text") -> None:
+    """Print action documents in text or json mode."""
+    if output_format == "json":
+        print(json.dumps(document, indent=2))
+    else:
+        print(render_alert_action_text(title, document))
 
 
 def serialize_rule_list_rows(rules: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -1910,6 +2092,22 @@ def build_rule_authoring_document(args: argparse.Namespace) -> dict[str, Any]:
     return document
 
 
+def _require_route_receiver(args: argparse.Namespace, command: str) -> Optional[str]:
+    """Require a route receiver unless --no-route is in effect."""
+    if getattr(args, "no_route", False):
+        if getattr(args, "receiver", None):
+            raise GrafanaError(
+                f"Alert {command} cannot use --receiver when --no-route is specified."
+            )
+        return None
+    receiver = getattr(args, "receiver", None)
+    if not str(receiver or "").strip():
+        raise GrafanaError(
+            f"Alert {command} requires --receiver unless --no-route is specified."
+        )
+    return str(receiver).strip()
+
+
 def build_desired_route_document(args: argparse.Namespace) -> Optional[dict[str, Any]]:
     """Build desired route document implementation."""
     if getattr(args, "no_route", False):
@@ -2014,21 +2212,45 @@ def maybe_update_managed_route(
     }
 
 
+def normalize_alert_delete_kind(kind: str) -> str:
+    """Normalize user provided alert delete kind tokens to canonical kinds."""
+    normalized = kind.strip().lower().replace("_", "-")
+    mapping = {
+        "rule": RULE_KIND,
+        "contact-point": CONTACT_POINT_KIND,
+        "contact_point": CONTACT_POINT_KIND,
+        "mute-timing": MUTE_TIMING_KIND,
+        "mute_timing": MUTE_TIMING_KIND,
+        "template": TEMPLATE_KIND,
+        "policy-tree": POLICIES_KIND,
+        "policy_tree": POLICIES_KIND,
+    }
+    canonical = mapping.get(normalized)
+    if canonical is None:
+        raise GrafanaError(
+            "Unsupported alert delete kind. "
+            "Expected one of: rule, contact-point, mute-timing, template, policy-tree."
+        )
+    return canonical
+
+
 def run_alert_plan_cli(args: argparse.Namespace) -> int:
     """Run alert plan command."""
     client = build_client(args)
     desired_dir = Path(args.desired_dir)
     document = build_alert_plan(client, desired_dir, getattr(args, "prune", False))
-    if getattr(args, "output_format", "text") == "json":
-        print(json.dumps(document, indent=2))
-    else:
-        # Simplistic text output for now
-        print(f"Alert plan: {document['summary']}")
+    print_alert_action_document(
+        document,
+        "Alert plan",
+        getattr(args, "output_format", "text"),
+    )
     return 0
 
 
 def run_alert_apply_cli(args: argparse.Namespace) -> int:
     """Run alert apply command."""
+    if not bool(getattr(args, "approve", False)):
+        raise GrafanaError("Alert apply requires --approve before live execution is allowed.")
     client = build_client(args)
     plan_file = Path(args.plan_file)
     with open(plan_file, "r", encoding="utf-8") as f:
@@ -2036,10 +2258,119 @@ def run_alert_apply_cli(args: argparse.Namespace) -> int:
     result = execute_alert_plan(
         client, plan_document, getattr(args, "allow_policy_reset", False)
     )
-    if getattr(args, "output_format", "text") == "json":
-        print(json.dumps(result, indent=2))
-    else:
-        print(f"Alert apply: {result['appliedCount']} applied")
+    print_alert_action_document(
+        result,
+        "Alert apply",
+        getattr(args, "output_format", "text"),
+    )
+    return 0
+
+
+def run_alert_init_cli(args: argparse.Namespace) -> int:
+    """Run alert init command."""
+    desired_dir = Path(args.desired_dir)
+    document = init_alert_runtime_layout(desired_dir)
+    print_alert_action_document(document, "Alert init", "text")
+    return 0
+
+
+def run_alert_delete_cli(args: argparse.Namespace) -> int:
+    """Run alert delete preview command."""
+    kind = normalize_alert_delete_kind(getattr(args, "kind", ""))
+    identity = str(getattr(args, "identity", "") or "").strip()
+    if not identity:
+        raise GrafanaError("Alert delete requires a non-empty --identity.")
+
+    allow_policy_reset = bool(getattr(args, "allow_policy_reset", False))
+    blocked = kind == POLICIES_KIND and not allow_policy_reset
+    document = build_alert_delete_preview_document(
+        [
+            {
+                "path": None,
+                "kind": kind,
+                "identity": identity,
+                "action": "blocked" if blocked else "delete",
+                "reason": (
+                    "policy-reset-requires-allow-policy-reset"
+                    if blocked
+                    else "explicit-delete-request"
+                ),
+                "desired": None,
+            }
+        ],
+        allow_policy_reset,
+    )
+
+    print_alert_action_document(
+        document,
+        "Alert delete preview",
+        getattr(args, "output_format", "text"),
+    )
+    return 0
+
+
+def run_alert_new_rule_cli(args: argparse.Namespace) -> int:
+    """Run alert new-rule command."""
+    desired_dir = Path(args.desired_dir)
+    name = args.name
+    path = desired_dir / RULES_SUBDIR / f"{sanitize_path_component(name)}.yaml"
+    document = build_new_rule_scaffold_document(name)
+    if path.exists():
+        raise GrafanaError(f"Refusing to overwrite existing file: {path}. Use --overwrite.")
+
+    write_json(document, path, overwrite=False)
+    result = {
+        "path": str(path),
+        "dryRun": False,
+        "document": document,
+    }
+    print_alert_action_document(result, "Alert new-rule", "text")
+    return 0
+
+
+def run_alert_new_contact_point_cli(args: argparse.Namespace) -> int:
+    """Run alert new-contact-point command."""
+    desired_dir = Path(args.desired_dir)
+    name = args.name
+    path = (
+        desired_dir
+        / CONTACT_POINTS_SUBDIR
+        / f"{sanitize_path_component(name)}.yaml"
+    )
+    document = build_new_contact_point_scaffold_document(name)
+    if path.exists():
+        raise GrafanaError(f"Refusing to overwrite existing file: {path}. Use --overwrite.")
+
+    write_json(document, path, overwrite=False)
+    result = {
+        "path": str(path),
+        "dryRun": False,
+        "document": document,
+    }
+    print_alert_action_document(result, "Alert new-contact-point", "text")
+    return 0
+
+
+def run_alert_new_template_cli(args: argparse.Namespace) -> int:
+    """Run alert new-template command."""
+    desired_dir = Path(args.desired_dir)
+    name = args.name
+    path = (
+        desired_dir
+        / TEMPLATES_SUBDIR
+        / f"{sanitize_path_component(name)}.yaml"
+    )
+    document = build_new_template_scaffold_document(name)
+    if path.exists():
+        raise GrafanaError(f"Refusing to overwrite existing file: {path}. Use --overwrite.")
+
+    write_json(document, path, overwrite=False)
+    result = {
+        "path": str(path),
+        "dryRun": False,
+        "document": document,
+    }
+    print_alert_action_document(result, "Alert new-template", "text")
     return 0
 
 
@@ -2047,6 +2378,9 @@ def run_alert_add_rule_cli(args: argparse.Namespace) -> int:
     """Run alert add-rule command."""
     desired_dir = Path(args.desired_dir)
     name = args.name
+    route_receiver = _require_route_receiver(args, "add-rule")
+    if route_receiver:
+        args.receiver = route_receiver
     path = desired_dir / RULES_SUBDIR / f"{sanitize_path_component(name)}.yaml"
     document = build_rule_authoring_document(args)
     desired_route = build_desired_route_document(args)
@@ -2070,7 +2404,7 @@ def run_alert_add_rule_cli(args: argparse.Namespace) -> int:
         "document": document,
         "route": route_effect,
     }
-    print(json.dumps(result, indent=2))
+    print_alert_action_document(result, "Alert add-rule", "text")
     return 0
 
 
@@ -2079,6 +2413,7 @@ def run_alert_clone_rule_cli(args: argparse.Namespace) -> int:
     desired_dir = Path(args.desired_dir)
     source = args.source
     name = args.name
+    route_receiver = _require_route_receiver(args, "clone-rule")
 
     # Find source
     source_path = None
@@ -2105,7 +2440,7 @@ def run_alert_clone_rule_cli(args: argparse.Namespace) -> int:
         raise GrafanaError(f"Could not find staged alert rule source {source!r}")
 
     document = copy.deepcopy(source_document)
-    route_name = getattr(args, "receiver", None) or name
+    route_name = route_receiver or name
     spec = document.setdefault("spec", {})
     spec["uid"] = sanitize_path_component(name)
     spec["title"] = name
@@ -2150,7 +2485,7 @@ def run_alert_clone_rule_cli(args: argparse.Namespace) -> int:
         "document": document,
         "route": route_effect,
     }
-    print(json.dumps(result, indent=2))
+    print_alert_action_document(result, "Alert clone-rule", "text")
     return 0
 
 
@@ -2169,7 +2504,7 @@ def run_alert_add_contact_point_cli(args: argparse.Namespace) -> int:
         "dryRun": args.dry_run,
         "document": document,
     }
-    print(json.dumps(result, indent=2))
+    print_alert_action_document(result, "Alert add-contact-point", "text")
     return 0
 
 
@@ -2190,7 +2525,7 @@ def run_alert_set_route_cli(args: argparse.Namespace) -> int:
         "routeDocument": desired_route,
         "route": route_effect,
     }
-    print(json.dumps(result, indent=2))
+    print_alert_action_document(result, "Alert set-route", "text")
     return 0
 
 
@@ -2204,18 +2539,33 @@ def run_alert_preview_route_cli(args: argparse.Namespace) -> int:
     if getattr(args, "severity", None):
         labels["severity"] = args.severity
 
-    # Simplified preview: find matching routes
     routes = current_policy_spec.get("routes", [])
     matches = []
     for route in routes:
-        if any(
-            route_matches_stable_label(route, r_name)
-            for r_name in [
-                labels.get("alertname", ""),
-                labels.get(MANAGED_ROUTE_LABEL_KEY, ""),
-            ]
-            if r_name
-        ):
+        if not isinstance(route, dict):
+            continue
+        object_matchers = route.get("object_matchers")
+        if not isinstance(object_matchers, list):
+            continue
+
+        def _matches_all(route_labels: list[Any]) -> bool:
+            for matcher in route_labels:
+                if not isinstance(matcher, list) or len(matcher) != 3:
+                    return False
+                raw_key, raw_op, raw_value = matcher
+                key = str(raw_key)
+                op = str(raw_op)
+                value = str(raw_value)
+
+                if key == "grafana_utils_route":
+                    continue
+                if op != "=":
+                    return False
+                if str(labels.get(key, "")) != value:
+                    return False
+            return True
+
+        if _matches_all(object_matchers):
             matches.append(build_route_preview(route))
 
     result = {
@@ -2242,6 +2592,16 @@ def main(argv: Optional[list[str]] = None) -> int:
             return run_alert_plan_cli(args)
         if command == "apply":
             return run_alert_apply_cli(args)
+        if command == "init":
+            return run_alert_init_cli(args)
+        if command == "delete":
+            return run_alert_delete_cli(args)
+        if command == "new-rule":
+            return run_alert_new_rule_cli(args)
+        if command == "new-contact-point":
+            return run_alert_new_contact_point_cli(args)
+        if command == "new-template":
+            return run_alert_new_template_cli(args)
         if command == "add-rule":
             return run_alert_add_rule_cli(args)
         if command == "clone-rule":
