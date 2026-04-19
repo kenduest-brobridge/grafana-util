@@ -969,7 +969,10 @@ grafana-util status snapshot export --url http://localhost:3000 --token &quot;$G
 <p>適用時機：當你需要一個不必連到 Grafana 也能檢視的本機 snapshot root 時。</p>
 <p>會寫出的內容：</p>
 <ul><li><code>snapshot/dashboards/</code></li><li><code>snapshot/datasources/</code></li><li><code>snapshot/access/users/</code></li><li><code>snapshot/access/teams/</code></li><li><code>snapshot/access/orgs/</code></li><li><code>snapshot/access/service-accounts/</code></li><li><code>snapshot/snapshot-metadata.json</code></li></ul>
-<p>主要旗標：<code>--output-dir</code>、<code>--overwrite</code>、<code>--prompt</code>，以及共用的 Grafana 連線與驗證旗標。<code>--prompt</code> 會先開一個 terminal multi-select prompt，讓你在匯出前勾選要包含哪些 lane。datasource lane 會匯出 config 與 <code>secureJsonDataPlaceholders</code>，但不會匯出 datasource secret 明文，因為 Grafana live API 本身不會回這些值。</p>
+<p>主要旗標：<code>--output-dir</code>、<code>--overwrite</code>、<code>--prompt</code>、<code>--run</code>、<code>--run-id</code>，以及共用的 Grafana 連線與驗證旗標。<code>--prompt</code> 會先開一個 terminal multi-select prompt，讓你在匯出前勾選要包含哪些 lane。datasource lane 會匯出 config 與 <code>secureJsonDataPlaceholders</code>，但不會匯出 datasource secret 明文，因為 Grafana live API 本身不會回這些值。</p>
+<p>如果沒有指定 <code>--output-dir</code>，snapshot export 會把 snapshot root 寫到 artifact workspace run：</p>
+<pre><code>&lt;artifact_root&gt;/&lt;profile-or-default&gt;/runs/&lt;run-id&gt;/</code></pre>
+<p>也就是 snapshot lane 會直接位於 run root 下，例如有匯出時會看到 <code>dashboards/</code>、<code>datasources/</code> 與 <code>access/users/</code>。artifact root 來自 <code>grafana-util.yaml</code> 裡的 <code>artifact_root</code>，未設定時預設是設定檔旁邊的 <code>.grafana-util/artifacts</code>。</p>
 <p>範例：</p>
 <pre><code># export。
 grafana-util status snapshot export --profile prod --output-dir ./snapshot</code></pre>
@@ -979,17 +982,22 @@ grafana-util status snapshot export --url http://localhost:3000 --basic-user adm
 grafana-util status snapshot export --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --output-dir ./snapshot</code></pre>
 <pre><code># 先用 terminal prompt 勾選要匯出的 snapshot lane。
 grafana-util status snapshot export --profile prod --prompt --output-dir ./snapshot</code></pre>
+<pre><code># 使用時間戳 run id，將 snapshot 匯出到 profile artifact workspace。
+grafana-util status snapshot export --profile prod --run timestamp --overwrite</code></pre>
 <p>相關指令：<code>snapshot review</code>、<code>workspace package</code>、<code>status overview</code>。</p>
 <h2 id="review"><code>review</code></h2>
 <p>用途：在不接觸 Grafana 的情況下檢視本機 snapshot inventory。</p>
 <p>適用時機：當你想把匯出的 snapshot root 以 table、csv、text、json、yaml 或 interactive 格式查看時。</p>
 <p>review summary 現在也會一起顯示 users、teams、orgs、service accounts 的 access 計數。</p>
-<p>主要旗標：<code>--input-dir</code>、<code>--interactive</code>、<code>--output-format</code>。</p>
+<p>主要旗標：<code>--input-dir</code>、<code>--interactive</code>、<code>--output-format</code>、<code>--run</code>、<code>--run-id</code>。</p>
+<p>如果沒有指定 <code>--input-dir</code>，<code>--run latest</code> 會讀取最新紀錄的 artifact workspace run，<code>--run-id &lt;name&gt;</code> 則會讀取指定名稱的 run。</p>
 <p>範例：</p>
 <pre><code># 在不接觸 Grafana 的情況下檢視本機 snapshot inventory。
 grafana-util status snapshot review --input-dir ./snapshot --output-format table</code></pre>
 <pre><code># 在不接觸 Grafana 的情況下檢視本機 snapshot inventory。
 grafana-util status snapshot review --input-dir ./snapshot --interactive</code></pre>
+<pre><code># 不指定目錄，直接檢視最新 artifact workspace snapshot run。
+grafana-util status snapshot review --run latest --output-format table</code></pre>
 <p>相關指令：<code>snapshot export</code>、<code>status overview</code>、<code>status staged</code>。</p>
 
 </article>

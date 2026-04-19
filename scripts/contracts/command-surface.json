@@ -21,6 +21,49 @@
     "dashboard analyze",
     "dashboard-analyze-"
   ],
+  "artifact_workspace": {
+    "profile_config_filename": "grafana-util.yaml",
+    "profile_config_env_var": "GRAFANA_UTIL_CONFIG",
+    "config_file_flag": "--config",
+    "artifact_root_key": "artifact_root",
+    "default_artifact_root": ".grafana-util/artifacts",
+    "run_flag": "--run",
+    "run_id_flag": "--run-id",
+    "run_selectors": [
+      "latest",
+      "timestamp"
+    ],
+    "run_layout": "<artifact_root>/<profile-or-default>/runs/<run-id>/",
+    "latest_pointer": "latest-run.json",
+    "lanes": {
+      "dashboard": "dashboards/",
+      "datasource": "datasources/",
+      "access_user": "access/users/",
+      "access_team": "access/teams/",
+      "access_org": "access/orgs/",
+      "access_service_account": "access/service-accounts/",
+      "snapshot": "./"
+    },
+    "export_commands": [
+      "dashboard export",
+      "datasource export",
+      "access user export",
+      "access team export",
+      "access org export",
+      "access service-account export",
+      "status snapshot export"
+    ],
+    "local_consumer_commands": [
+      "dashboard browse",
+      "dashboard summary",
+      "datasource list",
+      "access user list",
+      "access team list",
+      "access org list",
+      "access service-account list",
+      "status snapshot review"
+    ]
+  },
   "doc_pages": {
     "alert": "alert.md",
     "completion": "completion.md",

@@ -54,7 +54,15 @@ What gets written:
 - `snapshot/datasources/`
 - `snapshot/snapshot-metadata.json`
 
-Key flags: `--output-dir`, `--overwrite`, `--prompt`, plus the shared Grafana connection and auth flags. `--prompt` opens a terminal multi-select prompt so you can choose which lanes to export before the snapshot starts. The datasource lane exports config and any `secureJsonDataPlaceholders`, but it does not export datasource plaintext secrets because Grafana live APIs do not return them.
+Key flags: `--output-dir`, `--overwrite`, `--prompt`, `--run`, `--run-id`, plus the shared Grafana connection and auth flags. `--prompt` opens a terminal multi-select prompt so you can choose which lanes to export before the snapshot starts. The datasource lane exports config and any `secureJsonDataPlaceholders`, but it does not export datasource plaintext secrets because Grafana live APIs do not return them.
+
+When `--output-dir` is omitted, snapshot export writes the snapshot root under the artifact workspace run:
+
+```text
+<artifact_root>/<profile-or-default>/runs/<run-id>/
+```
+
+That means the snapshot lanes remain directly under the run root, for example `dashboards/`, `datasources/`, and `access/users/` when those lanes are exported. The artifact root comes from `artifact_root` in `grafana-util.yaml`, or defaults to `.grafana-util/artifacts` next to the config file.
 
 Examples:
 
@@ -73,6 +81,11 @@ grafana-util status snapshot export --profile prod --output-dir ./snapshot --ove
 grafana-util status snapshot export --profile prod --prompt --output-dir ./snapshot
 ```
 
+```bash
+# export a snapshot into the profile artifact workspace with a timestamped run id.
+grafana-util status snapshot export --profile prod --run timestamp --overwrite
+```
+
 Related commands: `snapshot review`, `workspace package`, `status overview`.
 
 ## `review`
@@ -83,7 +96,9 @@ When to use: when you want to inspect an exported snapshot root as table, csv, t
 
 Review summary focuses on the exported dashboard and datasource lanes present in the snapshot root.
 
-Key flags: `--input-dir`, `--interactive`, `--output-format`.
+Key flags: `--input-dir`, `--interactive`, `--output-format`, `--run`, `--run-id`.
+
+When `--input-dir` is omitted, `--run latest` reads the latest recorded artifact workspace run and `--run-id <name>` reads one explicit run.
 
 Examples:
 
@@ -95,6 +110,11 @@ grafana-util status snapshot review --input-dir ./snapshot --output-format table
 ```bash
 # review an exported snapshot root as table, csv, text, json, yaml, or interactive output.
 grafana-util status snapshot review --input-dir ./snapshot --interactive
+```
+
+```bash
+# review the latest artifact workspace snapshot run without naming its directory.
+grafana-util status snapshot review --run latest --output-format table
 ```
 
 Related commands: `snapshot export`, `status overview`, `status staged`.

@@ -34,7 +34,7 @@
 - `list`: `--input-dir`, `--org-id`, `--name`, `--query`, `--with-users`, `--table`, `--csv`, `--json`, `--yaml`, `--output-format`
 - `add`: `--name`, `--json`
 - `modify`: `--org-id`, `--name`, `--set-name`, `--json`
-- `export` 與 `diff`: `--org-id`, `--name`, `--output-dir` 或 `--diff-dir`, `--overwrite`, `--dry-run`, `--with-users`
+- `export` 與 `diff`: `--org-id`, `--name`, `--output-dir` 或 `--diff-dir`, `--run`, `--run-id`, `--overwrite`, `--dry-run`, `--with-users`
 - `import`: `--input-dir`, `--replace-existing`, `--dry-run`, `--yes`
 - `delete`: `--org-id`, `--name`, `--prompt`, `--yes`, `--json`
 
@@ -43,6 +43,7 @@
 - 只要 profile 具備必要管理員權限，就可優先用 `--profile` 做可重複的 org inventory。
 - org 管理面通常比窄權限 API token 更廣。建立、重新命名、匯出、匯入與刪除流程，較建議使用 Basic auth 或管理員憑證支援的 profile。
 - 當 org bundle 包含 users 時，import dry-run 會查詢 live org users，讓 role plan 反映目標環境。Externally synced user 的 role 變更會在 apply 前標示為 blocked。
+- 如果沒有指定 `--output-dir`，`access org export` 會寫到 profile artifact workspace 的 `access/orgs/`。新匯出建議用 `--run timestamp`，需要固定 run 名稱時用 `--run-id <name>`。
 
 ## 範例
 
@@ -54,6 +55,11 @@ grafana-util access org list --profile prod --output-format text
 ```bash
 # 先看本機存好的 org 套件。
 grafana-util access org list --input-dir ./access-orgs --output-format table
+```
+
+```bash
+# 使用時間戳 run id，將 org inventory 匯出到 profile artifact workspace。
+grafana-util access org export --profile prod --run timestamp --with-users --overwrite
 ```
 
 ```bash

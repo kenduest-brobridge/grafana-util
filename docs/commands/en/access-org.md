@@ -34,7 +34,7 @@ List live or local Grafana organizations, create, modify, export, import, diff, 
 - `list`: `--input-dir`, `--org-id`, `--name`, `--query`, `--with-users`, `--table`, `--csv`, `--json`, `--yaml`, `--output-format`
 - `add`: `--name`, `--json`
 - `modify`: `--org-id`, `--name`, `--set-name`, `--json`
-- `export` and `diff`: `--org-id`, `--name`, `--output-dir` or `--diff-dir`, `--overwrite`, `--dry-run`, `--with-users`
+- `export` and `diff`: `--org-id`, `--name`, `--output-dir` or `--diff-dir`, `--run`, `--run-id`, `--overwrite`, `--dry-run`, `--with-users`
 - `import`: `--input-dir`, `--replace-existing`, `--dry-run`, `--yes`
 - `delete`: `--org-id`, `--name`, `--prompt`, `--yes`, `--json`
 
@@ -43,6 +43,7 @@ List live or local Grafana organizations, create, modify, export, import, diff, 
 - Use `--profile` for repeatable org inventory when the selected profile has the required admin privileges.
 - Org administration is commonly broader than a narrow API token. Basic auth or an admin-backed profile is the safer default for create, rename, export, import, and delete flows.
 - When an org bundle includes users, import dry-run checks live org users so role plans reflect the target environment. Externally synced user role changes are reported as blocked before apply.
+- When `--output-dir` is omitted, `access org export` writes to the profile artifact workspace under `access/orgs/`. Use `--run timestamp` for a fresh timestamped run or `--run-id <name>` for a deterministic run.
 
 ## Examples
 
@@ -54,6 +55,11 @@ grafana-util access org list --profile prod --output-format text
 ```bash
 # Review a saved org bundle before replaying it.
 grafana-util access org list --input-dir ./access-orgs --output-format table
+```
+
+```bash
+# Export org inventory into the profile artifact workspace with a timestamped run id.
+grafana-util access org export --profile prod --run timestamp --with-users --overwrite
 ```
 
 ```bash

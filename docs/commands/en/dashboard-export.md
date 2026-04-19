@@ -20,6 +20,8 @@ Use this when you need a local export tree for later import, review, diff, or fi
 - `--include-history`: write dashboard revision-history artifacts under a `history/` subdirectory for each exported org scope.
 - `--provider-name`, `--provider-org-id`, `--provider-path`: customize the generated provisioning provider file.
 - `--provider-disable-deletion`, `--provider-allow-ui-updates`, `--provider-update-interval-seconds`: tune provisioning behavior.
+- `--run`: write under an artifact workspace run when `--output-dir` is omitted. Use `timestamp` for a new timestamped run or `latest` to reuse the latest recorded run.
+- `--run-id`: write under one explicit artifact workspace run id when `--output-dir` is omitted.
 - `--dry-run`: preview what would be written.
 
 ## Notes
@@ -32,6 +34,21 @@ Use this when you need a local export tree for later import, review, diff, or fi
 - Use `--include-history` to add `history/` under each exported org scope.
 - The provider file is `provisioning/provisioning/dashboards.yaml`.
 - Keep `raw/` for API import or diff, `prompt/` for UI import, and `provisioning/` for file provisioning.
+
+## Artifact workspace output
+
+When `--output-dir` is omitted, `dashboard export` writes to the artifact workspace from the selected profile config. The default config file is `grafana-util.yaml` in the current directory, overrideable with the root `--config <file>` flag or `GRAFANA_UTIL_CONFIG`.
+
+If the config does not set `artifact_root`, the default is `.grafana-util/artifacts` next to the config file. Relative `artifact_root` values are also resolved from the config file directory.
+
+The run layout is:
+
+```text
+<artifact_root>/<profile-or-default>/runs/<run-id>/dashboards/
+<artifact_root>/<profile-or-default>/latest-run.json
+```
+
+Use `--run timestamp` for a fresh export run, `--run-id <name>` for a deterministic run id, and `--run latest` mainly for local read commands that should consume the latest successful run.
 
 ## Export lane differences
 
@@ -87,6 +104,11 @@ grafana-util dashboard export --url http://localhost:3000 --basic-user admin --b
 ```bash
 # Export dashboards plus per-org revision-history artifacts into a reusable tree.
 grafana-util dashboard export --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --include-history --output-dir ./dashboards --overwrite
+```
+
+```bash
+# Export dashboards into the profile artifact workspace with a timestamped run id.
+grafana-util dashboard export --profile prod --run timestamp --overwrite
 ```
 
 ## Related commands

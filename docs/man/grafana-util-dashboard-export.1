@@ -42,6 +42,12 @@ customize the generated provisioning provider file.
 .B \-\-provider\-disable\-deletion, \-\-provider\-allow\-ui\-updates, \-\-provider\-update\-interval\-seconds
 tune provisioning behavior.
 .TP
+.B \-\-run
+write under an artifact workspace run when \-\-output\-dir is omitted. Use timestamp for a new timestamped run or latest to reuse the latest recorded run.
+.TP
+.B \-\-run\-id
+write under one explicit artifact workspace run id when \-\-output\-dir is omitted.
+.TP
 .B \-\-dry\-run
 preview what would be written.
 .SH SUCCESS CRITERIA

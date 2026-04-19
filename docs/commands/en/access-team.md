@@ -41,11 +41,13 @@ List or browse live and local Grafana teams, create, modify, export, import, dif
 - `browse`: `--input-dir`, `--query`, `--name`, `--with-members`, `--page`, `--per-page`
 - `add`: `--name`, `--email`, `--member`, `--admin`, `--json`
 - `modify`: `--team-id`, `--name`, `--add-member`, `--remove-member`, `--add-admin`, `--remove-admin`, `--json`
-- `export` and `diff`: `--output-dir` or `--diff-dir`, `--overwrite`, `--dry-run`, `--with-members`
+- `export` and `diff`: `--output-dir` or `--diff-dir`, `--run`, `--run-id`, `--overwrite`, `--dry-run`, `--with-members`
 - `import`: `--input-dir`, `--replace-existing`, `--dry-run`, `--table`, `--json`, `--output-format`, `--yes`
 - `delete`: `--team-id`, `--name`, `--prompt`, `--yes`, `--json`
 
 ## Examples
+
+When `--output-dir` is omitted, `access team export` writes to the profile artifact workspace under `access/teams/`. Use `--run timestamp` for a fresh timestamped run or `--run-id <name>` for a deterministic run. Later local reads can use `access team list --local --run latest`.
 
 ```bash
 # Inspect team membership before adding or removing people.
@@ -60,6 +62,11 @@ grafana-util access team list --input-dir ./access-teams --output-format table
 ```bash
 # Browse one saved team bundle interactively without touching Grafana.
 grafana-util access team browse --input-dir ./access-teams --name platform-team
+```
+
+```bash
+# Export teams into the profile artifact workspace with a timestamped run id.
+grafana-util access team export --profile prod --run timestamp --with-members --overwrite
 ```
 
 ```bash

@@ -16,6 +16,13 @@ Current AI change log only.
 - Older entries moved to [`ai-changes-archive-2026-04-18.md`](docs/internal/archive/ai-changes-archive-2026-04-18.md).
 - Older entries moved to [`ai-changes-archive-2026-04-19.md`](docs/internal/archive/ai-changes-archive-2026-04-19.md).
 
+## 2026-04-19 - Formalize artifact workspace docs
+- Summary: documented artifact workspace defaults across command docs and getting-started. The docs now describe `grafana-util.yaml`, root `--config`, `GRAFANA_UTIL_CONFIG`, config-relative `artifact_root`, timestamp/latest/run-id selection, latest-run pointer behavior, and lane placement for dashboard, datasource, snapshot, and access exports.
+- Tests: no runtime behavior change; docs and contract coverage only.
+- Test Run: `make man`; `make html`; `make man-check`; `make html-check`; `make quality-docs-surface`; `make quality-ai-workflow`.
+- Impact: `docs/user-guide/{en,zh-TW}/getting-started.md`, artifact-related command docs under `docs/commands/{en,zh-TW}/`, `scripts/contracts/command-surface.json`, and AI trace docs.
+- Rollback/Risk: low docs/contract clarification. Rollback would remove operator guidance for the already implemented artifact workspace behavior.
+
 ## 2026-04-19 - Add artifact workspace run support
 - Summary: added run-centric artifact workspace primitives and profile config `artifact_root`, root `--config`, timestamp/latest/run-id routing for key export flows, and local artifact resolution for selected browse/list/summary/review/plan paths.
 - Tests: updated focused Rust parser/test literals for changed option shapes; no test execution.
@@ -85,19 +92,3 @@ Current AI change log only.
 - Impact: Rust workspace preview/review helpers, access team browse TUI input modules, dashboard summary help/docs/tests, generated command/man/html docs, and AI trace docs. README files and Python implementation were intentionally left unchanged.
 - Rollback/Risk: medium internal refactor across review/TUI surfaces. Rollback should restore the previous workspace preview contract helper, inline team browse input dispatch/tests, and previous dashboard wording while preserving already-committed domain plan contracts.
 - Follow-up: connect future TUI review surfaces to `WorkspaceReviewView` directly instead of re-parsing raw JSON in each UI layer.
-
-## 2026-04-18 - Add access plan aggregate resource
-- Summary: added `grafana-util access plan --resource all` as a read-only aggregate over root-level `access-users`, `access-orgs`, `access-teams`, and `access-service-accounts` bundles. The aggregate delegates to concrete resource planners, reports missing bundle directories as skipped resource reports, and errors when no supported access bundle is present. The access plan implementation was split into contract types, renderers, user planner, aggregate planner, and test modules so production files stay under the 500-line review threshold.
-- Tests: added focused Rust coverage for parsing `--resource all`, aggregating present user/service-account bundles while reporting missing org/team bundles, and rejecting empty aggregate roots. Moved access plan and team plan tests into dedicated test modules without changing planner behavior.
-- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet access_plan --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet access --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet`; `cargo run --manifest-path rust/Cargo.toml --quiet --bin grafana-util -- access plan --help`; `cargo clippy --manifest-path rust/Cargo.toml --all-targets -- -D warnings`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `make man`; `make html`; `make quality-docs-surface`; `make quality-ai-workflow`; `make man-check`; `make html-check`; `git diff --check`.
-- Impact: Rust access plan routing/rendering/resource modules, access CLI help text, access plan command docs in English and zh-TW, generated man/html docs, and AI trace docs. README files and Python implementation were intentionally left unchanged.
-- Rollback/Risk: medium access plan behavior expansion. Rollback should route `--resource all` back to unsupported and remove the aggregate planner/tests/docs while keeping concrete user/org/team/service-account plan paths intact.
-- Follow-up: workspace-level aggregation and TUI consumption should use the stable `AccessPlanDocument` contract instead of adding UI state to resource planners.
-
-## 2026-04-18 - Add dashboard plan multi-org routing
-- Summary: enabled `grafana-util dashboard plan --use-export-org` for combined dashboard export roots. The planner now discovers raw/source org-scoped exports, resolves matching destination org IDs with Basic auth, collects scoped live state per existing org, aggregates multi-org plan summaries, and represents missing destination orgs as blocked or review-only `would-create` rows.
-- Tests: added focused dashboard plan regressions for multi-org aggregation, missing target org handling, Basic-auth enforcement, `--only-org-id` filtering, selected-missing errors, and missing-org live-call isolation.
-- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet dashboard_plan`; `cargo test --manifest-path rust/Cargo.toml --quiet dashboard_cli_parser_help_workflow`; `cargo test --manifest-path rust/Cargo.toml --quiet`; `cargo clippy --manifest-path rust/Cargo.toml --all-targets -- -D warnings`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `make man`; `make html`; `make quality-docs-surface`; `make quality-ai-workflow`; `make man-check`; `make html-check`; `git diff --check`.
-- Impact: Rust dashboard plan routing/model/tests, dashboard plan type module, dashboard plan command docs in English and zh-TW, generated man/html docs, and AI trace docs. README files and Python implementation were intentionally left unchanged.
-- Rollback/Risk: medium dashboard planning behavior expansion. Rollback should restore single-org `DashboardPlanInput` handling and return `--use-export-org` to unsupported while leaving the existing single-org plan path intact.
-- Follow-up: consider extracting dashboard plan route discovery into a shared import/plan helper after source/raw routing has more real-world coverage.

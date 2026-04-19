@@ -63,7 +63,15 @@ grafana-util status snapshot export --url http://localhost:3000 --token "$GRAFAN
 - `snapshot/access/service-accounts/`
 - `snapshot/snapshot-metadata.json`
 
-主要旗標：`--output-dir`、`--overwrite`、`--prompt`，以及共用的 Grafana 連線與驗證旗標。`--prompt` 會先開一個 terminal multi-select prompt，讓你在匯出前勾選要包含哪些 lane。datasource lane 會匯出 config 與 `secureJsonDataPlaceholders`，但不會匯出 datasource secret 明文，因為 Grafana live API 本身不會回這些值。
+主要旗標：`--output-dir`、`--overwrite`、`--prompt`、`--run`、`--run-id`，以及共用的 Grafana 連線與驗證旗標。`--prompt` 會先開一個 terminal multi-select prompt，讓你在匯出前勾選要包含哪些 lane。datasource lane 會匯出 config 與 `secureJsonDataPlaceholders`，但不會匯出 datasource secret 明文，因為 Grafana live API 本身不會回這些值。
+
+如果沒有指定 `--output-dir`，snapshot export 會把 snapshot root 寫到 artifact workspace run：
+
+```text
+<artifact_root>/<profile-or-default>/runs/<run-id>/
+```
+
+也就是 snapshot lane 會直接位於 run root 下，例如有匯出時會看到 `dashboards/`、`datasources/` 與 `access/users/`。artifact root 來自 `grafana-util.yaml` 裡的 `artifact_root`，未設定時預設是設定檔旁邊的 `.grafana-util/artifacts`。
 
 範例：
 
@@ -87,6 +95,11 @@ grafana-util status snapshot export --url http://localhost:3000 --token "$GRAFAN
 grafana-util status snapshot export --profile prod --prompt --output-dir ./snapshot
 ```
 
+```bash
+# 使用時間戳 run id，將 snapshot 匯出到 profile artifact workspace。
+grafana-util status snapshot export --profile prod --run timestamp --overwrite
+```
+
 相關指令：`snapshot review`、`workspace package`、`status overview`。
 
 ## `review`
@@ -97,7 +110,9 @@ grafana-util status snapshot export --profile prod --prompt --output-dir ./snaps
 
 review summary 現在也會一起顯示 users、teams、orgs、service accounts 的 access 計數。
 
-主要旗標：`--input-dir`、`--interactive`、`--output-format`。
+主要旗標：`--input-dir`、`--interactive`、`--output-format`、`--run`、`--run-id`。
+
+如果沒有指定 `--input-dir`，`--run latest` 會讀取最新紀錄的 artifact workspace run，`--run-id <name>` 則會讀取指定名稱的 run。
 
 範例：
 
@@ -109,6 +124,11 @@ grafana-util status snapshot review --input-dir ./snapshot --output-format table
 ```bash
 # 在不接觸 Grafana 的情況下檢視本機 snapshot inventory。
 grafana-util status snapshot review --input-dir ./snapshot --interactive
+```
+
+```bash
+# 不指定目錄，直接檢視最新 artifact workspace snapshot run。
+grafana-util status snapshot review --run latest --output-format table
 ```
 
 相關指令：`snapshot export`、`status overview`、`status staged`。

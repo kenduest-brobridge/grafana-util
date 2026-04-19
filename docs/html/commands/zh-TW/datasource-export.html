@@ -954,12 +954,19 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="何時使用">何時使用</h2>
 <p>當您需要一個本地 dataworkspace package，供後續檢查、比對或匯入時， 使用這個指令。</p>
 <h2 id="重點旗標">重點旗標</h2>
-<ul><li><code>--output-dir</code>：匯出樹的目標目錄。</li><li><code>--org-id</code>：匯出指定的 Grafana org。</li><li><code>--all-orgs</code>：把每個可見 org 匯出到各自的子目錄。需要 Basic auth。</li><li><code>--overwrite</code>：取代既有檔案。</li><li><code>--without-datasource-provisioning</code>：略過 provisioning 變體。</li><li><code>--dry-run</code>：預覽會寫出哪些內容。</li></ul>
+<ul><li><code>--output-dir</code>：匯出樹的目標目錄。</li><li><code>--org-id</code>：匯出指定的 Grafana org。</li><li><code>--all-orgs</code>：把每個可見 org 匯出到各自的子目錄。需要 Basic auth。</li><li><code>--overwrite</code>：取代既有檔案。</li><li><code>--without-datasource-provisioning</code>：略過 provisioning 變體。</li><li><code>--run</code>：未指定 <code>--output-dir</code> 時，寫入 artifact workspace run。<code>timestamp</code> 會建立新的時間戳 run，<code>latest</code> 會重用最新紀錄的 run。</li><li><code>--run-id</code>：未指定 <code>--output-dir</code> 時，寫入指定名稱的 artifact workspace run。</li><li><code>--dry-run</code>：預覽會寫出哪些內容。</li></ul>
+<h2 id="artifact-workspace-輸出">Artifact workspace 輸出</h2>
+<p>如果沒有指定 <code>--output-dir</code>，<code>datasource export</code> 會寫到：</p>
+<pre><code>&lt;artifact_root&gt;/&lt;profile-or-default&gt;/runs/&lt;run-id&gt;/datasources/</code></pre>
+<p>artifact root 來自 <code>grafana-util.yaml</code> 裡的 <code>artifact_root</code>。如果沒有設定，預設是設定檔旁邊的 <code>.grafana-util/artifacts</code>。設定檔不在目前目錄時，可用 root <code>--config &lt;file&gt;</code> 或 <code>GRAFANA_UTIL_CONFIG</code> 指定。</p>
+<p>新匯出建議用 <code>--run timestamp</code>，需要固定名稱時用 <code>--run-id &lt;name&gt;</code>；後續可用 <code>datasource list --local --run latest</code> 讀取最新紀錄的 datasource lane。</p>
 <h2 id="範例">範例</h2>
 <pre><code># 將線上 Grafana datasource inventory 匯出成標準化 JSON 與 provisioning 檔案。
 grafana-util datasource export --url http://localhost:3000 --basic-user admin --basic-password admin --output-dir ./datasources --overwrite</code></pre>
 <pre><code># 將線上 Grafana datasource inventory 匯出成標準化 JSON 與 provisioning 檔案。
 grafana-util datasource export --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --output-dir ./datasources --overwrite</code></pre>
+<pre><code># 使用時間戳 run id，將 datasource inventory 匯出到 profile artifact workspace。
+grafana-util datasource export --profile prod --run timestamp --overwrite</code></pre>
 <h2 id="採用前後對照">採用前後對照</h2>
 <ul><li><strong>採用前</strong>：live datasource 狀態很容易散掉，因為匯出後的結構不夠標準，也不容易再利用。</li><li><strong>採用後</strong>：一個匯出就能得到本地 bundle，後續檢視、比對或匯入都能直接沿用。</li></ul>
 <h2 id="成功判準">成功判準</h2>
@@ -975,7 +982,7 @@ grafana-util datasource export --url http://localhost:3000 --basic-user admin --
 <aside class="sidebar">
   <button class="sidebar-toggle sidebar-toggle-right" type="button" aria-expanded="true" aria-label="Toggle page sidebar">▶</button>
   <div class="sidebar-content">
-    <section class="sidebar-section"><h2>本頁內容</h2><ul class="toc-list"><li class="toc-level-2"><a href="#用途"><span class="toc-label">用途</span></a></li><li class="toc-level-2"><a href="#何時使用"><span class="toc-label">何時使用</span></a></li><li class="toc-level-2"><a href="#重點旗標"><span class="toc-label">重點旗標</span></a></li><li class="toc-level-2"><a href="#範例"><span class="toc-label">範例</span></a></li><li class="toc-level-2"><a href="#採用前後對照"><span class="toc-label">採用前後對照</span></a></li><li class="toc-level-2"><a href="#成功判準"><span class="toc-label">成功判準</span></a></li><li class="toc-level-2"><a href="#失敗時先檢查"><span class="toc-label">失敗時先檢查</span></a></li><li class="toc-level-2"><a href="#相關指令"><span class="toc-label">相關指令</span></a></li></ul></section><section class="sidebar-section"><h2>相關頁面</h2><ul class="sidebar-meta-list"><li><a href="../../handbook/zh-TW/datasource.html" class="sidebar-meta-link">對應手冊章節</a></li></ul></section><section class="sidebar-section"><h2>版本</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>語言</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/datasource-export.html" class="sidebar-meta-link">Switch to English</a></li></ul></section>
+    <section class="sidebar-section"><h2>本頁內容</h2><ul class="toc-list"><li class="toc-level-2"><a href="#用途"><span class="toc-label">用途</span></a></li><li class="toc-level-2"><a href="#何時使用"><span class="toc-label">何時使用</span></a></li><li class="toc-level-2"><a href="#重點旗標"><span class="toc-label">重點旗標</span></a></li><li class="toc-level-2"><a href="#artifact-workspace-輸出"><span class="toc-label">Artifact workspace 輸出</span></a></li><li class="toc-level-2"><a href="#範例"><span class="toc-label">範例</span></a></li><li class="toc-level-2"><a href="#採用前後對照"><span class="toc-label">採用前後對照</span></a></li><li class="toc-level-2"><a href="#成功判準"><span class="toc-label">成功判準</span></a></li><li class="toc-level-2"><a href="#失敗時先檢查"><span class="toc-label">失敗時先檢查</span></a></li><li class="toc-level-2"><a href="#相關指令"><span class="toc-label">相關指令</span></a></li></ul></section><section class="sidebar-section"><h2>相關頁面</h2><ul class="sidebar-meta-list"><li><a href="../../handbook/zh-TW/datasource.html" class="sidebar-meta-link">對應手冊章節</a></li></ul></section><section class="sidebar-section"><h2>版本</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>語言</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/datasource-export.html" class="sidebar-meta-link">Switch to English</a></li></ul></section>
   </div>
 </aside>
 

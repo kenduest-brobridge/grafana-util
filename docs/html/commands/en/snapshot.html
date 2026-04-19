@@ -971,7 +971,10 @@ grafana-util status snapshot review --input-dir ./snapshot --output-format json<
 <p>When to use: when you need a local snapshot root that can be reviewed without Grafana access.</p>
 <p>What gets written:</p>
 <ul><li><code>snapshot/dashboards/</code></li><li><code>snapshot/datasources/</code></li><li><code>snapshot/snapshot-metadata.json</code></li></ul>
-<p>Key flags: <code>--output-dir</code>, <code>--overwrite</code>, <code>--prompt</code>, plus the shared Grafana connection and auth flags. <code>--prompt</code> opens a terminal multi-select prompt so you can choose which lanes to export before the snapshot starts. The datasource lane exports config and any <code>secureJsonDataPlaceholders</code>, but it does not export datasource plaintext secrets because Grafana live APIs do not return them.</p>
+<p>Key flags: <code>--output-dir</code>, <code>--overwrite</code>, <code>--prompt</code>, <code>--run</code>, <code>--run-id</code>, plus the shared Grafana connection and auth flags. <code>--prompt</code> opens a terminal multi-select prompt so you can choose which lanes to export before the snapshot starts. The datasource lane exports config and any <code>secureJsonDataPlaceholders</code>, but it does not export datasource plaintext secrets because Grafana live APIs do not return them.</p>
+<p>When <code>--output-dir</code> is omitted, snapshot export writes the snapshot root under the artifact workspace run:</p>
+<pre><code>&lt;artifact_root&gt;/&lt;profile-or-default&gt;/runs/&lt;run-id&gt;/</code></pre>
+<p>That means the snapshot lanes remain directly under the run root, for example <code>dashboards/</code>, <code>datasources/</code>, and <code>access/users/</code> when those lanes are exported. The artifact root comes from <code>artifact_root</code> in <code>grafana-util.yaml</code>, or defaults to <code>.grafana-util/artifacts</code> next to the config file.</p>
 <p>Examples:</p>
 <pre><code># export.
 grafana-util status snapshot export --url http://localhost:3000 --basic-user admin --basic-password admin --output-dir ./snapshot</code></pre>
@@ -979,17 +982,22 @@ grafana-util status snapshot export --url http://localhost:3000 --basic-user adm
 grafana-util status snapshot export --profile prod --output-dir ./snapshot --overwrite</code></pre>
 <pre><code># choose snapshot lanes from a terminal prompt before export.
 grafana-util status snapshot export --profile prod --prompt --output-dir ./snapshot</code></pre>
+<pre><code># export a snapshot into the profile artifact workspace with a timestamped run id.
+grafana-util status snapshot export --profile prod --run timestamp --overwrite</code></pre>
 <p>Related commands: <code>snapshot review</code>, <code>workspace package</code>, <code>status overview</code>.</p>
 <h2 id="review"><code>review</code></h2>
 <p>Purpose: review a local snapshot inventory without touching Grafana.</p>
 <p>When to use: when you want to inspect an exported snapshot root as table, csv, text, json, yaml, or interactive output.</p>
 <p>Review summary focuses on the exported dashboard and datasource lanes present in the snapshot root.</p>
-<p>Key flags: <code>--input-dir</code>, <code>--interactive</code>, <code>--output-format</code>.</p>
+<p>Key flags: <code>--input-dir</code>, <code>--interactive</code>, <code>--output-format</code>, <code>--run</code>, <code>--run-id</code>.</p>
+<p>When <code>--input-dir</code> is omitted, <code>--run latest</code> reads the latest recorded artifact workspace run and <code>--run-id &lt;name&gt;</code> reads one explicit run.</p>
 <p>Examples:</p>
 <pre><code># review an exported snapshot root as table, csv, text, json, yaml, or interactive output.
 grafana-util status snapshot review --input-dir ./snapshot --output-format table</code></pre>
 <pre><code># review an exported snapshot root as table, csv, text, json, yaml, or interactive output.
 grafana-util status snapshot review --input-dir ./snapshot --interactive</code></pre>
+<pre><code># review the latest artifact workspace snapshot run without naming its directory.
+grafana-util status snapshot review --run latest --output-format table</code></pre>
 <p>Related commands: <code>snapshot export</code>, <code>status overview</code>, <code>status staged</code>.</p>
 
 </article>

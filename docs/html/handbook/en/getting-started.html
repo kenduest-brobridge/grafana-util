@@ -980,6 +980,17 @@ grafana-util --version</code></pre>
 <p>This confirms that the binary is on your <code>PATH</code> and that you are running the version you expect.</p>
 <h2 id="step-2-connection-patterns-and-profile-files">Step 2: Connection Patterns And Profile Files</h2>
 <p>Profile workflows are repo-local. <code>grafana-util config profile</code> works against <code>grafana-util.yaml</code> in the current working directory by default, or against the file pointed to by <code>GRAFANA_UTIL_CONFIG</code>.</p>
+<p>The same profile file can also own export artifacts. Put <code>artifact_root: .grafana-util/artifacts</code> next to the <code>profiles:</code> block when you want dashboard, snapshot, datasource, and access exports to land in one predictable workspace instead of repeating <code>--output-dir</code>.</p>
+<p>Relative <code>artifact_root</code> values are resolved from the directory that contains <code>grafana-util.yaml</code>, not from whatever directory happens to run the command. If the key is omitted, the default is <code>.grafana-util/artifacts</code> beside the config file. Use the root <code>--config &lt;file&gt;</code> flag or <code>GRAFANA_UTIL_CONFIG</code> when the profile file is not in the current directory.</p>
+<pre><code>artifact_root: .grafana-util/artifacts
+profiles:
+  prod:
+    url: https://grafana.example.com
+    token_env: GRAFANA_PROD_TOKEN</code></pre>
+<p>Artifact-backed exports use this run layout:</p>
+<pre><code>&lt;artifact_root&gt;/&lt;profile-or-default&gt;/runs/&lt;run-id&gt;/
+&lt;artifact_root&gt;/&lt;profile-or-default&gt;/latest-run.json</code></pre>
+<p>Use <code>--run timestamp</code> to create a new timestamped export run, <code>--run-id nightly-2026-04-19</code> for a stable run name, and <code>--run latest</code> for later browse/list/review commands that should read the latest recorded run.</p>
 <h3 id="auth-modes-at-a-glance">Auth modes at a glance</h3>
 <p><code>grafana-util</code> can read connection settings from direct flags, prompt-based input, environment variables, or a repo-local profile. Use the auth modes in this order:</p>
 <p><strong>Direct Basic auth</strong></p>

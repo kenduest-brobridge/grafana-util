@@ -14,7 +14,21 @@ provisioning projection。
 - `--all-orgs`：把每個可見 org 匯出到各自的子目錄。需要 Basic auth。
 - `--overwrite`：取代既有檔案。
 - `--without-datasource-provisioning`：略過 provisioning 變體。
+- `--run`：未指定 `--output-dir` 時，寫入 artifact workspace run。`timestamp` 會建立新的時間戳 run，`latest` 會重用最新紀錄的 run。
+- `--run-id`：未指定 `--output-dir` 時，寫入指定名稱的 artifact workspace run。
 - `--dry-run`：預覽會寫出哪些內容。
+
+## Artifact workspace 輸出
+
+如果沒有指定 `--output-dir`，`datasource export` 會寫到：
+
+```text
+<artifact_root>/<profile-or-default>/runs/<run-id>/datasources/
+```
+
+artifact root 來自 `grafana-util.yaml` 裡的 `artifact_root`。如果沒有設定，預設是設定檔旁邊的 `.grafana-util/artifacts`。設定檔不在目前目錄時，可用 root `--config <file>` 或 `GRAFANA_UTIL_CONFIG` 指定。
+
+新匯出建議用 `--run timestamp`，需要固定名稱時用 `--run-id <name>`；後續可用 `datasource list --local --run latest` 讀取最新紀錄的 datasource lane。
 
 ## 範例
 ```bash
@@ -25,6 +39,11 @@ grafana-util datasource export --url http://localhost:3000 --basic-user admin --
 ```bash
 # 將線上 Grafana datasource inventory 匯出成標準化 JSON 與 provisioning 檔案。
 grafana-util datasource export --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --output-dir ./datasources --overwrite
+```
+
+```bash
+# 使用時間戳 run id，將 datasource inventory 匯出到 profile artifact workspace。
+grafana-util datasource export --profile prod --run timestamp --overwrite
 ```
 
 ## 採用前後對照

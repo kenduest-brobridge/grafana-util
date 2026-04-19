@@ -120,6 +120,27 @@ This confirms that the binary is on your `PATH` and that you are running the ver
 
 Profile workflows are repo-local. `grafana-util config profile` works against `grafana-util.yaml` in the current working directory by default, or against the file pointed to by `GRAFANA_UTIL_CONFIG`.
 
+The same profile file can also own export artifacts. Put `artifact_root: .grafana-util/artifacts` next to the `profiles:` block when you want dashboard, snapshot, datasource, and access exports to land in one predictable workspace instead of repeating `--output-dir`.
+
+Relative `artifact_root` values are resolved from the directory that contains `grafana-util.yaml`, not from whatever directory happens to run the command. If the key is omitted, the default is `.grafana-util/artifacts` beside the config file. Use the root `--config <file>` flag or `GRAFANA_UTIL_CONFIG` when the profile file is not in the current directory.
+
+```yaml
+artifact_root: .grafana-util/artifacts
+profiles:
+  prod:
+    url: https://grafana.example.com
+    token_env: GRAFANA_PROD_TOKEN
+```
+
+Artifact-backed exports use this run layout:
+
+```text
+<artifact_root>/<profile-or-default>/runs/<run-id>/
+<artifact_root>/<profile-or-default>/latest-run.json
+```
+
+Use `--run timestamp` to create a new timestamped export run, `--run-id nightly-2026-04-19` for a stable run name, and `--run latest` for later browse/list/review commands that should read the latest recorded run.
+
 ### Auth modes at a glance
 
 `grafana-util` can read connection settings from direct flags, prompt-based input, environment variables, or a repo-local profile. Use the auth modes in this order:

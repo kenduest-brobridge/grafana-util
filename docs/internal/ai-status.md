@@ -16,6 +16,13 @@ Current AI-maintained status only.
 - Older entries moved to [`ai-status-archive-2026-04-18.md`](docs/internal/archive/ai-status-archive-2026-04-18.md).
 - Older entries moved to [`ai-status-archive-2026-04-19.md`](docs/internal/archive/ai-status-archive-2026-04-19.md).
 
+## 2026-04-19 - Formalize artifact workspace docs
+- State: Done
+- Scope: public command docs, getting-started handbook, command-surface contract, generated docs, and AI trace docs for artifact workspace export defaults. Runtime code, Python implementation, README files, and live Grafana behavior are out of scope.
+- Baseline: artifact workspace support existed in Rust, but operator docs and the public command-surface contract did not yet spell out config-relative `artifact_root`, timestamp/latest/run-id behavior, or lane placement.
+- Current Update: Documented `grafana-util.yaml`, root `--config`, `artifact_root`, run layout, latest pointer, and dashboard/snapshot/datasource/access artifact lanes in English and zh-TW docs.
+- Result: Generated docs, docs-surface, and AI workflow checks pass.
+
 ## 2026-04-19 - Add artifact workspace run support
 - State: Done
 - Scope: Rust profile config, artifact resolver, dashboard/snapshot/datasource/access export and local artifact routing, CLI config flag, focused parser/test literal updates, and AI trace docs. Generated docs, README files, Python implementation, and live Grafana behavior beyond explicit artifact/local flags are out of scope.
@@ -48,17 +55,3 @@ Current AI-maintained status only.
 - Baseline: Several Rust regression files mixed unrelated behavior suites in 900+ line modules, which made review and worker assignment harder even after production architecture warnings were clean.
 - Current Update: Split the largest test hubs into behavior-named sibling modules while keeping their original files as routing facades and shared fixture homes where appropriate. Restored the existing access user runtime module include and kept dashboard browse's test-only document builder explicit for clippy.
 - Result: Focused sync/dashboard/snapshot/access tests pass, full Rust tests pass, clippy and formatting pass, and `make quality-architecture` remains clean.
-
-## 2026-04-18 - Clear Rust architecture warnings
-- State: Done
-- Scope: Rust architecture-warning cleanup across dashboard plan/export/export-layout/import-apply, status live, datasource CLI defs, alert runtime tests, focused tests, full Rust quality gate, and AI trace docs. README files, generated user docs, and Python implementation are out of scope.
-- Baseline: `make quality-architecture` reported warning-threshold files in dashboard export/export-layout/import_apply/plan, status live, datasource CLI defs, and alert runtime tests. Several production files mixed orchestration, rendering, live collection, artifact writing, and tests in one module.
-- Current Update: Split each warning surface by responsibility: dashboard plan into input/reconcile/render, dashboard import/apply into backend/prepare/live/render, dashboard export into provisioning/root-bundle helpers, export-layout into apply/render/tests, status live into discovery/domains/multi-org/tests, datasource CLI output-format helpers, and alert runtime tests by scenario group.
-- Result: `make quality-architecture` is clean with zero warnings, focused tests pass, full Rust tests pass, clippy passes, and `make quality-rust` passes outside the sandbox. The sandboxed `make quality-rust` run still fails local mock-server socket tests with `Operation not permitted`.
-
-## 2026-04-18 - Fix datasource plan architecture gate
-- State: Done
-- Scope: Rust datasource plan module split, shared review/action contract vocabulary, focused tests, architecture quality gate, and AI trace docs. README files, generated user docs, and Python implementation are out of scope.
-- Baseline: `make quality-architecture` failed because `rust/src/commands/datasource/plan/mod.rs` was 1065 lines, above the 800-line hard limit; review action/status/reason strings were also spread through datasource/access/dashboard/sync plan, preview, apply, and TUI paths.
-- Current Update: Split datasource plan into `model`, `builder`, `render`, and `tests` modules, leaving `mod.rs` as a thin re-export layer. Added a shared review contract vocabulary and routed core plan/preview/apply summary filters through it instead of scattering `would-*`, `same`, `blocked`, `warning`, and related reason strings.
-- Result: Focused datasource plan tests, full Rust tests, clippy, formatting, and `make quality-architecture` pass. Remaining architecture output contains warning-threshold files only, with zero hard failures.

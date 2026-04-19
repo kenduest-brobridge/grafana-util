@@ -13,3 +13,17 @@
 - Baseline: The remaining backlog has oversized dashboard browse render/support surfaces, scattered project status producer shapes, a high-risk live apply path, and shallow output contract validation.
 - Current Update: Split dashboard browse detail rendering out of the frame renderer, introduced a shared status producer model for staged datasource/alert adapters, extracted the sync live apply phase loop, and extended output contract checks with collection-aware constraints.
 - Result: Focused dashboard/status/sync/contract tests, full Rust tests, formatting, output contract checks, and sync quality gate pass. `make quality-architecture` still reports the pre-existing `rust/src/commands/datasource/plan/mod.rs` hard line-count blocker.
+
+## 2026-04-18 - Clear Rust architecture warnings
+- State: Done
+- Scope: Rust architecture-warning cleanup across dashboard plan/export/export-layout/import-apply, status live, datasource CLI defs, alert runtime tests, focused tests, full Rust quality gate, and AI trace docs. README files, generated user docs, and Python implementation are out of scope.
+- Baseline: `make quality-architecture` reported warning-threshold files in dashboard export/export-layout/import_apply/plan, status live, datasource CLI defs, and alert runtime tests. Several production files mixed orchestration, rendering, live collection, artifact writing, and tests in one module.
+- Current Update: Split each warning surface by responsibility: dashboard plan into input/reconcile/render, dashboard import/apply into backend/prepare/live/render, dashboard export into provisioning/root-bundle helpers, export-layout into apply/render/tests, status live into discovery/domains/multi-org/tests, datasource CLI output-format helpers, and alert runtime tests by scenario group.
+- Result: `make quality-architecture` is clean with zero warnings, focused tests pass, full Rust tests pass, clippy passes, and `make quality-rust` passes outside the sandbox. The sandboxed `make quality-rust` run still fails local mock-server socket tests with `Operation not permitted`.
+
+## 2026-04-18 - Fix datasource plan architecture gate
+- State: Done
+- Scope: Rust datasource plan module split, shared review/action contract vocabulary, focused tests, architecture quality gate, and AI trace docs. README files, generated user docs, and Python implementation are out of scope.
+- Baseline: `make quality-architecture` failed because `rust/src/commands/datasource/plan/mod.rs` was 1065 lines, above the 800-line hard limit; review action/status/reason strings were also spread through datasource/access/dashboard/sync plan, preview, apply, and TUI paths.
+- Current Update: Split datasource plan into `model`, `builder`, `render`, and `tests` modules, leaving `mod.rs` as a thin re-export layer. Added a shared review contract vocabulary and routed core plan/preview/apply summary filters through it instead of scattering `would-*`, `same`, `blocked`, `warning`, and related reason strings.
+- Result: Focused datasource plan tests, full Rust tests, clippy, formatting, and `make quality-architecture` pass. Remaining architecture output contains warning-threshold files only, with zero hard failures.

@@ -20,6 +20,8 @@
 - `--include-history`：把 dashboard 版本歷史成品寫到每個匯出 org 範圍下的 `history/` 子目錄。
 - `--provider-name`、`--provider-org-id`、`--provider-path`：自訂產生的 provisioning provider 檔案。
 - `--provider-disable-deletion`、`--provider-allow-ui-updates`、`--provider-update-interval-seconds`：調整 provisioning 行為。
+- `--run`：未指定 `--output-dir` 時，寫入 artifact workspace run。`timestamp` 會建立新的時間戳 run，`latest` 會重用最新紀錄的 run。
+- `--run-id`：未指定 `--output-dir` 時，寫入指定名稱的 artifact workspace run。
 - `--dry-run`：預覽會寫出哪些內容。
 
 ## 說明
@@ -32,6 +34,21 @@
 - `--include-history` 會在每個匯出 org 範圍下加上 `history/`。
 - provider 檔案會寫到 `provisioning/provisioning/dashboards.yaml`。
 - `raw/` 給 API import 或 diff，`prompt/` 給 UI import，`provisioning/` 給 file provisioning。
+
+## Artifact workspace 輸出
+
+如果沒有指定 `--output-dir`，`dashboard export` 會寫到所選 profile config 的 artifact workspace。預設設定檔是目前目錄的 `grafana-util.yaml`，也可以用 root `--config <file>` 或 `GRAFANA_UTIL_CONFIG` 指定。
+
+如果 config 沒有設定 `artifact_root`，預設目錄是設定檔旁邊的 `.grafana-util/artifacts`。相對路徑的 `artifact_root` 也會以設定檔所在目錄為基準解析。
+
+run layout 如下：
+
+```text
+<artifact_root>/<profile-or-default>/runs/<run-id>/dashboards/
+<artifact_root>/<profile-or-default>/latest-run.json
+```
+
+新匯出建議使用 `--run timestamp`，需要固定 run 名稱時使用 `--run-id <name>`；`--run latest` 較適合後續本機讀取命令用來讀取最新成功 run。
 
 ## 匯出變體差異
 
@@ -87,6 +104,11 @@ grafana-util dashboard export --url http://localhost:3000 --token "$GRAFANA_API_
 ```bash
 # 匯出 dashboard，並把每個 org 的版本歷史成品一併寫入可重用的目錄樹。
 grafana-util dashboard export --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --include-history --output-dir ./dashboards --overwrite
+```
+
+```bash
+# 使用時間戳 run id，將 dashboard 匯出到 profile artifact workspace。
+grafana-util dashboard export --profile prod --run timestamp --overwrite
 ```
 
 ## 相關指令

@@ -120,6 +120,27 @@ grafana-util 0.10.2
 
 Profile 這套流程是以「專案本地設定」為中心。`grafana-util config profile` 預設會讀寫目前工作目錄中的 `grafana-util.yaml`，若有設定 `GRAFANA_UTIL_CONFIG`，則會優先讀取該路徑。
 
+同一個 profile 檔也可以管理匯出 artifact。若希望 dashboard、snapshot、datasource 與 access export 都落在固定 workspace，而不是每次重複指定 `--output-dir`，可以在 `profiles:` 同層加入 `artifact_root: .grafana-util/artifacts`。
+
+相對路徑的 `artifact_root` 會以 `grafana-util.yaml` 所在目錄為基準，不會受目前 shell 執行目錄影響。如果沒有設定，預設就是設定檔旁邊的 `.grafana-util/artifacts`。設定檔不在目前目錄時，可用 root `--config <file>` 或 `GRAFANA_UTIL_CONFIG` 指定。
+
+```yaml
+artifact_root: .grafana-util/artifacts
+profiles:
+  prod:
+    url: https://grafana.example.com
+    token_env: GRAFANA_PROD_TOKEN
+```
+
+artifact-backed export 使用這個 run layout：
+
+```text
+<artifact_root>/<profile-or-default>/runs/<run-id>/
+<artifact_root>/<profile-or-default>/latest-run.json
+```
+
+新匯出使用 `--run timestamp` 建立時間戳 run，需要穩定名稱時用 `--run-id nightly-2026-04-19`，後續 browse/list/review 要讀最新成功 run 時用 `--run latest`。
+
 ### 身分驗證模式概覽
 
 `grafana-util` 可以從直接旗標、互動輸入、環境變數或專案本地的 profile 取得連線資訊。建議依序使用：

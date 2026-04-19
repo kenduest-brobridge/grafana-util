@@ -980,6 +980,17 @@ grafana-util --version</code></pre>
 <p>這代表執行檔已在 <code>PATH</code> 上，而且版本與目前檢出的發行版一致。</p>
 <h2 id="步驟-2連線方式與-profile-設定檔">步驟 2：連線方式與 Profile 設定檔</h2>
 <p>Profile 這套流程是以「專案本地設定」為中心。<code>grafana-util config profile</code> 預設會讀寫目前工作目錄中的 <code>grafana-util.yaml</code>，若有設定 <code>GRAFANA_UTIL_CONFIG</code>，則會優先讀取該路徑。</p>
+<p>同一個 profile 檔也可以管理匯出 artifact。若希望 dashboard、snapshot、datasource 與 access export 都落在固定 workspace，而不是每次重複指定 <code>--output-dir</code>，可以在 <code>profiles:</code> 同層加入 <code>artifact_root: .grafana-util/artifacts</code>。</p>
+<p>相對路徑的 <code>artifact_root</code> 會以 <code>grafana-util.yaml</code> 所在目錄為基準，不會受目前 shell 執行目錄影響。如果沒有設定，預設就是設定檔旁邊的 <code>.grafana-util/artifacts</code>。設定檔不在目前目錄時，可用 root <code>--config &lt;file&gt;</code> 或 <code>GRAFANA_UTIL_CONFIG</code> 指定。</p>
+<pre><code>artifact_root: .grafana-util/artifacts
+profiles:
+  prod:
+    url: https://grafana.example.com
+    token_env: GRAFANA_PROD_TOKEN</code></pre>
+<p>artifact-backed export 使用這個 run layout：</p>
+<pre><code>&lt;artifact_root&gt;/&lt;profile-or-default&gt;/runs/&lt;run-id&gt;/
+&lt;artifact_root&gt;/&lt;profile-or-default&gt;/latest-run.json</code></pre>
+<p>新匯出使用 <code>--run timestamp</code> 建立時間戳 run，需要穩定名稱時用 <code>--run-id nightly-2026-04-19</code>，後續 browse/list/review 要讀最新成功 run 時用 <code>--run latest</code>。</p>
 <h3 id="身分驗證模式概覽">身分驗證模式概覽</h3>
 <p><code>grafana-util</code> 可以從直接旗標、互動輸入、環境變數或專案本地的 profile 取得連線資訊。建議依序使用：</p>
 <p><strong>直接基本驗證 (Basic Auth)</strong></p>
