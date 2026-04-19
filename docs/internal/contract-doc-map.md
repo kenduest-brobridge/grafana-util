@@ -83,6 +83,11 @@ Use three layers:
   - If the artifact is still under active shape churn, keep it in the runtime
     golden / manifest layer and do not describe it as a stable public contract
     yet.
+  - Use `make contract-promotion-report` as an informational evidence matrix
+    across runtime golden, schema/help manifest, public CLI route,
+    docs-entrypoint, generated-docs, and artifact-workspace lanes. Structural
+    gaps are report findings by default; only explicit strict report mode should
+    turn them into a failing gate.
 
 ## Current Contract Lane Overlap
 
