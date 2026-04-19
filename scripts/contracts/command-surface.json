@@ -56,11 +56,21 @@
     "local_consumer_commands": [
       "dashboard browse",
       "dashboard summary",
+      "dashboard import",
+      "dashboard diff",
       "datasource list",
       "access user list",
+      "access user import",
+      "access user diff",
       "access team list",
+      "access team import",
+      "access team diff",
       "access org list",
+      "access org import",
+      "access org diff",
       "access service-account list",
+      "access service-account import",
+      "access service-account diff",
       "status snapshot review"
     ]
   },

@@ -59,6 +59,9 @@ fn make_diff_args(input_dir: PathBuf, input_format: DashboardImportInputFormat) 
     DiffArgs {
         common: make_common_args("http://127.0.0.1:3000".to_string()),
         input_dir,
+        local: false,
+        run: None,
+        run_id: None,
         input_format,
         import_folder_uid: None,
         context_lines: 3,

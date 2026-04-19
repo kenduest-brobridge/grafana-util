@@ -41,13 +41,13 @@ List or browse live and local Grafana teams, create, modify, export, import, dif
 - `browse`: `--input-dir`, `--query`, `--name`, `--with-members`, `--page`, `--per-page`
 - `add`: `--name`, `--email`, `--member`, `--admin`, `--json`
 - `modify`: `--team-id`, `--name`, `--add-member`, `--remove-member`, `--add-admin`, `--remove-admin`, `--json`
-- `export` and `diff`: `--output-dir` or `--diff-dir`, `--run`, `--run-id`, `--overwrite`, `--dry-run`, `--with-members`
-- `import`: `--input-dir`, `--replace-existing`, `--dry-run`, `--table`, `--json`, `--output-format`, `--yes`
+- `export` and `diff`: `--output-dir` or `--diff-dir`, `--local`, `--run`, `--run-id`, `--overwrite`, `--dry-run`, `--with-members`
+- `import`: `--input-dir`, `--local`, `--run`, `--run-id`, `--replace-existing`, `--dry-run`, `--table`, `--json`, `--output-format`, `--yes`
 - `delete`: `--team-id`, `--name`, `--prompt`, `--yes`, `--json`
 
 ## Examples
 
-When `--output-dir` is omitted, `access team export` writes to the profile artifact workspace under `access/teams/`. Use `--run timestamp` for a fresh timestamped run or `--run-id <name>` for a deterministic run. Later local reads can use `access team list --local --run latest`.
+When `--output-dir` is omitted, `access team export` writes to the profile artifact workspace under `access/teams/`. Use `--run timestamp` for a fresh timestamped run or `--run-id <name>` for a deterministic run. Later local reads, imports, and diffs can use `--local`, `--run latest`, or `--run-id <name>`.
 
 ```bash
 # Inspect team membership before adding or removing people.
@@ -77,6 +77,11 @@ grafana-util access team add --url http://localhost:3000 --basic-user admin --ba
 ```bash
 # Import a team bundle before switching environments.
 grafana-util access team import --url http://localhost:3000 --basic-user admin --basic-password admin --input-dir ./access-teams --replace-existing --yes
+```
+
+```bash
+# Dry-run import from the latest profile artifact workspace team run.
+grafana-util access team import --profile prod --local --dry-run --output-format table
 ```
 
 ```bash

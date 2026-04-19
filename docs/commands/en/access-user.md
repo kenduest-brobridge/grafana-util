@@ -43,13 +43,13 @@ List or browse live and local Grafana users, create, modify, export, import, dif
 - `browse`: `--input-dir`, `--scope`, `--all-orgs`, `--current-org`, `--query`, `--login`, `--email`, `--org-role`, `--grafana-admin`, `--page`, `--per-page`
 - `add`: `--login`, `--email`, `--name`, `--password` or `--password-file` or `--prompt-user-password`, `--org-role`, `--grafana-admin`, `--json`
 - `modify`: `--user-id`, `--login`, `--email`, `--set-login`, `--set-email`, `--set-name`, `--set-password` or `--set-password-file` or `--prompt-set-password`, `--set-org-role`, `--set-grafana-admin`, `--json`
-- `export` and `diff`: `--output-dir` or `--diff-dir`, `--run`, `--run-id`, `--overwrite`, `--dry-run`, `--scope`, `--with-teams`
-- `import`: `--input-dir`, `--scope`, `--replace-existing`, `--dry-run`, `--table`, `--json`, `--output-format`, `--yes`
+- `export` and `diff`: `--output-dir` or `--diff-dir`, `--local`, `--run`, `--run-id`, `--overwrite`, `--dry-run`, `--scope`, `--with-teams`
+- `import`: `--input-dir`, `--local`, `--run`, `--run-id`, `--scope`, `--replace-existing`, `--dry-run`, `--table`, `--json`, `--output-format`, `--yes`
 - `delete`: `--user-id`, `--login`, `--email`, optional `--scope`, `--prompt`, `--yes`, `--json`
 
 ## Examples
 
-When `--output-dir` is omitted, `access user export` writes to the profile artifact workspace under `access/users/`. Use `--run timestamp` for a fresh timestamped run or `--run-id <name>` for a deterministic run. Later local reads can use `access user list --local --run latest`.
+When `--output-dir` is omitted, `access user export` writes to the profile artifact workspace under `access/users/`. Use `--run timestamp` for a fresh timestamped run or `--run-id <name>` for a deterministic run. Later local reads, imports, and diffs can use `--local`, `--run latest`, or `--run-id <name>`.
 
 ```bash
 # Inspect users in one org before changing membership or roles.
@@ -69,6 +69,11 @@ grafana-util access user browse --input-dir ./access-users --login alice
 ```bash
 # Export users into the profile artifact workspace with a timestamped run id.
 grafana-util access user export --profile prod --run timestamp --scope org --overwrite
+```
+
+```bash
+# Dry-run import from the latest profile artifact workspace user run.
+grafana-util access user import --profile prod --local --dry-run --output-format table
 ```
 
 ```bash

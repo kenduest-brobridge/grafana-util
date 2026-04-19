@@ -39,15 +39,15 @@ List live or local Grafana service accounts, create, export, import, diff, or de
 
 - `list`: `--input-dir`, `--query`, `--output-columns`, `--list-columns`, `--page`, `--per-page`, `--table`, `--csv`, `--json`, `--yaml`, `--output-format`
 - `add`: `--name`, `--role`, `--disabled`, `--json`
-- `export` and `diff`: `--output-dir` or `--diff-dir`, `--run`, `--run-id`, `--overwrite`, `--dry-run`
-- `import`: `--input-dir`, `--replace-existing`, `--dry-run`, `--table`, `--json`, `--output-format`, `--yes`
+- `export` and `diff`: `--output-dir` or `--diff-dir`, `--local`, `--run`, `--run-id`, `--overwrite`, `--dry-run`
+- `import`: `--input-dir`, `--local`, `--run`, `--run-id`, `--replace-existing`, `--dry-run`, `--table`, `--json`, `--output-format`, `--yes`
 - `delete`: `--name`, `--service-account-id`, `--prompt`, `--yes`, `--json`
 - `token add`: `--service-account-id` or `--name`, `--token-name`, `--seconds-to-live`, `--json`
 - `token delete`: `--service-account-id` or `--name`, `--token-id` or `--token-name`, `--prompt`, `--yes`, `--json`
 
 ## Examples
 
-When `--output-dir` is omitted, `access service-account export` writes to the profile artifact workspace under `access/service-accounts/`. Use `--run timestamp` for a fresh timestamped run or `--run-id <name>` for a deterministic run. Later local reads can use `access service-account list --local --run latest`.
+When `--output-dir` is omitted, `access service-account export` writes to the profile artifact workspace under `access/service-accounts/`. Use `--run timestamp` for a fresh timestamped run or `--run-id <name>` for a deterministic run. Later local reads, imports, and diffs can use `--local`, `--run latest`, or `--run-id <name>`.
 
 ```bash
 # Inspect service accounts before creating or deleting a token.
@@ -62,6 +62,11 @@ grafana-util access service-account list --input-dir ./access-service-accounts -
 ```bash
 # Export service accounts into the profile artifact workspace with a timestamped run id.
 grafana-util access service-account export --profile prod --run timestamp --overwrite
+```
+
+```bash
+# Dry-run import from the latest profile artifact workspace service-account run.
+grafana-util access service-account import --profile prod --local --dry-run --output-format table
 ```
 
 ```bash

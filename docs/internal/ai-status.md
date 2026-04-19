@@ -16,6 +16,13 @@ Current AI-maintained status only.
 - Older entries moved to [`ai-status-archive-2026-04-18.md`](docs/internal/archive/ai-status-archive-2026-04-18.md).
 - Older entries moved to [`ai-status-archive-2026-04-19.md`](docs/internal/archive/ai-status-archive-2026-04-19.md).
 
+## 2026-04-19 - Broaden artifact workspace local consumers
+- State: Done
+- Scope: Rust dashboard/access import and diff artifact input routing, command docs, command-surface contract, generated docs, and AI trace docs. Python implementation, README files, and live Grafana behavior beyond resolving local artifact input paths are out of scope.
+- Baseline: Dashboard import/diff and access import/diff required explicit input or diff directories even after export/list/browse flows could resolve profile artifact runs.
+- Current Update: Added `--local`, `--run`, and `--run-id` artifact input resolution for dashboard import/diff and access user/team/org/service-account import/diff.
+- Result: Rust formatting, generated docs, docs-surface, and AI workflow checks pass. Rust tests were not run.
+
 ## 2026-04-19 - Formalize artifact workspace docs
 - State: Done
 - Scope: public command docs, getting-started handbook, command-surface contract, generated docs, and AI trace docs for artifact workspace export defaults. Runtime code, Python implementation, README files, and live Grafana behavior are out of scope.
@@ -48,10 +55,3 @@ Current AI-maintained status only.
 - Scope: Rust alert live project-status normalization, TODO backlog cleanup, contract promotion guidance, mutation review-envelope inventory, focused tests, formatting, architecture checks, and AI trace docs. Public CLI behavior, generated docs, README files, and Python implementation are out of scope.
 - Current Update: Routed the alert live status producer through the shared status reading model, removed stale completed work from the active backlog, documented runtime-vs-schema promotion rules, and captured an internal review-envelope inventory before any public JSON changes.
 - Result: Focused alert/status tests, contract/schema checks, full Rust tests, clippy, formatting, architecture, and AI workflow checks pass locally.
-
-## 2026-04-18 - Split oversized Rust test surfaces
-- State: Done
-- Scope: Rust test-surface maintainability for sync bundle execution, dashboard export/import/topology, dashboard browse workflow, snapshot, access org runtime, TODO backlog, focused tests, full Rust test, clippy, architecture gate, and AI trace docs. README files, generated user docs, public CLI behavior, JSON contracts, and Python implementation are out of scope.
-- Baseline: Several Rust regression files mixed unrelated behavior suites in 900+ line modules, which made review and worker assignment harder even after production architecture warnings were clean.
-- Current Update: Split the largest test hubs into behavior-named sibling modules while keeping their original files as routing facades and shared fixture homes where appropriate. Restored the existing access user runtime module include and kept dashboard browse's test-only document builder explicit for clippy.
-- Result: Focused sync/dashboard/snapshot/access tests pass, full Rust tests pass, clippy and formatting pass, and `make quality-architecture` remains clean.

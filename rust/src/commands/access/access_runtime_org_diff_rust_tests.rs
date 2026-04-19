@@ -25,6 +25,9 @@ fn org_diff_with_request_reports_same_state() {
     let args = OrgDiffArgs {
         common: make_basic_common_no_org_id(),
         diff_dir: diff_dir.clone(),
+        local: false,
+        run: None,
+        run_id: None,
     };
     let result = diff_orgs_with_request(
         |method, path, _params, _payload| match (method, path) {
@@ -65,6 +68,9 @@ fn org_diff_with_request_reports_user_role_drift() {
     let args = OrgDiffArgs {
         common: make_basic_common_no_org_id(),
         diff_dir: diff_dir.clone(),
+        local: false,
+        run: None,
+        run_id: None,
     };
     let result = diff_orgs_with_request(
         |method, path, _params, _payload| match (method, path) {

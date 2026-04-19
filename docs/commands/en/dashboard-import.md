@@ -13,6 +13,7 @@ Use this when you have a local export tree or provisioning tree and need to push
 ## Key flags
 - `--input-dir`: source directory for raw or combined export input.
 - `--input-format`: choose `raw` or `provisioning`.
+- `--local`, `--run`, `--run-id`: read the source dashboard lane from the artifact workspace instead of passing `--input-dir`.
 - `--org-id`, `--use-export-org`, `--only-org-id`, `--create-missing-orgs`: control cross-org routing.
 - `--import-folder-uid`: force a destination folder UID.
 - `--ensure-folders`, `--replace-existing`, `--update-existing-only`: control import behavior.
@@ -41,6 +42,11 @@ grafana-util dashboard import --url http://localhost:3000 --basic-user admin --b
 ```bash
 # Import dashboard JSON files through the Grafana API.
 grafana-util dashboard import --url http://localhost:3000 --basic-user admin --basic-password admin --input-dir ./dashboards/raw --dry-run --table
+```
+
+```bash
+# Dry-run import from the latest profile artifact workspace dashboard run.
+grafana-util dashboard import --profile prod --local --dry-run --table
 ```
 
 ## Related commands

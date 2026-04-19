@@ -9,6 +9,7 @@ Use this when you want to see what would change before importing or publishing a
 ## Key flags
 - `--input-dir`: compare this export directory against Grafana.
 - `--input-format`: choose `raw` or `provisioning`.
+- `--local`, `--run`, `--run-id`: compare the dashboard lane from the artifact workspace instead of passing `--input-dir`.
 - `--import-folder-uid`: override the destination folder UID for the comparison.
 - `--context-lines`: unified diff context.
 - `--output-format`: choose `text` or `json`.
@@ -22,6 +23,11 @@ grafana-util dashboard diff --url http://localhost:3000 --basic-user admin --bas
 ```bash
 # Compare local dashboard files against live Grafana dashboards.
 grafana-util dashboard diff --url http://localhost:3000 --basic-user admin --basic-password admin --org-id 2 --input-dir ./dashboards/raw --output-format json
+```
+
+```bash
+# Compare the latest profile artifact workspace dashboard run against live Grafana.
+grafana-util dashboard diff --profile prod --local --output-format json
 ```
 
 ## Related commands

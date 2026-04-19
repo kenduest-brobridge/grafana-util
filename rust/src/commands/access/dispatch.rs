@@ -49,6 +49,52 @@ fn export_access_lane_path(
     .map(Some)
 }
 
+fn is_empty_path(path: &std::path::Path) -> bool {
+    path.as_os_str().is_empty()
+}
+
+fn resolve_required_access_input_dir(
+    input_dir: &mut PathBuf,
+    profile: Option<&str>,
+    run: Option<super::cli_defs::AccessArtifactRunMode>,
+    run_id: Option<&str>,
+    local: bool,
+    lane: ArtifactLane,
+    command_name: &str,
+) -> Result<()> {
+    if is_empty_path(input_dir) {
+        if local || run.is_some() || run_id.is_some() {
+            *input_dir = local_access_lane_path(profile, run, run_id, lane)?;
+            return Ok(());
+        }
+        return Err(message(format!(
+            "{command_name} requires --input-dir or artifact workspace selection with --local, --run, or --run-id."
+        )));
+    }
+    Ok(())
+}
+
+fn resolve_required_access_diff_dir(
+    diff_dir: &mut PathBuf,
+    profile: Option<&str>,
+    run: Option<super::cli_defs::AccessArtifactRunMode>,
+    run_id: Option<&str>,
+    local: bool,
+    lane: ArtifactLane,
+    command_name: &str,
+) -> Result<()> {
+    if local || run.is_some() || run_id.is_some() {
+        *diff_dir = local_access_lane_path(profile, run, run_id, lane)?;
+        return Ok(());
+    }
+    if is_empty_path(diff_dir) {
+        return Err(message(format!(
+            "{command_name} requires --diff-dir or artifact workspace selection with --local, --run, or --run-id."
+        )));
+    }
+    Ok(())
+}
+
 fn resolve_access_plan_args(args: &AccessPlanArgs) -> Result<AccessPlanArgs> {
     let mut resolved = args.clone();
     if resolved.local && resolved.input_dir.is_none() {
@@ -172,10 +218,58 @@ fn run_user_access_cli(command: &UserCommand, args: &AccessCliArgs) -> Result<()
             }
         }
         UserCommand::Import(inner) => {
-            run_access_cli_with_common(&inner.common, args, build_http_client)
+            let mut inner = inner.clone();
+            resolve_required_access_input_dir(
+                &mut inner.input_dir,
+                inner.common.profile.as_deref(),
+                inner.run,
+                inner.run_id.as_deref(),
+                inner.local,
+                ArtifactLane::AccessUsers,
+                "access user import",
+            )?;
+            let resolved_args = AccessCliArgs {
+                command: AccessCommand::User {
+                    command: UserCommand::Import(inner),
+                },
+            };
+            run_access_cli_with_common(
+                match &resolved_args.command {
+                    AccessCommand::User {
+                        command: UserCommand::Import(inner),
+                    } => &inner.common,
+                    _ => unreachable!(),
+                },
+                &resolved_args,
+                build_http_client,
+            )
         }
         UserCommand::Diff(inner) => {
-            run_access_cli_with_common(&inner.common, args, build_http_client)
+            let mut inner = inner.clone();
+            resolve_required_access_diff_dir(
+                &mut inner.diff_dir,
+                inner.common.profile.as_deref(),
+                inner.run,
+                inner.run_id.as_deref(),
+                inner.local,
+                ArtifactLane::AccessUsers,
+                "access user diff",
+            )?;
+            let resolved_args = AccessCliArgs {
+                command: AccessCommand::User {
+                    command: UserCommand::Diff(inner),
+                },
+            };
+            run_access_cli_with_common(
+                match &resolved_args.command {
+                    AccessCommand::User {
+                        command: UserCommand::Diff(inner),
+                    } => &inner.common,
+                    _ => unreachable!(),
+                },
+                &resolved_args,
+                build_http_client,
+            )
         }
         UserCommand::Delete(inner) => {
             run_access_cli_with_common(&inner.common, args, build_http_client)
@@ -238,10 +332,58 @@ fn run_org_access_cli(command: &OrgCommand, args: &AccessCliArgs) -> Result<()> 
             }
         }
         OrgCommand::Import(inner) => {
-            run_access_cli_with_common(&inner.common, args, build_http_client_no_org_id)
+            let mut inner = inner.clone();
+            resolve_required_access_input_dir(
+                &mut inner.input_dir,
+                inner.common.profile.as_deref(),
+                inner.run,
+                inner.run_id.as_deref(),
+                inner.local,
+                ArtifactLane::AccessOrgs,
+                "access org import",
+            )?;
+            let resolved_args = AccessCliArgs {
+                command: AccessCommand::Org {
+                    command: OrgCommand::Import(inner),
+                },
+            };
+            run_access_cli_with_common(
+                match &resolved_args.command {
+                    AccessCommand::Org {
+                        command: OrgCommand::Import(inner),
+                    } => &inner.common,
+                    _ => unreachable!(),
+                },
+                &resolved_args,
+                build_http_client_no_org_id,
+            )
         }
         OrgCommand::Diff(inner) => {
-            run_access_cli_with_common(&inner.common, args, build_http_client_no_org_id)
+            let mut inner = inner.clone();
+            resolve_required_access_diff_dir(
+                &mut inner.diff_dir,
+                inner.common.profile.as_deref(),
+                inner.run,
+                inner.run_id.as_deref(),
+                inner.local,
+                ArtifactLane::AccessOrgs,
+                "access org diff",
+            )?;
+            let resolved_args = AccessCliArgs {
+                command: AccessCommand::Org {
+                    command: OrgCommand::Diff(inner),
+                },
+            };
+            run_access_cli_with_common(
+                match &resolved_args.command {
+                    AccessCommand::Org {
+                        command: OrgCommand::Diff(inner),
+                    } => &inner.common,
+                    _ => unreachable!(),
+                },
+                &resolved_args,
+                build_http_client_no_org_id,
+            )
         }
         OrgCommand::Delete(inner) => {
             run_access_cli_with_common(&inner.common, args, build_http_client_no_org_id)
@@ -332,10 +474,58 @@ fn run_team_access_cli(command: &TeamCommand, args: &AccessCliArgs) -> Result<()
             }
         }
         TeamCommand::Import(inner) => {
-            run_access_cli_with_common(&inner.common, args, build_http_client)
+            let mut inner = inner.clone();
+            resolve_required_access_input_dir(
+                &mut inner.input_dir,
+                inner.common.profile.as_deref(),
+                inner.run,
+                inner.run_id.as_deref(),
+                inner.local,
+                ArtifactLane::AccessTeams,
+                "access team import",
+            )?;
+            let resolved_args = AccessCliArgs {
+                command: AccessCommand::Team {
+                    command: TeamCommand::Import(inner),
+                },
+            };
+            run_access_cli_with_common(
+                match &resolved_args.command {
+                    AccessCommand::Team {
+                        command: TeamCommand::Import(inner),
+                    } => &inner.common,
+                    _ => unreachable!(),
+                },
+                &resolved_args,
+                build_http_client,
+            )
         }
         TeamCommand::Diff(inner) => {
-            run_access_cli_with_common(&inner.common, args, build_http_client)
+            let mut inner = inner.clone();
+            resolve_required_access_diff_dir(
+                &mut inner.diff_dir,
+                inner.common.profile.as_deref(),
+                inner.run,
+                inner.run_id.as_deref(),
+                inner.local,
+                ArtifactLane::AccessTeams,
+                "access team diff",
+            )?;
+            let resolved_args = AccessCliArgs {
+                command: AccessCommand::Team {
+                    command: TeamCommand::Diff(inner),
+                },
+            };
+            run_access_cli_with_common(
+                match &resolved_args.command {
+                    AccessCommand::Team {
+                        command: TeamCommand::Diff(inner),
+                    } => &inner.common,
+                    _ => unreachable!(),
+                },
+                &resolved_args,
+                build_http_client,
+            )
         }
         TeamCommand::Delete(inner) => {
             run_access_cli_with_common(&inner.common, args, build_http_client)
@@ -398,10 +588,58 @@ fn run_service_account_access_cli(
             }
         }
         ServiceAccountCommand::Import(inner) => {
-            run_access_cli_with_common(&inner.common, args, build_http_client)
+            let mut inner = inner.clone();
+            resolve_required_access_input_dir(
+                &mut inner.input_dir,
+                inner.common.profile.as_deref(),
+                inner.run,
+                inner.run_id.as_deref(),
+                inner.local,
+                ArtifactLane::AccessServiceAccounts,
+                "access service-account import",
+            )?;
+            let resolved_args = AccessCliArgs {
+                command: AccessCommand::ServiceAccount {
+                    command: ServiceAccountCommand::Import(inner),
+                },
+            };
+            run_access_cli_with_common(
+                match &resolved_args.command {
+                    AccessCommand::ServiceAccount {
+                        command: ServiceAccountCommand::Import(inner),
+                    } => &inner.common,
+                    _ => unreachable!(),
+                },
+                &resolved_args,
+                build_http_client,
+            )
         }
         ServiceAccountCommand::Diff(inner) => {
-            run_access_cli_with_common(&inner.common, args, build_http_client)
+            let mut inner = inner.clone();
+            resolve_required_access_diff_dir(
+                &mut inner.diff_dir,
+                inner.common.profile.as_deref(),
+                inner.run,
+                inner.run_id.as_deref(),
+                inner.local,
+                ArtifactLane::AccessServiceAccounts,
+                "access service-account diff",
+            )?;
+            let resolved_args = AccessCliArgs {
+                command: AccessCommand::ServiceAccount {
+                    command: ServiceAccountCommand::Diff(inner),
+                },
+            };
+            run_access_cli_with_common(
+                match &resolved_args.command {
+                    AccessCommand::ServiceAccount {
+                        command: ServiceAccountCommand::Diff(inner),
+                    } => &inner.common,
+                    _ => unreachable!(),
+                },
+                &resolved_args,
+                build_http_client,
+            )
         }
         ServiceAccountCommand::Delete(inner) => {
             run_access_cli_with_common(&inner.common, args, build_http_client)

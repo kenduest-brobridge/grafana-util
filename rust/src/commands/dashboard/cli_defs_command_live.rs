@@ -259,9 +259,32 @@ pub struct DiffArgs {
     pub common: CommonCliArgs,
     #[arg(
         long = "input-dir",
+        default_value = "",
+        hide_default_value = true,
         help = "Compare dashboards from this directory against Grafana. Point this to the raw/ export directory explicitly, or use with --input-format provisioning for a provisioning root or its dashboards/ subdirectory."
     )]
     pub input_dir: PathBuf,
+    #[arg(
+        long = "local",
+        default_value_t = false,
+        conflicts_with = "input_dir",
+        help = "Compare dashboards from the latest artifact workspace dashboard run instead of an explicit input directory."
+    )]
+    pub local: bool,
+    #[arg(
+        long = "run",
+        value_name = "latest|timestamp",
+        conflicts_with_all = ["input_dir", "run_id"],
+        help = "Compare dashboards from an artifact workspace dashboard run."
+    )]
+    pub run: Option<String>,
+    #[arg(
+        long = "run-id",
+        value_name = "NAME",
+        conflicts_with_all = ["input_dir", "run"],
+        help = "Compare dashboards from this artifact workspace run id."
+    )]
+    pub run_id: Option<String>,
     #[arg(
         long,
         value_enum,

@@ -96,6 +96,9 @@ fn org_import_rejects_kind_mismatch_and_future_version_bundle_contract() {
     let args = OrgImportArgs {
         common: make_basic_common_no_org_id(),
         input_dir: temp.path().to_path_buf(),
+        local: false,
+        run: None,
+        run_id: None,
         replace_existing: true,
         dry_run: true,
         yes: false,
@@ -146,6 +149,9 @@ fn org_import_with_request_dry_run_reports_user_role_update_without_mutating() {
     let args = OrgImportArgs {
         common: make_basic_common_no_org_id(),
         input_dir: input_dir.clone(),
+        local: false,
+        run: None,
+        run_id: None,
         replace_existing: true,
         dry_run: true,
         yes: true,
@@ -208,6 +214,9 @@ fn org_import_with_request_blocks_externally_synced_org_user_role_update_before_
     let args = OrgImportArgs {
         common: make_basic_common_no_org_id(),
         input_dir: input_dir.clone(),
+        local: false,
+        run: None,
+        run_id: None,
         replace_existing: true,
         dry_run: false,
         yes: true,
@@ -272,6 +281,9 @@ fn org_import_with_request_adds_missing_org_user_to_existing_org() {
     let args = OrgImportArgs {
         common: make_basic_common_no_org_id(),
         input_dir: input_dir.clone(),
+        local: false,
+        run: None,
+        run_id: None,
         replace_existing: true,
         dry_run: false,
         yes: true,
@@ -337,6 +349,9 @@ fn org_import_with_request_updates_existing_org_users() {
     let args = OrgImportArgs {
         common: make_basic_common_no_org_id(),
         input_dir: input_dir.clone(),
+        local: false,
+        run: None,
+        run_id: None,
         replace_existing: true,
         dry_run: false,
         yes: true,
@@ -391,6 +406,9 @@ fn org_import_with_request_creates_missing_org_and_users_when_replace_existing_i
     let args = OrgImportArgs {
         common: make_basic_common_no_org_id(),
         input_dir: input_dir.clone(),
+        local: false,
+        run: None,
+        run_id: None,
         replace_existing: true,
         dry_run: false,
         yes: true,

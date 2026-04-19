@@ -16,6 +16,13 @@ Current AI change log only.
 - Older entries moved to [`ai-changes-archive-2026-04-18.md`](docs/internal/archive/ai-changes-archive-2026-04-18.md).
 - Older entries moved to [`ai-changes-archive-2026-04-19.md`](docs/internal/archive/ai-changes-archive-2026-04-19.md).
 
+## 2026-04-19 - Broaden artifact workspace local consumers
+- Summary: expanded artifact workspace local input routing so dashboard import/diff and access user/team/org/service-account import/diff can consume profile artifact runs through `--local`, `--run`, or `--run-id` without repeating input directories.
+- Tests: parser/runtime behavior changed; Rust tests not run.
+- Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all`; `make man`; `make html`; `make man-check`; `make html-check`; `make quality-docs-surface`; `make quality-ai-workflow`.
+- Impact: Rust dashboard/access CLI argument surfaces, dashboard/access dispatch path materialization, command docs, command-surface contract, and AI trace docs. Python implementation and README files are intentionally out of scope.
+- Rollback/Risk: medium CLI behavior expansion around required local input paths. Rollback would remove the new local input flags and restore explicit `--input-dir`/`--diff-dir` only behavior.
+
 ## 2026-04-19 - Formalize artifact workspace docs
 - Summary: documented artifact workspace defaults across command docs and getting-started. The docs now describe `grafana-util.yaml`, root `--config`, `GRAFANA_UTIL_CONFIG`, config-relative `artifact_root`, timestamp/latest/run-id selection, latest-run pointer behavior, and lane placement for dashboard, datasource, snapshot, and access exports.
 - Tests: no runtime behavior change; docs and contract coverage only.
@@ -84,11 +91,3 @@ Current AI change log only.
 - Impact: Rust dashboard browse rendering modules, staged project-status adapters, sync live apply orchestration modules, output contract checker/registry/tests, internal contract mapping docs, and AI trace docs. README files and generated user docs were intentionally left unchanged.
 - Rollback/Risk: low to medium internal refactor. Rollback should restore inline browse detail rendering, inline sync live apply loops, direct staged status construction, and the previous shallow output contract checker while preserving public command behavior.
 - Follow-up: split the pre-existing `rust/src/commands/datasource/plan/mod.rs` architecture hard blocker before treating `make quality-architecture` as a clean gate again.
-
-## 2026-04-18 - Advance workspace review aggregation and cleanup
-- Summary: added an internal `WorkspaceReviewView` adapter so workspace preview and review TUI filtering share one action/domain/blocker normalization path while preserving the existing `grafana-utils-sync-plan` JSON shape. Split access team browse key dispatch and tests out of the input surface, reducing `team_browse_input.rs` to a small input/confirmation facade. Cleaned public dashboard summary/review wording and helper names without renaming true query analyzer internals.
-- Tests: added workspace review-view contract coverage and moved access team browse input tests into a dedicated module. Updated dashboard help/parser tests and live summary help fixtures for the summary/review wording.
-- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet team_browse --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet sync --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet dashboard_cli_inspect_help --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet dashboard_cli_parser_help --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet`; `cargo clippy --manifest-path rust/Cargo.toml --all-targets -- -D warnings`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `make man`; `make html`; `make quality-docs-surface`.
-- Impact: Rust workspace preview/review helpers, access team browse TUI input modules, dashboard summary help/docs/tests, generated command/man/html docs, and AI trace docs. README files and Python implementation were intentionally left unchanged.
-- Rollback/Risk: medium internal refactor across review/TUI surfaces. Rollback should restore the previous workspace preview contract helper, inline team browse input dispatch/tests, and previous dashboard wording while preserving already-committed domain plan contracts.
-- Follow-up: connect future TUI review surfaces to `WorkspaceReviewView` directly instead of re-parsing raw JSON in each UI layer.

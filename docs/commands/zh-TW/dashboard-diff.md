@@ -9,6 +9,7 @@
 ## 重點旗標
 - `--input-dir`：拿這個匯出目錄與 Grafana 比對。
 - `--input-format`：選擇 `raw` 或 `provisioning`。
+- `--local`、`--run`、`--run-id`：不傳 `--input-dir`，改拿 artifact workspace 的 dashboard lane 與 Grafana 比對。
 - `--import-folder-uid`：覆寫比對時的目的資料夾 UID。
 - `--context-lines`：統一 diff 的上下文行數。
 - `--output-format`：選擇 `text` 或 `json`。
@@ -22,6 +23,11 @@ grafana-util dashboard diff --url http://localhost:3000 --basic-user admin --bas
 ```bash
 # 比較本地儀表板檔案與線上 Grafana 儀表板的差異。
 grafana-util dashboard diff --url http://localhost:3000 --basic-user admin --basic-password admin --org-id 2 --input-dir ./dashboards/raw --output-format json
+```
+
+```bash
+# 拿最新的 profile artifact workspace dashboard run 與 live Grafana 比對。
+grafana-util dashboard diff --profile prod --local --output-format json
 ```
 
 ## 相關指令

@@ -177,9 +177,31 @@ pub struct ServiceAccountImportArgs {
     pub common: CommonCliArgs,
     #[arg(
         long = "input-dir",
+        default_value = "",
+        hide_default_value = true,
         help = "Import directory that contains service-accounts.json and export-metadata.json."
     )]
     pub input_dir: PathBuf,
+    #[arg(
+        long,
+        default_value_t = false,
+        conflicts_with = "input_dir",
+        help = "Import service accounts from the artifact workspace instead of an explicit input directory."
+    )]
+    pub local: bool,
+    #[arg(
+        long,
+        value_enum,
+        conflicts_with_all = ["input_dir", "run_id"],
+        help = "Select the artifact run to import from."
+    )]
+    pub run: Option<AccessArtifactRunMode>,
+    #[arg(
+        long = "run-id",
+        conflicts_with_all = ["input_dir", "run"],
+        help = "Import from this explicit artifact run id."
+    )]
+    pub run_id: Option<String>,
     #[arg(
         long,
         default_value_t = false,
@@ -233,6 +255,26 @@ pub struct ServiceAccountDiffArgs {
         help = "Diff directory that contains service-accounts.json and export-metadata.json."
     )]
     pub diff_dir: PathBuf,
+    #[arg(
+        long,
+        default_value_t = false,
+        conflicts_with = "diff_dir",
+        help = "Diff service accounts from the artifact workspace instead of an explicit diff directory."
+    )]
+    pub local: bool,
+    #[arg(
+        long,
+        value_enum,
+        conflicts_with_all = ["diff_dir", "run_id"],
+        help = "Select the artifact run to diff from."
+    )]
+    pub run: Option<AccessArtifactRunMode>,
+    #[arg(
+        long = "run-id",
+        conflicts_with_all = ["diff_dir", "run"],
+        help = "Diff from this explicit artifact run id."
+    )]
+    pub run_id: Option<String>,
 }
 
 /// Create one token for an existing Grafana service account.

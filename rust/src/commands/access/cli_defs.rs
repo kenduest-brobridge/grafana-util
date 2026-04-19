@@ -301,9 +301,31 @@ pub struct TeamImportArgs {
     pub common: CommonCliArgs,
     #[arg(
         long = "input-dir",
+        default_value = "",
+        hide_default_value = true,
         help = "Import directory that contains teams.json and export-metadata.json."
     )]
     pub input_dir: PathBuf,
+    #[arg(
+        long,
+        default_value_t = false,
+        conflicts_with = "input_dir",
+        help = "Import teams from the artifact workspace instead of an explicit input directory."
+    )]
+    pub local: bool,
+    #[arg(
+        long,
+        value_enum,
+        conflicts_with_all = ["input_dir", "run_id"],
+        help = "Select the artifact run to import from."
+    )]
+    pub run: Option<AccessArtifactRunMode>,
+    #[arg(
+        long = "run-id",
+        conflicts_with_all = ["input_dir", "run"],
+        help = "Import from this explicit artifact run id."
+    )]
+    pub run_id: Option<String>,
     #[arg(
         long,
         default_value_t = false,
@@ -357,6 +379,26 @@ pub struct TeamDiffArgs {
         help = "Diff directory that contains teams.json and export-metadata.json."
     )]
     pub diff_dir: PathBuf,
+    #[arg(
+        long,
+        default_value_t = false,
+        conflicts_with = "diff_dir",
+        help = "Diff teams from the artifact workspace instead of an explicit diff directory."
+    )]
+    pub local: bool,
+    #[arg(
+        long,
+        value_enum,
+        conflicts_with_all = ["diff_dir", "run_id"],
+        help = "Select the artifact run to diff from."
+    )]
+    pub run: Option<AccessArtifactRunMode>,
+    #[arg(
+        long = "run-id",
+        conflicts_with_all = ["diff_dir", "run"],
+        help = "Diff from this explicit artifact run id."
+    )]
+    pub run_id: Option<String>,
 }
 
 /// Struct definition for TeamModifyArgs.
@@ -595,9 +637,31 @@ pub struct OrgImportArgs {
     pub common: CommonCliArgsNoOrgId,
     #[arg(
         long = "input-dir",
+        default_value = "",
+        hide_default_value = true,
         help = "Import directory that contains orgs.json and export-metadata.json."
     )]
     pub input_dir: PathBuf,
+    #[arg(
+        long,
+        default_value_t = false,
+        conflicts_with = "input_dir",
+        help = "Import orgs from the artifact workspace instead of an explicit input directory."
+    )]
+    pub local: bool,
+    #[arg(
+        long,
+        value_enum,
+        conflicts_with_all = ["input_dir", "run_id"],
+        help = "Select the artifact run to import from."
+    )]
+    pub run: Option<AccessArtifactRunMode>,
+    #[arg(
+        long = "run-id",
+        conflicts_with_all = ["input_dir", "run"],
+        help = "Import from this explicit artifact run id."
+    )]
+    pub run_id: Option<String>,
     #[arg(
         long,
         default_value_t = false,
@@ -629,6 +693,26 @@ pub struct OrgDiffArgs {
         help = "Diff directory that contains orgs.json and export-metadata.json."
     )]
     pub diff_dir: PathBuf,
+    #[arg(
+        long,
+        default_value_t = false,
+        conflicts_with = "diff_dir",
+        help = "Diff orgs from the artifact workspace instead of an explicit diff directory."
+    )]
+    pub local: bool,
+    #[arg(
+        long,
+        value_enum,
+        conflicts_with_all = ["diff_dir", "run_id"],
+        help = "Select the artifact run to diff from."
+    )]
+    pub run: Option<AccessArtifactRunMode>,
+    #[arg(
+        long = "run-id",
+        conflicts_with_all = ["diff_dir", "run"],
+        help = "Diff from this explicit artifact run id."
+    )]
+    pub run_id: Option<String>,
 }
 
 /// Resource selector for access plan review flows.

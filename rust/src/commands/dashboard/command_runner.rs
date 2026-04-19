@@ -169,6 +169,31 @@ fn resolve_dashboard_local_artifact_input(
     Ok(Some(dashboard_artifact_lane_path(&resolved.run_root)))
 }
 
+fn is_empty_path(path: &Path) -> bool {
+    path.as_os_str().is_empty()
+}
+
+fn materialize_dashboard_required_artifact_input(
+    profile: Option<&str>,
+    input_dir: &mut PathBuf,
+    run: Option<&str>,
+    run_id: Option<&str>,
+    local: bool,
+    command_name: &str,
+) -> Result<()> {
+    if is_empty_path(input_dir) {
+        if let Some(resolved) = resolve_dashboard_local_artifact_input(profile, run, run_id, local)?
+        {
+            *input_dir = resolved;
+            return Ok(());
+        }
+        return Err(message(format!(
+            "{command_name} requires --input-dir or artifact workspace selection with --local, --run, or --run-id."
+        )));
+    }
+    Ok(())
+}
+
 fn materialize_dashboard_artifact_args(args: &mut DashboardCliArgs) -> Result<()> {
     match &mut args.command {
         DashboardCommand::Browse(inner)
@@ -192,6 +217,26 @@ fn materialize_dashboard_artifact_args(args: &mut DashboardCliArgs) -> Result<()
             )? {
                 inner.input_dir = Some(input_dir);
             }
+        }
+        DashboardCommand::Import(inner) => {
+            materialize_dashboard_required_artifact_input(
+                inner.common.profile.as_deref(),
+                &mut inner.input_dir,
+                inner.run.as_deref(),
+                inner.run_id.as_deref(),
+                inner.local,
+                "dashboard import",
+            )?;
+        }
+        DashboardCommand::Diff(inner) => {
+            materialize_dashboard_required_artifact_input(
+                inner.common.profile.as_deref(),
+                &mut inner.input_dir,
+                inner.run.as_deref(),
+                inner.run_id.as_deref(),
+                inner.local,
+                "dashboard diff",
+            )?;
         }
         _ => {}
     }

@@ -44,10 +44,36 @@ pub struct ImportArgs {
     pub create_missing_orgs: bool,
     #[arg(
         long = "input-dir",
+        default_value = "",
+        hide_default_value = true,
         help = "Import dashboards from this directory. Use the raw/ export directory for single-org import, or the combined export root when --use-export-org is enabled.",
         help_heading = "Input Options"
     )]
     pub input_dir: PathBuf,
+    #[arg(
+        long = "local",
+        default_value_t = false,
+        conflicts_with = "input_dir",
+        help = "Import dashboards from the latest artifact workspace dashboard run instead of an explicit input directory.",
+        help_heading = "Artifact Workspace Options"
+    )]
+    pub local: bool,
+    #[arg(
+        long = "run",
+        value_name = "latest|timestamp",
+        conflicts_with_all = ["input_dir", "run_id"],
+        help = "Import dashboards from an artifact workspace dashboard run.",
+        help_heading = "Artifact Workspace Options"
+    )]
+    pub run: Option<String>,
+    #[arg(
+        long = "run-id",
+        value_name = "NAME",
+        conflicts_with_all = ["input_dir", "run"],
+        help = "Import dashboards from this artifact workspace run id.",
+        help_heading = "Artifact Workspace Options"
+    )]
+    pub run_id: Option<String>,
     #[arg(
         long,
         value_enum,

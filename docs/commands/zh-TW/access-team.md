@@ -41,13 +41,13 @@
 - `browse`: `--input-dir`, `--query`, `--name`, `--with-members`, `--page`, `--per-page`
 - `add`: `--name`, `--email`, `--member`, `--admin`, `--json`
 - `modify`: `--team-id`, `--name`, `--add-member`, `--remove-member`, `--add-admin`, `--remove-admin`, `--json`
-- `export` 與 `diff`: `--output-dir` 或 `--diff-dir`, `--run`, `--run-id`, `--overwrite`, `--dry-run`, `--with-members`
-- `import`: `--input-dir`, `--replace-existing`, `--dry-run`, `--table`, `--json`, `--output-format`, `--yes`
+- `export` 與 `diff`: `--output-dir` 或 `--diff-dir`, `--local`, `--run`, `--run-id`, `--overwrite`, `--dry-run`, `--with-members`
+- `import`: `--input-dir`, `--local`, `--run`, `--run-id`, `--replace-existing`, `--dry-run`, `--table`, `--json`, `--output-format`, `--yes`
 - `delete`: `--team-id`, `--name`, `--prompt`, `--yes`, `--json`
 
 ## 範例
 
-如果沒有指定 `--output-dir`，`access team export` 會寫到 profile artifact workspace 的 `access/teams/`。新匯出建議用 `--run timestamp`，需要固定 run 名稱時用 `--run-id <name>`。後續本機讀取可用 `access team list --local --run latest`。
+如果沒有指定 `--output-dir`，`access team export` 會寫到 profile artifact workspace 的 `access/teams/`。新匯出建議用 `--run timestamp`，需要固定 run 名稱時用 `--run-id <name>`。後續本機讀取、匯入與比對都可用 `--local`、`--run latest` 或 `--run-id <name>`。
 
 ```bash
 # 在新增或移除成員前，先確認 team membership。
@@ -67,6 +67,11 @@ grafana-util access team browse --input-dir ./access-teams --name platform-team
 ```bash
 # 使用時間戳 run id，將 teams 匯出到 profile artifact workspace。
 grafana-util access team export --profile prod --run timestamp --with-members --overwrite
+```
+
+```bash
+# 從最新的 profile artifact workspace team run 做 dry-run import。
+grafana-util access team import --profile prod --local --dry-run --output-format table
 ```
 
 ```bash

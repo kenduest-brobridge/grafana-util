@@ -247,6 +247,9 @@ fn diff_teams_with_request_returns_expected_difference_count() {
     let args = TeamDiffArgs {
         common: super::make_token_common(),
         diff_dir: diff_dir.clone(),
+        local: false,
+        run: None,
+        run_id: None,
     };
     let result = diff_teams_with_request(
         |_method, path, _params, _payload| match path {
@@ -350,6 +353,9 @@ fn team_import_rejects_kind_mismatch_and_future_version_bundle_contract() {
     let args = TeamImportArgs {
         common: super::make_token_common(),
         input_dir: temp_dir.path().to_path_buf(),
+        local: false,
+        run: None,
+        run_id: None,
         replace_existing: true,
         dry_run: true,
         table: false,
@@ -396,6 +402,9 @@ fn team_import_resolves_members_to_email_for_bulk_update() {
     let args = TeamImportArgs {
         common: super::make_token_common(),
         input_dir: temp_dir.path().to_path_buf(),
+        local: false,
+        run: None,
+        run_id: None,
         replace_existing: true,
         dry_run: false,
         table: false,
@@ -458,6 +467,9 @@ fn team_import_blocks_bulk_update_when_identity_has_no_email() {
     let args = TeamImportArgs {
         common: super::make_token_common(),
         input_dir: temp_dir.path().to_path_buf(),
+        local: false,
+        run: None,
+        run_id: None,
         replace_existing: true,
         dry_run: false,
         table: false,
@@ -497,6 +509,9 @@ fn team_import_dry_run_blocks_provisioned_team_membership_updates() {
     let args = TeamImportArgs {
         common: super::make_token_common(),
         input_dir: temp_dir.path().to_path_buf(),
+        local: false,
+        run: None,
+        run_id: None,
         replace_existing: true,
         dry_run: true,
         table: true,
@@ -555,6 +570,9 @@ fn team_diff_with_request_reports_same_state_for_members_and_admins() {
     let args = TeamDiffArgs {
         common: super::make_token_common(),
         diff_dir: temp_dir.path().to_path_buf(),
+        local: false,
+        run: None,
+        run_id: None,
     };
     let result = diff_teams_with_request(
         |_method, path, _params, _payload| match path {
@@ -619,6 +637,9 @@ fn team_diff_with_request_reports_membership_drift() {
     let args = TeamDiffArgs {
         common: super::make_token_common(),
         diff_dir: temp_dir.path().to_path_buf(),
+        local: false,
+        run: None,
+        run_id: None,
     };
     let result = diff_teams_with_request(
         |_method, path, _params, _payload| match path {

@@ -13,6 +13,7 @@
 ## 重點旗標
 - `--input-dir`：原始或合併匯出輸入的來源目錄。
 - `--input-format`：選擇 `raw` 或 `provisioning`。
+- `--local`、`--run`、`--run-id`：不傳 `--input-dir`，改從 artifact workspace 的 dashboard lane 讀取來源。
 - `--org-id`、`--use-export-org`、`--only-org-id`、`--create-missing-orgs`：控制跨 org 路由。
 - `--import-folder-uid`：強制指定目的資料夾 UID。
 - `--ensure-folders`、`--replace-existing`、`--update-existing-only`：控制匯入行為。
@@ -44,6 +45,11 @@ grafana-util dashboard import --url http://localhost:3000 --basic-user admin --b
 ```bash
 # 透過 Grafana API 匯入儀表板 JSON 檔案。
 grafana-util dashboard import --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --input-dir ./dashboards/raw --dry-run --table
+```
+
+```bash
+# 從最新的 profile artifact workspace dashboard run 做 dry-run import。
+grafana-util dashboard import --profile prod --local --dry-run --table
 ```
 
 ## 相關指令

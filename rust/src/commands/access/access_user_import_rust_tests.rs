@@ -18,6 +18,9 @@ fn user_import_with_request_org_scope_requires_yes_for_team_removal() {
     let args = UserImportArgs {
         common: make_basic_common(),
         input_dir: temp_dir.path().to_path_buf(),
+        local: false,
+        run: None,
+        run_id: None,
         scope: Scope::Org,
         replace_existing: true,
         dry_run: false,
@@ -64,6 +67,9 @@ fn user_import_with_request_dry_run_reports_org_role_and_team_drift() {
     let args = UserImportArgs {
         common: make_basic_common(),
         input_dir: temp_dir.path().to_path_buf(),
+        local: false,
+        run: None,
+        run_id: None,
         scope: Scope::Org,
         replace_existing: true,
         dry_run: true,
@@ -128,6 +134,9 @@ fn user_import_with_request_dry_run_json_reports_org_summary_and_rows() {
     let args = UserImportArgs {
         common: make_basic_common(),
         input_dir: temp_dir.path().to_path_buf(),
+        local: false,
+        run: None,
+        run_id: None,
         scope: Scope::Org,
         replace_existing: true,
         dry_run: true,
@@ -175,6 +184,9 @@ fn user_import_with_request_updates_existing_org_user_role_and_team_membership()
     let args = UserImportArgs {
         common: make_basic_common(),
         input_dir: temp_dir.path().to_path_buf(),
+        local: false,
+        run: None,
+        run_id: None,
         scope: Scope::Org,
         replace_existing: true,
         dry_run: false,

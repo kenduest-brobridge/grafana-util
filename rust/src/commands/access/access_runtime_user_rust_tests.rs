@@ -58,6 +58,9 @@ fn diff_users_with_request_returns_expected_difference_count() {
     let args = UserDiffArgs {
         common: make_token_common(),
         diff_dir: diff_dir.clone(),
+        local: false,
+        run: None,
+        run_id: None,
         scope: Scope::Org,
     };
     let result = diff_users_with_request(
@@ -194,6 +197,9 @@ fn user_import_rejects_kind_mismatch_and_future_version_bundle_contract() {
     let args = UserImportArgs {
         common: make_basic_common(),
         input_dir: temp_dir.path().to_path_buf(),
+        local: false,
+        run: None,
+        run_id: None,
         scope: Scope::Global,
         replace_existing: true,
         dry_run: true,
@@ -241,6 +247,9 @@ fn user_diff_with_request_reports_same_state_for_global_bundle() {
     let args = UserDiffArgs {
         common: make_basic_common(),
         diff_dir: temp_dir.path().to_path_buf(),
+        local: false,
+        run: None,
+        run_id: None,
         scope: Scope::Global,
     };
     let result = diff_users_with_request(
@@ -277,6 +286,9 @@ fn user_import_with_request_dry_run_reports_global_profile_and_admin_drift() {
     let args = UserImportArgs {
         common: make_basic_common(),
         input_dir: temp_dir.path().to_path_buf(),
+        local: false,
+        run: None,
+        run_id: None,
         scope: Scope::Global,
         replace_existing: true,
         dry_run: true,
@@ -335,6 +347,9 @@ fn user_import_rejects_external_profile_update_before_apply() {
     let args = UserImportArgs {
         common: make_basic_common(),
         input_dir: temp_dir.path().to_path_buf(),
+        local: false,
+        run: None,
+        run_id: None,
         scope: Scope::Global,
         replace_existing: true,
         dry_run: false,
@@ -375,6 +390,9 @@ fn user_import_dry_run_blocks_externally_synced_org_role_update() {
     let args = UserImportArgs {
         common: make_token_common(),
         input_dir: temp_dir.path().to_path_buf(),
+        local: false,
+        run: None,
+        run_id: None,
         scope: Scope::Org,
         replace_existing: true,
         dry_run: true,
@@ -625,6 +643,9 @@ fn user_import_with_request_dry_run_json_reports_global_summary_and_rows() {
     let args = UserImportArgs {
         common: make_basic_common(),
         input_dir: temp_dir.path().to_path_buf(),
+        local: false,
+        run: None,
+        run_id: None,
         scope: Scope::Global,
         replace_existing: true,
         dry_run: true,
@@ -666,6 +687,9 @@ fn user_import_with_request_updates_existing_global_user() {
     let args = UserImportArgs {
         common: make_basic_common(),
         input_dir: temp_dir.path().to_path_buf(),
+        local: false,
+        run: None,
+        run_id: None,
         scope: Scope::Global,
         replace_existing: true,
         dry_run: false,
@@ -738,6 +762,9 @@ fn user_import_with_request_creates_missing_global_user_when_password_present() 
     let args = UserImportArgs {
         common: make_basic_common(),
         input_dir: temp_dir.path().to_path_buf(),
+        local: false,
+        run: None,
+        run_id: None,
         scope: Scope::Global,
         replace_existing: true,
         dry_run: false,
@@ -849,6 +876,9 @@ fn user_diff_with_request_reports_same_state_for_org_bundle_with_teams() {
     let args = UserDiffArgs {
         common: make_basic_common(),
         diff_dir: temp_dir.path().to_path_buf(),
+        local: false,
+        run: None,
+        run_id: None,
         scope: Scope::Org,
     };
     let result = diff_users_with_request(

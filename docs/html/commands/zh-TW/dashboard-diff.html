@@ -954,12 +954,14 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="何時使用">何時使用</h2>
 <p>當您想在匯入或發佈儀表板 bundle 之前先看出會變更哪些內容時，使用這個指令。</p>
 <h2 id="重點旗標">重點旗標</h2>
-<ul><li><code>--input-dir</code>：拿這個匯出目錄與 Grafana 比對。</li><li><code>--input-format</code>：選擇 <code>raw</code> 或 <code>provisioning</code>。</li><li><code>--import-folder-uid</code>：覆寫比對時的目的資料夾 UID。</li><li><code>--context-lines</code>：統一 diff 的上下文行數。</li><li><code>--output-format</code>：選擇 <code>text</code> 或 <code>json</code>。</li></ul>
+<ul><li><code>--input-dir</code>：拿這個匯出目錄與 Grafana 比對。</li><li><code>--input-format</code>：選擇 <code>raw</code> 或 <code>provisioning</code>。</li><li><code>--local</code>、<code>--run</code>、<code>--run-id</code>：不傳 <code>--input-dir</code>，改拿 artifact workspace 的 dashboard lane 與 Grafana 比對。</li><li><code>--import-folder-uid</code>：覆寫比對時的目的資料夾 UID。</li><li><code>--context-lines</code>：統一 diff 的上下文行數。</li><li><code>--output-format</code>：選擇 <code>text</code> 或 <code>json</code>。</li></ul>
 <h2 id="範例">範例</h2>
 <pre><code># 比較本地儀表板檔案與線上 Grafana 儀表板的差異。
 grafana-util dashboard diff --url http://localhost:3000 --basic-user admin --basic-password admin --input-dir ./dashboards/raw</code></pre>
 <pre><code># 比較本地儀表板檔案與線上 Grafana 儀表板的差異。
 grafana-util dashboard diff --url http://localhost:3000 --basic-user admin --basic-password admin --org-id 2 --input-dir ./dashboards/raw --output-format json</code></pre>
+<pre><code># 拿最新的 profile artifact workspace dashboard run 與 live Grafana 比對。
+grafana-util dashboard diff --profile prod --local --output-format json</code></pre>
 <h2 id="相關指令">相關指令</h2>
 <ul><li><a href="dashboard-export.html">dashboard export</a></li><li><a href="dashboard-import.html">dashboard import</a></li><li><a href="dashboard-dependencies.html">dashboard dependencies</a></li><li><a href="../../handbook/zh-TW/diff-json-contract.html">共用 diff JSON contract</a></li></ul>
 <p>CLI schema 快速查詢：</p>

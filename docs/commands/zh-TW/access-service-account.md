@@ -39,15 +39,15 @@
 
 - `list`: `--input-dir`, `--query`, `--output-columns`, `--list-columns`, `--page`, `--per-page`, `--table`, `--csv`, `--json`, `--yaml`, `--output-format`
 - `add`: `--name`, `--role`, `--disabled`, `--json`
-- `export` 與 `diff`: `--output-dir` 或 `--diff-dir`, `--run`, `--run-id`, `--overwrite`, `--dry-run`
-- `import`: `--input-dir`, `--replace-existing`, `--dry-run`, `--table`, `--json`, `--output-format`, `--yes`
+- `export` 與 `diff`: `--output-dir` 或 `--diff-dir`, `--local`, `--run`, `--run-id`, `--overwrite`, `--dry-run`
+- `import`: `--input-dir`, `--local`, `--run`, `--run-id`, `--replace-existing`, `--dry-run`, `--table`, `--json`, `--output-format`, `--yes`
 - `delete`: `--name`, `--service-account-id`, `--prompt`, `--yes`, `--json`
 - `token add`: `--service-account-id` 或 `--name`, `--token-name`, `--seconds-to-live`, `--json`
 - `token delete`: `--service-account-id` 或 `--name`, `--token-id` 或 `--token-name`, `--prompt`, `--yes`, `--json`
 
 ## 範例
 
-如果沒有指定 `--output-dir`，`access service-account export` 會寫到 profile artifact workspace 的 `access/service-accounts/`。新匯出建議用 `--run timestamp`，需要固定 run 名稱時用 `--run-id <name>`。後續本機讀取可用 `access service-account list --local --run latest`。
+如果沒有指定 `--output-dir`，`access service-account export` 會寫到 profile artifact workspace 的 `access/service-accounts/`。新匯出建議用 `--run timestamp`，需要固定 run 名稱時用 `--run-id <name>`。後續本機讀取、匯入與比對都可用 `--local`、`--run latest` 或 `--run-id <name>`。
 
 ```bash
 # 在建立或刪除 token 前，先看清楚 service account。
@@ -62,6 +62,11 @@ grafana-util access service-account list --input-dir ./access-service-accounts -
 ```bash
 # 使用時間戳 run id，將 service accounts 匯出到 profile artifact workspace。
 grafana-util access service-account export --profile prod --run timestamp --overwrite
+```
+
+```bash
+# 從最新的 profile artifact workspace service-account run 做 dry-run import。
+grafana-util access service-account import --profile prod --local --dry-run --output-format table
 ```
 
 ```bash
