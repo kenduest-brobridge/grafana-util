@@ -75,7 +75,21 @@ from .alerts.provisioning import (
     load_string_map as load_string_map_impl,
     prepare_import_payload_for_target,
     serialize_compare_document,
+    RESOURCE_SUBDIR_BY_KIND as PROVISIONING_RESOURCE_SUBDIR_BY_KIND,
 )
+from .alerts.scaffold import (
+    build_contact_point_scaffold_document,
+    build_managed_policy_route_preview,
+    build_new_contact_point_scaffold_document,
+    build_new_rule_scaffold_document_with_route,
+    build_new_template_scaffold_document,
+    build_route_preview,
+    build_stable_route_label_value,
+    remove_managed_policy_subtree,
+    upsert_managed_policy_subtree,
+    route_matches_stable_label,
+)
+from .alerts.runtime import build_alert_plan, execute_alert_plan
 from .clients.alert_client import GrafanaAlertClient
 from .http_transport import build_json_http_transport
 
@@ -1796,6 +1810,425 @@ def list_alert_resources(args: argparse.Namespace) -> int:
     return 0
 
 
+def build_simple_expression_data(
+    expr: Optional[str],
+    threshold: Optional[float],
+    _above: bool,
+    below: bool,
+) -> list[dict[str, Any]]:
+    """Build simple expression data implementation."""
+    evaluator_type = "lt" if below else "gt"
+    evaluator_value = threshold if threshold is not None else 0.0
+    expression = expr if expr is not None else "A"
+    return [
+        {
+            "refId": "A",
+            "relativeTimeRange": {"from": 0, "to": 0},
+            "datasourceUid": "__expr__",
+            "model": {
+                "refId": "A",
+                "type": "classic_conditions",
+                "datasource": {"type": "__expr__", "uid": "__expr__"},
+                "expression": expression,
+                "conditions": [
+                    {
+                        "type": "query",
+                        "query": {"params": ["A"]},
+                        "reducer": {"type": "last", "params": []},
+                        "evaluator": {
+                            "type": evaluator_type,
+                            "params": [evaluator_value],
+                        },
+                        "operator": {"type": "and"},
+                    }
+                ],
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+            },
+        }
+    ]
+
+
+def parse_string_pairs(values: list[str], label: str) -> dict[str, str]:
+    """Parse string pairs implementation."""
+    pairs = {}
+    for entry in values or []:
+        if "=" not in entry:
+            raise GrafanaError(f"{label} entries must use key=value form: {entry}")
+        key, value = entry.split("=", 1)
+        key = key.strip()
+        if not key:
+            raise GrafanaError(f"{label} key cannot be empty: {entry}")
+        pairs[key] = value.strip()
+    return pairs
+
+
+def build_rule_authoring_document(args: argparse.Namespace) -> dict[str, Any]:
+    """Build rule authoring document implementation."""
+    name = args.name
+    folder = args.folder
+    rule_group = args.rule_group
+    route_name = args.receiver if args.receiver else name
+    folder_uid = sanitize_path_component(folder)
+    if not folder_uid:
+        raise GrafanaError("Alert add-rule requires a non-empty --folder value.")
+
+    document = build_new_rule_scaffold_document_with_route(
+        name, folder_uid, rule_group, route_name
+    )
+    labels = parse_string_pairs(args.labels, "Alert rule label")
+    annotations = parse_string_pairs(args.annotations, "Alert annotation")
+
+    spec = document.setdefault("spec", {})
+    rule_labels = spec.setdefault("labels", {})
+    for key, value in labels.items():
+        rule_labels[key] = value
+    if getattr(args, "severity", None):
+        rule_labels["severity"] = args.severity
+
+    rule_annotations = spec.setdefault("annotations", {})
+    for key, value in annotations.items():
+        rule_annotations[key] = value
+
+    if getattr(args, "for_duration", None):
+        spec["for"] = args.for_duration
+
+    if (
+        getattr(args, "expr", None)
+        or getattr(args, "threshold", None)
+        or getattr(args, "above", False)
+        or getattr(args, "below", False)
+    ):
+        spec["data"] = build_simple_expression_data(
+            getattr(args, "expr", None),
+            getattr(args, "threshold", None),
+            getattr(args, "above", False),
+            getattr(args, "below", False),
+        )
+        spec["condition"] = "A"
+
+    return document
+
+
+def build_desired_route_document(args: argparse.Namespace) -> Optional[dict[str, Any]]:
+    """Build desired route document implementation."""
+    if getattr(args, "no_route", False):
+        return None
+    receiver = getattr(args, "receiver", None)
+    if not receiver:
+        return None
+
+    labels = parse_string_pairs(getattr(args, "labels", []), "Alert route label")
+    matchers = [[key, "=", value] for key, value in labels.items()]
+    if getattr(args, "severity", None):
+        matchers.append(["severity", "=", args.severity])
+
+    return {
+        "receiver": receiver,
+        "group_by": ["grafana_folder", "alertname"],
+        "continue": False,
+        "object_matchers": matchers,
+    }
+
+
+def resolve_policy_path(desired_dir: Path) -> Path:
+    """Resolve policy path implementation."""
+    candidates = [
+        desired_dir / POLICIES_SUBDIR / "notification-policies.yaml",
+        desired_dir / POLICIES_SUBDIR / "notification-policies.yml",
+        desired_dir / POLICIES_SUBDIR / "notification-policies.json",
+    ]
+    for path in candidates:
+        if path.exists():
+            return path
+    return desired_dir / POLICIES_SUBDIR / "notification-policies.yaml"
+
+
+def load_or_init_policy_document(
+    desired_dir: Path, receiver: str
+) -> tuple[Path, dict[str, Any]]:
+    """Load or init policy document implementation."""
+    path = resolve_policy_path(desired_dir)
+    if path.exists():
+        return path, load_json_file(path)
+
+    policy = {
+        "receiver": receiver.strip() if receiver.strip() else "grafana-default-email",
+        "group_by": ["grafana_folder", "alertname"],
+        "routes": [],
+    }
+    document = build_policies_export_document(policy)
+    document.setdefault("metadata", {})["managedBy"] = "grafana-utils"
+    return path, document
+
+
+def extract_policy_spec(document: dict[str, Any]) -> dict[str, Any]:
+    """Extract policy spec implementation."""
+    if "spec" in document and isinstance(document["spec"], dict):
+        return document["spec"]
+    return document
+
+
+def maybe_update_managed_route(
+    desired_dir: Path,
+    args: argparse.Namespace,
+    route_name: str,
+    desired_route: Optional[dict[str, Any]],
+    dry_run: bool,
+) -> Optional[dict[str, Any]]:
+    """Maybe update managed route implementation."""
+    receiver = getattr(args, "receiver", None) or route_name
+    policy_path, current_policy_document = load_or_init_policy_document(
+        desired_dir, receiver
+    )
+    current_policy_spec = extract_policy_spec(current_policy_document)
+    preview = build_managed_policy_route_preview(
+        current_policy_spec,
+        route_name,
+        desired_route,
+    )
+
+    next_policy_info = None
+    if not dry_run:
+        if desired_route is not None:
+            next_policy_spec, action = upsert_managed_policy_subtree(
+                current_policy_spec, route_name, desired_route
+            )
+        else:
+            next_policy_spec, action = remove_managed_policy_subtree(
+                current_policy_spec, route_name
+            )
+
+        document = build_policies_export_document(next_policy_spec)
+        document.setdefault("metadata", {})["managedBy"] = "grafana-utils"
+        write_json(document, policy_path, overwrite=True)
+        next_policy_info = {
+            "path": str(policy_path),
+            "document": document,
+        }
+
+    return {
+        "path": str(policy_path),
+        "preview": preview,
+        "result": next_policy_info,
+    }
+
+
+def run_alert_plan_cli(args: argparse.Namespace) -> int:
+    """Run alert plan command."""
+    client = build_client(args)
+    desired_dir = Path(args.desired_dir)
+    document = build_alert_plan(client, desired_dir, getattr(args, "prune", False))
+    if getattr(args, "output_format", "text") == "json":
+        print(json.dumps(document, indent=2))
+    else:
+        # Simplistic text output for now
+        print(f"Alert plan: {document['summary']}")
+    return 0
+
+
+def run_alert_apply_cli(args: argparse.Namespace) -> int:
+    """Run alert apply command."""
+    client = build_client(args)
+    plan_file = Path(args.plan_file)
+    with open(plan_file, "r", encoding="utf-8") as f:
+        plan_document = json.load(f)
+    result = execute_alert_plan(
+        client, plan_document, getattr(args, "allow_policy_reset", False)
+    )
+    if getattr(args, "output_format", "text") == "json":
+        print(json.dumps(result, indent=2))
+    else:
+        print(f"Alert apply: {result['appliedCount']} applied")
+    return 0
+
+
+def run_alert_add_rule_cli(args: argparse.Namespace) -> int:
+    """Run alert add-rule command."""
+    desired_dir = Path(args.desired_dir)
+    name = args.name
+    path = desired_dir / RULES_SUBDIR / f"{sanitize_path_component(name)}.yaml"
+    document = build_rule_authoring_document(args)
+    desired_route = build_desired_route_document(args)
+
+    route_effect = None
+    if desired_route:
+        route_effect = maybe_update_managed_route(
+            desired_dir,
+            args,
+            getattr(args, "receiver", None) or name,
+            desired_route,
+            args.dry_run,
+        )
+
+    if not args.dry_run:
+        write_json(document, path, overwrite=False)
+
+    result = {
+        "path": str(path),
+        "dryRun": args.dry_run,
+        "document": document,
+        "route": route_effect,
+    }
+    print(json.dumps(result, indent=2))
+    return 0
+
+
+def run_alert_clone_rule_cli(args: argparse.Namespace) -> int:
+    """Run alert clone-rule command."""
+    desired_dir = Path(args.desired_dir)
+    source = args.source
+    name = args.name
+
+    # Find source
+    source_path = None
+    source_document = None
+    normalized_source = sanitize_path_component(source)
+    for path in discover_alert_resource_files(desired_dir):
+        doc = load_json_file(path)
+        if detect_document_kind(doc) != RULE_KIND:
+            continue
+        meta = doc.get("metadata", {})
+        spec = doc.get("spec", {})
+        if (
+            meta.get("uid") == source
+            or meta.get("title") == source
+            or spec.get("uid") == source
+            or spec.get("title") == source
+            or sanitize_path_component(str(meta.get("title") or "")) == normalized_source
+        ):
+            source_path = path
+            source_document = doc
+            break
+
+    if not source_document:
+        raise GrafanaError(f"Could not find staged alert rule source {source!r}")
+
+    document = copy.deepcopy(source_document)
+    route_name = getattr(args, "receiver", None) or name
+    spec = document.setdefault("spec", {})
+    spec["uid"] = sanitize_path_component(name)
+    spec["title"] = name
+    if getattr(args, "folder", None):
+        spec["folderUID"] = sanitize_path_component(args.folder)
+    if getattr(args, "rule_group", None):
+        spec["ruleGroup"] = args.rule_group
+
+    labels = spec.setdefault("labels", {})
+    labels[MANAGED_ROUTE_LABEL_KEY] = build_stable_route_label_value(route_name)
+    if getattr(args, "severity", None):
+        labels["severity"] = args.severity
+
+    metadata = document.setdefault("metadata", {})
+    metadata["uid"] = sanitize_path_component(name)
+    metadata["title"] = name
+    if getattr(args, "folder", None):
+        metadata["folder"] = {
+            "folderUid": sanitize_path_component(args.folder),
+            "folderTitle": args.folder,
+            "resolution": "uid-or-title",
+        }
+    metadata["route"] = {
+        "labelKey": MANAGED_ROUTE_LABEL_KEY,
+        "labelValue": build_stable_route_label_value(route_name),
+    }
+
+    desired_route = build_desired_route_document(args)
+    route_effect = None
+    if desired_route:
+        route_effect = maybe_update_managed_route(
+            desired_dir, args, route_name, desired_route, args.dry_run
+        )
+
+    path = desired_dir / RULES_SUBDIR / f"{sanitize_path_component(name)}.yaml"
+    if not args.dry_run:
+        write_json(document, path, overwrite=False)
+
+    result = {
+        "path": str(path),
+        "dryRun": args.dry_run,
+        "document": document,
+        "route": route_effect,
+    }
+    print(json.dumps(result, indent=2))
+    return 0
+
+
+def run_alert_add_contact_point_cli(args: argparse.Namespace) -> int:
+    """Run alert add-contact-point command."""
+    desired_dir = Path(args.desired_dir)
+    name = args.name
+    path = desired_dir / CONTACT_POINTS_SUBDIR / f"{sanitize_path_component(name)}.yaml"
+    document = build_new_contact_point_scaffold_document(name)
+
+    if not args.dry_run:
+        write_json(document, path, overwrite=False)
+
+    result = {
+        "path": str(path),
+        "dryRun": args.dry_run,
+        "document": document,
+    }
+    print(json.dumps(result, indent=2))
+    return 0
+
+
+def run_alert_set_route_cli(args: argparse.Namespace) -> int:
+    """Run alert set-route command."""
+    desired_dir = Path(args.desired_dir)
+    receiver = args.receiver
+    desired_route = build_desired_route_document(args)
+    if not desired_route:
+        raise GrafanaError("Alert set-route requires route content.")
+
+    route_effect = maybe_update_managed_route(
+        desired_dir, args, receiver, desired_route, args.dry_run
+    )
+    result = {
+        "receiver": receiver,
+        "dryRun": args.dry_run,
+        "routeDocument": desired_route,
+        "route": route_effect,
+    }
+    print(json.dumps(result, indent=2))
+    return 0
+
+
+def run_alert_preview_route_cli(args: argparse.Namespace) -> int:
+    """Run alert preview-route command."""
+    desired_dir = Path(args.desired_dir)
+    _path, current_policy_document = load_or_init_policy_document(desired_dir, "")
+    current_policy_spec = extract_policy_spec(current_policy_document)
+
+    labels = parse_string_pairs(getattr(args, "labels", []), "Alert preview label")
+    if getattr(args, "severity", None):
+        labels["severity"] = args.severity
+
+    # Simplified preview: find matching routes
+    routes = current_policy_spec.get("routes", [])
+    matches = []
+    for route in routes:
+        if any(
+            route_matches_stable_label(route, r_name)
+            for r_name in [
+                labels.get("alertname", ""),
+                labels.get(MANAGED_ROUTE_LABEL_KEY, ""),
+            ]
+            if r_name
+        ):
+            matches.append(build_route_preview(route))
+
+    result = {
+        "input": {
+            "labels": labels,
+            "severity": getattr(args, "severity", None),
+        },
+        "matches": matches,
+    }
+    print(json.dumps(result, indent=2))
+    return 0
+
+
 def main(argv: Optional[list[str]] = None) -> int:
     """Parse+normalize then dispatch to alert-specific command handlers."""
     # Call graph: see callers/callees.
@@ -1804,9 +2237,25 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     args = parse_args(argv)
     try:
-        if getattr(args, "alert_command", "").startswith("list-"):
+        command = getattr(args, "alert_command", "")
+        if command == "plan":
+            return run_alert_plan_cli(args)
+        if command == "apply":
+            return run_alert_apply_cli(args)
+        if command == "add-rule":
+            return run_alert_add_rule_cli(args)
+        if command == "clone-rule":
+            return run_alert_clone_rule_cli(args)
+        if command == "add-contact-point":
+            return run_alert_add_contact_point_cli(args)
+        if command == "set-route":
+            return run_alert_set_route_cli(args)
+        if command == "preview-route":
+            return run_alert_preview_route_cli(args)
+
+        if command.startswith("list-"):
             return list_alert_resources(args)
-        if getattr(args, "alert_command", None) == "import":
+        if command == "import":
             if not bool(getattr(args, "dry_run", False)) and not bool(
                 getattr(args, "approve", False)
             ):

@@ -14,14 +14,62 @@ class ResourceKind:
     ALERT_RULES = "alert-rules"
     ORGS = "orgs"
 
+    @classmethod
+    def all(cls) -> List[str]:
+        return [cls.DASHBOARDS, cls.FOLDERS, cls.DATASOURCES, cls.ALERT_RULES, cls.ORGS]
 
-SUPPORTED_KINDS = [
-    ResourceKind.DASHBOARDS,
-    ResourceKind.FOLDERS,
-    ResourceKind.DATASOURCES,
-    ResourceKind.ALERT_RULES,
-    ResourceKind.ORGS,
-]
+    @classmethod
+    def singular_label(cls, kind: str) -> str:
+        return {
+            cls.DASHBOARDS: "dashboard",
+            cls.FOLDERS: "folder",
+            cls.DATASOURCES: "datasource",
+            cls.ALERT_RULES: "alert-rule",
+            cls.ORGS: "org",
+        }.get(kind, kind)
+
+    @classmethod
+    def description(cls, kind: str) -> str:
+        return {
+            cls.DASHBOARDS: "Grafana dashboards from /api/search and /api/dashboards/uid/{uid}.",
+            cls.FOLDERS: "Grafana folders from /api/folders and /api/folders/{uid}.",
+            cls.DATASOURCES: "Grafana datasources from /api/datasources and /api/datasources/uid/{uid}.",
+            cls.ALERT_RULES: "Grafana alert rules from /api/v1/provisioning/alert-rules and /api/v1/provisioning/alert-rules/{uid}.",
+            cls.ORGS: "Grafana org inventory from /api/orgs and /api/orgs/{id}.",
+        }.get(kind, "")
+
+    @classmethod
+    def selector_pattern(cls, kind: str) -> str:
+        return {
+            cls.DASHBOARDS: "dashboards/<uid>",
+            cls.FOLDERS: "folders/<uid>",
+            cls.DATASOURCES: "datasources/<uid>",
+            cls.ALERT_RULES: "alert-rules/<uid>",
+            cls.ORGS: "orgs/<id>",
+        }.get(kind, "")
+
+    @classmethod
+    def list_endpoint(cls, kind: str) -> str:
+        return {
+            cls.DASHBOARDS: "GET /api/search",
+            cls.FOLDERS: "GET /api/folders",
+            cls.DATASOURCES: "GET /api/datasources",
+            cls.ALERT_RULES: "GET /api/v1/provisioning/alert-rules",
+            cls.ORGS: "GET /api/orgs",
+        }.get(kind, "")
+
+    @classmethod
+    def get_endpoint(cls, kind: str) -> str:
+        return {
+            cls.DASHBOARDS: "GET /api/dashboards/uid/{uid}",
+            cls.FOLDERS: "GET /api/folders/{uid}",
+            cls.DATASOURCES: "GET /api/datasources/uid/{uid}",
+            cls.ALERT_RULES: "GET /api/v1/provisioning/alert-rules/{uid}",
+            cls.ORGS: "GET /api/orgs/{id}",
+        }.get(kind, "")
+
+
+SUPPORTED_KINDS = ResourceKind.all()
 
 
 def build_parser(prog: Optional[str] = None) -> argparse.ArgumentParser:
@@ -81,7 +129,68 @@ def list_command(args: argparse.Namespace) -> int:
     elif args.kind == ResourceKind.ORGS:
         items = access_client.request_json("GET", "/api/orgs")
     
-    dump_document({"kind": args.kind, "count": len(items), "items": items}, args.output_format)
+    document = {
+        "kind": args.kind,
+        "count": len(items),
+        "items": items
+    }
+    
+    if args.output_format == "table":
+        headers = []
+        rows = []
+        if args.kind == ResourceKind.DASHBOARDS:
+            headers = ["uid", "title", "folder"]
+            rows = [[item.get("uid", ""), item.get("title", item.get("name", "")), item.get("folderTitle", "")] for item in items]
+        elif args.kind == ResourceKind.FOLDERS:
+            headers = ["uid", "title", "parent_uid"]
+            rows = [[item.get("uid", ""), item.get("title", ""), item.get("parentUid", "")] for item in items]
+        elif args.kind == ResourceKind.DATASOURCES:
+            headers = ["uid", "name", "type"]
+            rows = [[item.get("uid", ""), item.get("name", ""), item.get("type", "")] for item in items]
+        elif args.kind == ResourceKind.ALERT_RULES:
+            headers = ["uid", "title", "folder_uid"]
+            rows = [[item.get("uid", ""), item.get("title", ""), item.get("folderUID", "")] for item in items]
+        elif args.kind == ResourceKind.ORGS:
+            headers = ["id", "name", "address"]
+            rows = [[str(item.get("id", "")), item.get("name", ""), item.get("address", "")] for item in items]
+        
+        from .tabular_output import render_table
+        for line in render_table(headers, rows):
+            print(line)
+        return 0
+
+    dump_document(document, args.output_format)
+    return 0
+
+
+def describe_command(args: argparse.Namespace) -> int:
+    kinds = [args.kind] if args.kind else SUPPORTED_KINDS
+    records = []
+    for kind in kinds:
+        records.append({
+            "kind": kind,
+            "singular": ResourceKind.singular_label(kind),
+            "selector": ResourceKind.selector_pattern(kind),
+            "list_endpoint": ResourceKind.list_endpoint(kind),
+            "get_endpoint": ResourceKind.get_endpoint(kind),
+            "description": ResourceKind.description(kind),
+        })
+    
+    document = {
+        "kind": args.kind,
+        "count": len(records),
+        "items": records
+    }
+
+    if args.output_format == "table":
+        headers = ["kind", "singular", "selector", "list_endpoint", "get_endpoint", "description"]
+        rows = [[r["kind"], r["singular"], r["selector"], r["list_endpoint"], r["get_endpoint"], r["description"]] for r in records]
+        from .tabular_output import render_table
+        for line in render_table(headers, rows):
+            print(line)
+        return 0
+
+    dump_document(document, args.output_format)
     return 0
 
 
@@ -110,12 +219,24 @@ def main(argv: Optional[list[str]] = None) -> int:
     args = parser.parse_args(argv)
     try:
         if args.command == "kinds":
-            dump_document(SUPPORTED_KINDS, args.output_format)
+            records = []
+            for kind in SUPPORTED_KINDS:
+                records.append({
+                    "kind": kind,
+                    "singular": ResourceKind.singular_label(kind),
+                    "description": ResourceKind.description(kind),
+                })
+            if args.output_format == "table":
+                headers = ["kind", "singular", "description"]
+                rows = [[r["kind"], r["singular"], r["description"]] for r in records]
+                from .tabular_output import render_table
+                for line in render_table(headers, rows):
+                    print(line)
+                return 0
+            dump_document(records, args.output_format)
             return 0
         if args.command == "describe":
-            # Simplified describe for parity
-            dump_document({"supported": SUPPORTED_KINDS}, args.output_format)
-            return 0
+            return describe_command(args)
         if args.command == "list":
             return list_command(args)
         if args.command == "get":

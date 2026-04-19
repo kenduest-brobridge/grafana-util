@@ -1,5 +1,7 @@
 """Shared alerting constants and exceptions."""
 
+import re
+
 RAW_EXPORT_SUBDIR = "raw"
 RULES_SUBDIR = "rules"
 CONTACT_POINTS_SUBDIR = "contact-points"
@@ -17,6 +19,34 @@ TEMPLATE_KIND = "grafana-notification-template"
 TOOL_API_VERSION = 1
 TOOL_SCHEMA_VERSION = 1
 ROOT_INDEX_KIND = "grafana-utils-alert-export-index"
+
+ALERT_PLAN_KIND = "grafana-util-alert-plan"
+ALERT_PLAN_SCHEMA_VERSION = 1
+ALERT_DELETE_PREVIEW_KIND = "grafana-util-alert-delete-preview"
+ALERT_DELETE_PREVIEW_SCHEMA_VERSION = 1
+ALERT_IMPORT_DRY_RUN_KIND = "grafana-util-alert-import-dry-run"
+ALERT_IMPORT_DRY_RUN_SCHEMA_VERSION = 1
+ALERT_MANAGED_POLICY_PREVIEW_SCHEMA_VERSION = 1
+
+MANAGED_ROUTE_LABEL_KEY = "grafana_utils_route"
+
+
+def sanitize_path_component(value: str) -> str:
+    """Sanitize path component implementation."""
+    normalized = re.sub(r"[^\w.\- ]+", "_", value.strip(), flags=re.UNICODE)
+    normalized = re.sub(r"\s+", "_", normalized)
+    normalized = re.sub(r"_+", "_", normalized)
+    normalized = normalized.strip("._")
+    return normalized or "untitled"
+
+
+def value_to_string(value: any) -> str:
+    """Convert any value to a stable string representation."""
+    if value is None:
+        return ""
+    if isinstance(value, bool):
+        return str(value).lower()
+    return str(value)
 
 RESOURCE_SUBDIR_BY_KIND = {
     RULE_KIND: RULES_SUBDIR,
