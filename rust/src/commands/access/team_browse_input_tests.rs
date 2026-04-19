@@ -28,6 +28,9 @@ fn live_browse_args() -> TeamBrowseArgs {
     TeamBrowseArgs {
         common: common_args(Some("token")),
         input_dir: None,
+        local: false,
+        run: None,
+        run_id: None,
         query: None,
         name: None,
         with_members: true,
@@ -111,6 +114,9 @@ fn load_rows_reads_local_team_bundle_without_live_requests() {
     let args = TeamBrowseArgs {
         common: common_args(None),
         input_dir: Some(temp.path().to_path_buf()),
+        local: false,
+        run: None,
+        run_id: None,
         query: None,
         name: Some("platform-team".to_string()),
         with_members: true,
@@ -149,6 +155,9 @@ fn reload_key_l_refreshes_local_bundle_without_live_requests() {
     let args = TeamBrowseArgs {
         common: common_args(None),
         input_dir: Some(temp.path().to_path_buf()),
+        local: false,
+        run: None,
+        run_id: None,
         query: None,
         name: None,
         with_members: true,

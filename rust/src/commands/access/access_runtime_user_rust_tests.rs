@@ -95,6 +95,8 @@ fn user_export_with_request_writes_global_bundle() {
     let args = UserExportArgs {
         common: make_basic_common(),
         output_dir: temp_dir.path().to_path_buf(),
+        run: None,
+        run_id: None,
         overwrite: true,
         dry_run: false,
         scope: Scope::Global,
@@ -782,6 +784,8 @@ fn user_export_with_request_writes_org_bundle_with_teams() {
     let args = UserExportArgs {
         common: make_basic_common(),
         output_dir: temp_dir.path().to_path_buf(),
+        run: None,
+        run_id: None,
         overwrite: true,
         dry_run: false,
         scope: Scope::Org,

@@ -751,6 +751,8 @@ mod export_tests {
         let args = ExportArgs {
             common: make_common_args("http://127.0.0.1:3000".to_string()),
             output_dir: temp.path().join("dashboards"),
+            run: None,
+            run_id: None,
             page_size: 500,
             org_id: None,
             all_orgs: false,

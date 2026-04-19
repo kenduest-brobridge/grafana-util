@@ -18,6 +18,8 @@ fn make_history_only_export_args(
     ExportArgs {
         common: make_common_args("http://127.0.0.1:3000".to_string()),
         output_dir,
+        run: None,
+        run_id: None,
         page_size: 500,
         org_id,
         all_orgs,
@@ -45,6 +47,8 @@ fn export_dashboards_with_request_all_orgs_aggregates_results() {
     let args = ExportArgs {
         common: make_common_args("http://127.0.0.1:3000".to_string()),
         output_dir: temp.path().join("dashboards"),
+        run: None,
+        run_id: None,
         page_size: 500,
         org_id: None,
         all_orgs: true,
@@ -307,6 +311,8 @@ fn export_dashboards_mirrors_nested_folder_paths_for_raw_and_prompt() {
     let args = ExportArgs {
         common: make_common_args("http://127.0.0.1:3000".to_string()),
         output_dir: temp.path().join("dashboards"),
+        run: None,
+        run_id: None,
         page_size: 500,
         org_id: None,
         all_orgs: false,
@@ -672,6 +678,8 @@ fn export_dashboards_with_dry_run_keeps_output_dir_empty() {
     let args = ExportArgs {
         common: make_common_args("http://127.0.0.1:3000".to_string()),
         output_dir: temp.path().join("dashboards"),
+        run: None,
+        run_id: None,
         page_size: 500,
         org_id: None,
         all_orgs: false,
@@ -720,6 +728,8 @@ fn export_dashboards_writes_provisioning_artifacts_in_separate_lane() {
     let args = ExportArgs {
         common: make_common_args("http://127.0.0.1:3000".to_string()),
         output_dir: temp.path().join("dashboards"),
+        run: None,
+        run_id: None,
         page_size: 500,
         org_id: None,
         all_orgs: false,
@@ -834,6 +844,8 @@ fn export_dashboards_writes_custom_provisioning_provider_settings() {
     let args = ExportArgs {
         common: make_common_args("http://127.0.0.1:3000".to_string()),
         output_dir: temp.path().join("dashboards"),
+        run: None,
+        run_id: None,
         page_size: 500,
         org_id: None,
         all_orgs: false,

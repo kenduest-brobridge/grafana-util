@@ -184,12 +184,15 @@ pub(crate) fn build_service_account_plan_document<F>(
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
+    let input_dir = args
+        .input_dir
+        .as_ref()
+        .ok_or_else(|| message("Access plan requires --input-dir or --local."))?;
     let local_records =
-        load_service_account_import_records(&args.input_dir, ACCESS_EXPORT_KIND_SERVICE_ACCOUNTS)?;
-    let local_map =
-        build_service_account_diff_map(&local_records, &args.input_dir.to_string_lossy())?;
+        load_service_account_import_records(input_dir, ACCESS_EXPORT_KIND_SERVICE_ACCOUNTS)?;
+    let local_map = build_service_account_diff_map(&local_records, &input_dir.to_string_lossy())?;
     let local_evidence =
-        index_service_account_records(&local_records, &args.input_dir.to_string_lossy())?;
+        index_service_account_records(&local_records, &input_dir.to_string_lossy())?;
 
     let live_records = list_all_service_accounts_with_request(&mut request_json)?
         .into_iter()
@@ -212,6 +215,10 @@ where
 
     let source_path = args
         .input_dir
+        .as_ref()
+        .ok_or_else(|| {
+            crate::common::message("Access service-account plan requires --input-dir or --local.")
+        })?
         .join(ACCESS_SERVICE_ACCOUNT_EXPORT_FILENAME)
         .to_string_lossy()
         .to_string();
@@ -391,7 +398,10 @@ mod tests {
     fn make_args(input_dir: &Path, prune: bool) -> AccessPlanArgs {
         AccessPlanArgs {
             common: make_common(),
-            input_dir: input_dir.to_path_buf(),
+            input_dir: Some(input_dir.to_path_buf()),
+            local: false,
+            run: None,
+            run_id: None,
             resource: AccessPlanResource::ServiceAccount,
             prune,
             output_columns: Vec::new(),

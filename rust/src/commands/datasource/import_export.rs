@@ -85,7 +85,11 @@ pub(crate) fn import_datasources_with_client(
     }
 
     let replace_existing = args.replace_existing || args.update_existing_only;
-    let (_metadata, records) = load_import_records(&args.input_dir, args.input_format)?;
+    let input_dir = args
+        .input_dir
+        .as_ref()
+        .ok_or_else(|| message("Datasource import requires --input-dir or --local."))?;
+    let (_metadata, records) = load_import_records(input_dir, args.input_format)?;
     let secret_values = parse_secret_values_inputs(
         args.secret_values.as_deref(),
         args.secret_values_file.as_deref(),
@@ -112,7 +116,7 @@ pub(crate) fn import_datasources_with_client(
     println!(
         "Imported {} datasource(s) from {}; updated {}, skipped {}, blocked {}",
         plan.would_create + plan.would_update,
-        args.input_dir.display(),
+        input_dir.display(),
         plan.would_update,
         plan.would_skip,
         0usize
@@ -187,7 +191,9 @@ pub(crate) fn import_datasources_by_export_org(args: &DatasourceImportArgs) -> R
                 missing_org_count,
                 would_create_org_count,
                 datasource_count,
-                &args.input_dir,
+                args.input_dir
+                    .as_ref()
+                    .ok_or_else(|| message("Datasource import requires --input-dir or --local."))?,
             )
         );
         return Ok(0);
@@ -201,7 +207,10 @@ pub(crate) fn import_datasources_by_export_org(args: &DatasourceImportArgs) -> R
     for plan in plans {
         let scoped_args = DatasourceImportArgs {
             common: args.common.clone(),
-            input_dir: plan.input_dir.clone(),
+            input_dir: Some(plan.input_dir.clone()),
+            local: false,
+            run: None,
+            run_id: None,
             input_format: args.input_format,
             org_id: None,
             use_export_org: false,

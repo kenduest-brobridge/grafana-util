@@ -72,6 +72,27 @@ pub struct InspectVarsArgs {
     )]
     pub input_dir: Option<PathBuf>,
     #[arg(
+        long = "local",
+        default_value_t = false,
+        conflicts_with = "input_dir",
+        help = "Summarize dashboards from the latest artifact workspace dashboard run instead of live Grafana."
+    )]
+    pub local: bool,
+    #[arg(
+        long = "run",
+        value_name = "latest|timestamp",
+        conflicts_with_all = ["input_dir", "run_id"],
+        help = "Summarize dashboards from an artifact workspace dashboard run."
+    )]
+    pub run: Option<String>,
+    #[arg(
+        long = "run-id",
+        value_name = "NAME",
+        conflicts_with_all = ["input_dir", "run"],
+        help = "Summarize dashboards from this artifact workspace run id."
+    )]
+    pub run_id: Option<String>,
+    #[arg(
         long,
         value_enum,
         default_value_t = DashboardImportInputFormat::Raw,
@@ -123,6 +144,27 @@ pub struct SummaryArgs {
         help = "Summarize dashboards from this directory instead of live Grafana. Use --input-format provisioning for a provisioning/ root or its dashboards/ subdirectory, or --input-format git-sync for a repo-backed dashboard tree."
     )]
     pub input_dir: Option<PathBuf>,
+    #[arg(
+        long = "local",
+        default_value_t = false,
+        conflicts_with = "input_dir",
+        help = "Summarize dashboards from the latest artifact workspace dashboard run instead of live Grafana."
+    )]
+    pub local: bool,
+    #[arg(
+        long = "run",
+        value_name = "latest|timestamp",
+        conflicts_with_all = ["input_dir", "run_id"],
+        help = "Summarize dashboards from an artifact workspace dashboard run."
+    )]
+    pub run: Option<String>,
+    #[arg(
+        long = "run-id",
+        value_name = "NAME",
+        conflicts_with_all = ["input_dir", "run"],
+        help = "Summarize dashboards from this artifact workspace run id."
+    )]
+    pub run_id: Option<String>,
     #[arg(
         long,
         value_enum,

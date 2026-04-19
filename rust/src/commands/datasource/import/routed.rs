@@ -219,7 +219,7 @@ pub(crate) fn build_routed_datasource_import_dry_run_json(
             scoped_args.use_export_org = false;
             scoped_args.only_org_id = Vec::new();
             scoped_args.create_missing_orgs = false;
-            scoped_args.input_dir = plan.input_dir.clone();
+            scoped_args.input_dir = Some(plan.input_dir.clone());
             let scoped_client = build_http_client_for_org_from_api(&admin_api, target_org_id)?;
             build_datasource_import_dry_run_json_value(&collect_datasource_import_dry_run_report(
                 &scoped_client,

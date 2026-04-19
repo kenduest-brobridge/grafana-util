@@ -255,7 +255,7 @@ fn datasource_plan_parser_accepts_prune_and_table_output() {
 
     match args.command {
         DatasourceGroupCommand::Plan(inner) => {
-            assert_eq!(inner.input_dir, Path::new("./datasources"));
+            assert_eq!(inner.input_dir.as_deref(), Some(Path::new("./datasources")));
             assert!(inner.prune);
             assert_eq!(
                 inner.output_format,

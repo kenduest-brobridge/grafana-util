@@ -6,7 +6,12 @@
 //! - Materialize auth once before dispatching to command handlers.
 
 use serde_json::Value;
+use std::path::PathBuf;
 
+use crate::artifact_workspace::{
+    lane_root_path, profile_scope_name, profile_scope_path, record_latest_run, resolve_run_id,
+    run_root_path, ArtifactLane, RunSelector,
+};
 use crate::common::{message, print_supported_columns, render_json_value, string_field, Result};
 use crate::dashboard::{
     build_api_client, build_auth_context, build_http_client, build_http_client_for_org_from_api,
@@ -18,8 +23,12 @@ use crate::datasource_catalog::{
     render_supported_datasource_catalog_yaml,
 };
 use crate::grafana_api::DatasourceResourceClient;
+use crate::profile_config::{
+    load_profile_config_file, resolve_artifact_root_path, resolve_profile_config_path,
+};
 use crate::tabular_output::render_yaml;
 
+use super::ArtifactRunMode;
 use super::{
     build_add_payload, build_all_orgs_export_index, build_all_orgs_export_metadata,
     build_all_orgs_output_dir, build_datasource_export_metadata, build_datasource_plan,
@@ -50,6 +59,70 @@ const DATASOURCE_IMPORT_LIST_COLUMNS: &[&str] = &[
     "target_read_only",
     "blocked_reason",
 ];
+
+fn datasource_run_selector(
+    run: Option<ArtifactRunMode>,
+    run_id: Option<&str>,
+    default_run: RunSelector,
+) -> RunSelector {
+    if let Some(run_id) = run_id {
+        return RunSelector::RunId(run_id.to_string());
+    }
+    match run {
+        Some(ArtifactRunMode::Timestamp) => RunSelector::Timestamp,
+        Some(ArtifactRunMode::Latest) => RunSelector::Latest,
+        None => default_run,
+    }
+}
+
+fn datasource_artifact_lane_path(
+    profile: Option<&str>,
+    selector: RunSelector,
+    lane: ArtifactLane,
+    update_latest: bool,
+) -> Result<PathBuf> {
+    let config_path = resolve_profile_config_path();
+    let config = if config_path.exists() {
+        Some(load_profile_config_file(&config_path)?)
+    } else {
+        None
+    };
+    let artifact_root = resolve_artifact_root_path(config.as_ref(), &config_path);
+    let scope_root = profile_scope_path(&artifact_root, profile);
+    let run_id = resolve_run_id(&scope_root, &selector)?;
+    if update_latest {
+        record_latest_run(&scope_root, profile_scope_name(profile), &run_id)?;
+    }
+    Ok(lane_root_path(&run_root_path(&scope_root, &run_id), lane))
+}
+
+fn resolve_datasource_artifact_input_dir(
+    profile: Option<&str>,
+    run: Option<ArtifactRunMode>,
+    run_id: Option<&str>,
+) -> Result<PathBuf> {
+    datasource_artifact_lane_path(
+        profile,
+        datasource_run_selector(run, run_id, RunSelector::Latest),
+        ArtifactLane::Datasources,
+        false,
+    )
+}
+
+fn resolve_datasource_export_output_dir(args: &super::DatasourceExportArgs) -> Result<PathBuf> {
+    if let Some(output_dir) = &args.output_dir {
+        return Ok(output_dir.clone());
+    }
+    if args.run.is_none() && args.run_id.is_none() {
+        return Ok(PathBuf::from("datasources"));
+    }
+    datasource_artifact_lane_path(
+        args.common.profile.as_deref(),
+        datasource_run_selector(args.run, args.run_id.as_deref(), RunSelector::Timestamp),
+        ArtifactLane::Datasources,
+        !args.dry_run,
+    )
+}
 
 // Datasource runtime boundary:
 // normalize shared flags, validate, materialize auth, then dispatch by command kind.
@@ -148,7 +221,14 @@ fn execute_datasource_command(command: DatasourceGroupCommand) -> Result<()> {
             }
             Ok(())
         }
-        DatasourceGroupCommand::List(args) => {
+        DatasourceGroupCommand::List(mut args) => {
+            if args.local && args.input_dir.is_none() {
+                args.input_dir = Some(resolve_datasource_artifact_input_dir(
+                    args.common.profile.as_deref(),
+                    args.run,
+                    args.run_id.as_deref(),
+                )?);
+            }
             if args.input_dir.is_some() {
                 return super::run_local_datasource_list(&args);
             }
@@ -483,7 +563,12 @@ fn execute_datasource_command(command: DatasourceGroupCommand) -> Result<()> {
             );
             Ok(())
         }
-        DatasourceGroupCommand::Export(args) => {
+        DatasourceGroupCommand::Export(mut args) => {
+            args.output_dir = Some(resolve_datasource_export_output_dir(&args)?);
+            let output_dir = args
+                .output_dir
+                .as_ref()
+                .ok_or_else(|| message("Datasource export output directory was not resolved."))?;
             if args.all_orgs {
                 let context = build_auth_context(&args.common)?;
                 if context.auth_mode != "basic" {
@@ -507,7 +592,7 @@ fn execute_datasource_command(command: DatasourceGroupCommand) -> Result<()> {
                     let org_name = string_field(&org, "name", "");
                     let org_client = build_http_client_for_org_from_api(&admin_api, org_id)?;
                     let records = build_export_records(&org_client)?;
-                    let scoped_output_dir = build_all_orgs_output_dir(&args.output_dir, &org);
+                    let scoped_output_dir = build_all_orgs_output_dir(output_dir, &org);
                     let datasources_path = scoped_output_dir.join(DATASOURCE_EXPORT_FILENAME);
                     let index_path = scoped_output_dir.join("index.json");
                     let metadata_path = scoped_output_dir.join(EXPORT_METADATA_FILENAME);
@@ -584,16 +669,16 @@ fn execute_datasource_command(command: DatasourceGroupCommand) -> Result<()> {
                 }
                 if !args.dry_run {
                     write_json_file(
-                        &args.output_dir.join("index.json"),
+                        &output_dir.join("index.json"),
                         &build_all_orgs_export_index(&root_items),
                         args.overwrite,
                     )?;
                     write_json_file(
-                        &args.output_dir.join(EXPORT_METADATA_FILENAME),
+                        &output_dir.join(EXPORT_METADATA_FILENAME),
                         &build_all_orgs_export_metadata(
                             &args.common.url,
                             args.common.profile.as_deref(),
-                            &args.output_dir,
+                            output_dir,
                             org_count,
                             total,
                         ),
@@ -601,8 +686,7 @@ fn execute_datasource_command(command: DatasourceGroupCommand) -> Result<()> {
                     )?;
                     if !args.without_datasource_provisioning {
                         write_yaml_file(
-                            &args
-                                .output_dir
+                            &output_dir
                                 .join(DATASOURCE_PROVISIONING_SUBDIR)
                                 .join(DATASOURCE_PROVISIONING_FILENAME),
                             &build_datasource_provisioning_document(&root_records),
@@ -614,17 +698,16 @@ fn execute_datasource_command(command: DatasourceGroupCommand) -> Result<()> {
                     "{} datasource(s) across {} exported org(s) under {}",
                     total,
                     org_count,
-                    args.output_dir.display()
+                    output_dir.display()
                 );
                 return Ok(());
             }
             let client = resolve_target_client(&args.common, args.org_id)?;
             let records = build_export_records(&client)?;
-            let datasources_path = args.output_dir.join(DATASOURCE_EXPORT_FILENAME);
-            let index_path = args.output_dir.join("index.json");
-            let metadata_path = args.output_dir.join(EXPORT_METADATA_FILENAME);
-            let provisioning_path = args
-                .output_dir
+            let datasources_path = output_dir.join(DATASOURCE_EXPORT_FILENAME);
+            let index_path = output_dir.join("index.json");
+            let metadata_path = output_dir.join(EXPORT_METADATA_FILENAME);
+            let provisioning_path = output_dir
                 .join(DATASOURCE_PROVISIONING_SUBDIR)
                 .join(DATASOURCE_PROVISIONING_FILENAME);
             if !args.dry_run {
@@ -642,7 +725,7 @@ fn execute_datasource_command(command: DatasourceGroupCommand) -> Result<()> {
                         Some("org"),
                         None,
                         None,
-                        &args.output_dir,
+                        output_dir,
                         records.len(),
                     ),
                     args.overwrite,
@@ -674,7 +757,14 @@ fn execute_datasource_command(command: DatasourceGroupCommand) -> Result<()> {
             );
             Ok(())
         }
-        DatasourceGroupCommand::Import(args) => {
+        DatasourceGroupCommand::Import(mut args) => {
+            if args.local && args.input_dir.is_none() {
+                args.input_dir = Some(resolve_datasource_artifact_input_dir(
+                    args.common.profile.as_deref(),
+                    args.run,
+                    args.run_id.as_deref(),
+                )?);
+            }
             validate_import_org_auth(&args.common, &args)?;
             if args.table && !args.dry_run {
                 return Err(message(
@@ -714,16 +804,23 @@ fn execute_datasource_command(command: DatasourceGroupCommand) -> Result<()> {
             import_datasources_with_client(&client, &args)?;
             Ok(())
         }
-        DatasourceGroupCommand::Diff(args) => {
+        DatasourceGroupCommand::Diff(mut args) => {
+            if args.local && args.diff_dir.is_none() {
+                args.diff_dir = Some(resolve_datasource_artifact_input_dir(
+                    args.common.profile.as_deref(),
+                    args.run,
+                    args.run_id.as_deref(),
+                )?);
+            }
             let client = build_http_client(&args.common)?;
             let datasource_client = DatasourceResourceClient::new(&client);
             let live = datasource_client.list_datasources()?;
-            let (compared_count, differences) = diff_datasources_with_live(
-                &args.diff_dir,
-                args.input_format,
-                &live,
-                args.output_format,
-            )?;
+            let diff_dir = args
+                .diff_dir
+                .as_ref()
+                .ok_or_else(|| message("Datasource diff requires --diff-dir or --local."))?;
+            let (compared_count, differences) =
+                diff_datasources_with_live(diff_dir, args.input_format, &live, args.output_format)?;
             if differences > 0 {
                 return Err(message(format!(
                     "Found {} datasource difference(s) across {} exported datasource(s).",
@@ -736,16 +833,27 @@ fn execute_datasource_command(command: DatasourceGroupCommand) -> Result<()> {
             );
             Ok(())
         }
-        DatasourceGroupCommand::Plan(args) => {
+        DatasourceGroupCommand::Plan(mut args) => {
+            if args.local && args.input_dir.is_none() {
+                args.input_dir = Some(resolve_datasource_artifact_input_dir(
+                    args.common.profile.as_deref(),
+                    args.run,
+                    args.run_id.as_deref(),
+                )?);
+            }
             let plan_input = if args.use_export_org {
                 build_routed_datasource_plan_input(&args)?
             } else {
                 let client = resolve_target_client(&args.common, args.org_id)?;
+                let input_dir_arg = args
+                    .input_dir
+                    .as_ref()
+                    .ok_or_else(|| message("Datasource plan requires --input-dir or --local."))?;
                 let input_dir =
                     if args.input_format == super::DatasourceImportInputFormat::Inventory {
-                        resolve_datasource_export_root_dir(&args.input_dir)?
+                        resolve_datasource_export_root_dir(input_dir_arg)?
                     } else {
-                        args.input_dir.clone()
+                        input_dir_arg.clone()
                     };
                 let (_metadata, records) = load_import_records(&input_dir, args.input_format)?;
                 let live = DatasourceResourceClient::new(&client).list_datasources()?;
@@ -827,6 +935,9 @@ fn datasource_plan_to_import_args(args: &super::DatasourcePlanArgs) -> Datasourc
     DatasourceImportArgs {
         common: args.common.clone(),
         input_dir: args.input_dir.clone(),
+        local: args.local,
+        run: args.run,
+        run_id: args.run_id.clone(),
         input_format: args.input_format,
         org_id: args.org_id,
         use_export_org: args.use_export_org,

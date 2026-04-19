@@ -103,7 +103,10 @@ fn user_plan_builds_summary_and_renderers() {
     write_user_bundle(temp_dir.path());
     let args = AccessPlanArgs {
         common: make_common(),
-        input_dir: temp_dir.path().to_path_buf(),
+        input_dir: Some(temp_dir.path().to_path_buf()),
+        local: false,
+        run: None,
+        run_id: None,
         resource: AccessPlanResource::User,
         prune: false,
         output_columns: vec![
@@ -161,7 +164,10 @@ fn all_plan_aggregates_present_bundles_and_reports_missing_resources() {
     write_service_account_bundle(&service_accounts_dir);
     let args = AccessPlanArgs {
         common: make_common(),
-        input_dir: temp_dir.path().to_path_buf(),
+        input_dir: Some(temp_dir.path().to_path_buf()),
+        local: false,
+        run: None,
+        run_id: None,
         resource: AccessPlanResource::All,
         prune: false,
         output_columns: Vec::new(),
@@ -213,7 +219,10 @@ fn all_plan_errors_when_no_bundle_dirs_are_present() {
     let temp_dir = tempdir().unwrap();
     let args = AccessPlanArgs {
         common: make_common(),
-        input_dir: temp_dir.path().to_path_buf(),
+        input_dir: Some(temp_dir.path().to_path_buf()),
+        local: false,
+        run: None,
+        run_id: None,
         resource: AccessPlanResource::All,
         prune: false,
         output_columns: Vec::new(),
@@ -259,7 +268,10 @@ fn org_plan_builds_summary_and_renderers() {
     );
     let args = AccessPlanArgs {
         common: make_common(),
-        input_dir: temp_dir.path().to_path_buf(),
+        input_dir: Some(temp_dir.path().to_path_buf()),
+        local: false,
+        run: None,
+        run_id: None,
         resource: AccessPlanResource::Org,
         prune: false,
         output_columns: vec![
@@ -340,7 +352,10 @@ fn org_plan_prune_marks_remote_orgs_for_delete() {
     );
     let args = AccessPlanArgs {
         common: make_common(),
-        input_dir: temp_dir.path().to_path_buf(),
+        input_dir: Some(temp_dir.path().to_path_buf()),
+        local: false,
+        run: None,
+        run_id: None,
         resource: AccessPlanResource::Org,
         prune: true,
         output_columns: vec![

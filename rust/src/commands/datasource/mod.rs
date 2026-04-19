@@ -59,10 +59,11 @@ mod datasource_runtime;
 
 pub(crate) use datasource_cli_defs::{normalize_datasource_group_command, root_command};
 pub use datasource_cli_defs::{
-    DatasourceAddArgs, DatasourceBrowseArgs, DatasourceCliArgs, DatasourceDeleteArgs,
-    DatasourceDiffArgs, DatasourceExportArgs, DatasourceGroupCommand, DatasourceImportArgs,
-    DatasourceImportInputFormat, DatasourceListArgs, DatasourceModifyArgs, DatasourcePlanArgs,
-    DatasourcePlanOutputFormat, DatasourceTypesArgs, DryRunOutputFormat, ListOutputFormat,
+    ArtifactRunMode, DatasourceAddArgs, DatasourceBrowseArgs, DatasourceCliArgs,
+    DatasourceDeleteArgs, DatasourceDiffArgs, DatasourceExportArgs, DatasourceGroupCommand,
+    DatasourceImportArgs, DatasourceImportInputFormat, DatasourceListArgs, DatasourceModifyArgs,
+    DatasourcePlanArgs, DatasourcePlanOutputFormat, DatasourceTypesArgs, DryRunOutputFormat,
+    ListOutputFormat,
 };
 #[cfg(test)]
 pub(crate) use datasource_diff_render::{

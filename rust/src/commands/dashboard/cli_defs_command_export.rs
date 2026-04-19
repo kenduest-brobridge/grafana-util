@@ -37,6 +37,22 @@ pub struct ExportArgs {
     )]
     pub output_dir: PathBuf,
     #[arg(
+        long = "run",
+        value_name = "latest|timestamp",
+        conflicts_with = "run_id",
+        help = "Resolve the dashboard export output under an artifact workspace run. Use latest to reuse the latest run or timestamp to create a new timestamped run.",
+        help_heading = "Artifact Workspace Options"
+    )]
+    pub run: Option<String>,
+    #[arg(
+        long = "run-id",
+        value_name = "NAME",
+        conflicts_with = "run",
+        help = "Resolve the dashboard export output under this artifact workspace run id.",
+        help_heading = "Artifact Workspace Options"
+    )]
+    pub run_id: Option<String>,
+    #[arg(
         long,
         default_value_t = DEFAULT_PAGE_SIZE,
         help = "Dashboard search page size.",

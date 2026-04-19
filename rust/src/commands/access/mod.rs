@@ -19,6 +19,8 @@ mod access_plan;
 mod access_plan_org;
 #[path = "access_plan_team.rs"]
 mod access_plan_team;
+#[path = "artifact_workspace.rs"]
+mod artifact_workspace;
 #[path = "auth_materialize.rs"]
 mod auth_materialize;
 #[path = "browse_support.rs"]
@@ -58,10 +60,10 @@ mod user_browse;
 
 pub use cli_defs::{
     build_auth_context, build_http_client, build_http_client_no_org_id, normalize_access_cli_args,
-    parse_cli_from, root_command, AccessAuthContext, AccessCliArgs, AccessCommand, CommonCliArgs,
-    CommonCliArgsNoOrgId, DryRunOutputFormat, OrgAddArgs, OrgCommand, OrgDeleteArgs, OrgDiffArgs,
-    OrgExportArgs, OrgImportArgs, OrgListArgs, OrgModifyArgs, Scope, ServiceAccountAddArgs,
-    ServiceAccountCommand, ServiceAccountDiffArgs, ServiceAccountExportArgs,
+    parse_cli_from, root_command, AccessAuthContext, AccessCliArgs, AccessCommand, AccessPlanArgs,
+    CommonCliArgs, CommonCliArgsNoOrgId, DryRunOutputFormat, OrgAddArgs, OrgCommand, OrgDeleteArgs,
+    OrgDiffArgs, OrgExportArgs, OrgImportArgs, OrgListArgs, OrgModifyArgs, Scope,
+    ServiceAccountAddArgs, ServiceAccountCommand, ServiceAccountDiffArgs, ServiceAccountExportArgs,
     ServiceAccountImportArgs, ServiceAccountListArgs, ServiceAccountTokenAddArgs,
     ServiceAccountTokenCommand, TeamAddArgs, TeamBrowseArgs, TeamCommand, TeamDiffArgs,
     TeamExportArgs, TeamImportArgs, TeamListArgs, TeamModifyArgs, UserAddArgs, UserBrowseArgs,

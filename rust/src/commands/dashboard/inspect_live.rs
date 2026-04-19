@@ -100,6 +100,8 @@ pub(crate) fn build_analysis_live_export_args(
         dry_run: false,
         progress: false,
         verbose: false,
+        run: None,
+        run_id: None,
     }
 }
 

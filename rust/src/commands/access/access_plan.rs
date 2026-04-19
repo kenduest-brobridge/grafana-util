@@ -11,7 +11,7 @@ use serde_json::Value;
 
 use super::access_plan_org::build_org_access_plan_actions;
 use crate::access::cli_defs::{AccessPlanArgs, AccessPlanResource, PlanOutputFormat};
-use crate::common::{tool_version, Result};
+use crate::common::{message, tool_version, Result};
 
 #[path = "access_plan_all.rs"]
 mod access_plan_all;
@@ -87,7 +87,11 @@ fn build_org_access_plan_document<F>(
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
-    let (resource, actions) = build_org_access_plan_actions(request_json, args, &args.input_dir)?;
+    let input_dir = args
+        .input_dir
+        .as_ref()
+        .ok_or_else(|| message("Access plan requires --input-dir or --local."))?;
+    let (resource, actions) = build_org_access_plan_actions(request_json, args, input_dir)?;
     let resources = vec![resource];
     Ok(build_access_plan_document_from_parts(
         resources, actions, args.prune,

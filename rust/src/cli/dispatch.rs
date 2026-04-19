@@ -125,7 +125,7 @@ fn route_cli_args(args: CliArgs) -> DomainInvocation {
     // Parse-to-domain translation boundary.
     // If this match grows out of sync with CLI schema changes, the explicit
     // `expect` below will catch it in tests and CI rather than silently dropping routes.
-    let CliArgs { color, command } = args;
+    let CliArgs { color, command, .. } = args;
     match command {
         UnifiedCommand::Completion(args) => DomainInvocation::Completion(args),
         UnifiedCommand::Version(args) => DomainInvocation::Version {

@@ -22,6 +22,8 @@ fn snapshot_export_wrapper_calls_dashboard_then_datasource_runners() {
     let export_args = SnapshotExportArgs {
         common: sample_common_args(),
         output_dir: temp.path().join("snapshot"),
+        run: None,
+        run_id: None,
         overwrite: true,
         prompt: false,
     };
@@ -97,9 +99,10 @@ fn snapshot_export_wrapper_calls_dashboard_then_datasource_runners() {
         temp.path().join("snapshot").join("dashboards")
     );
     assert!(datasource_args.all_orgs);
+    let expected_datasource_dir = temp.path().join("snapshot").join("datasources");
     assert_eq!(
-        datasource_args.output_dir,
-        temp.path().join("snapshot").join("datasources")
+        datasource_args.output_dir.as_deref(),
+        Some(expected_datasource_dir.as_path())
     );
     assert!(dashboard_args.overwrite);
     assert!(datasource_args.overwrite);
@@ -119,6 +122,8 @@ fn snapshot_export_selected_with_handlers_runs_only_selected_lanes() {
     let export_args = SnapshotExportArgs {
         common: sample_common_args(),
         output_dir: temp.path().join("snapshot"),
+        run: None,
+        run_id: None,
         overwrite: false,
         prompt: false,
     };

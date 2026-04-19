@@ -279,7 +279,10 @@ fn discover_export_org_import_scopes_reads_selected_multi_org_root() {
     );
     let args = DatasourceImportArgs {
         common: test_datasource_common_args(),
-        input_dir: import_root,
+        input_dir: Some(import_root),
+        local: false,
+        run: None,
+        run_id: None,
         input_format: DatasourceImportInputFormat::Inventory,
         org_id: None,
         use_export_org: true,
@@ -357,7 +360,10 @@ fn discover_export_org_import_scopes_accepts_workspace_root_and_sorts_children()
     .unwrap();
     let args = DatasourceImportArgs {
         common: test_datasource_common_args(),
-        input_dir: workspace_root,
+        input_dir: Some(workspace_root),
+        local: false,
+        run: None,
+        run_id: None,
         input_format: DatasourceImportInputFormat::Inventory,
         org_id: None,
         use_export_org: true,
@@ -408,7 +414,10 @@ fn discover_export_org_import_scopes_errors_when_selected_org_missing() {
     );
     let args = DatasourceImportArgs {
         common: test_datasource_common_args(),
-        input_dir: import_root,
+        input_dir: Some(import_root),
+        local: false,
+        run: None,
+        run_id: None,
         input_format: DatasourceImportInputFormat::Inventory,
         org_id: None,
         use_export_org: true,

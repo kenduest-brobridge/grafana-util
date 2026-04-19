@@ -436,9 +436,12 @@ pub(super) fn build_user_access_plan_document<F>(
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
-    let bundle = load_user_bundle(&args.input_dir)?;
-    let (resource, actions) =
-        build_access_plan_actions(request_json, args, &args.input_dir, &bundle)?;
+    let input_dir = args
+        .input_dir
+        .as_ref()
+        .ok_or_else(|| message("Access plan requires --input-dir or --local."))?;
+    let bundle = load_user_bundle(input_dir)?;
+    let (resource, actions) = build_access_plan_actions(request_json, args, input_dir, &bundle)?;
     let resources = vec![resource];
     Ok(build_access_plan_document_from_parts(
         resources, actions, args.prune,

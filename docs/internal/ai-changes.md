@@ -16,6 +16,14 @@ Current AI change log only.
 - Older entries moved to [`ai-changes-archive-2026-04-18.md`](docs/internal/archive/ai-changes-archive-2026-04-18.md).
 - Older entries moved to [`ai-changes-archive-2026-04-19.md`](docs/internal/archive/ai-changes-archive-2026-04-19.md).
 
+## 2026-04-19 - Add artifact workspace run support
+- Summary: added run-centric artifact workspace primitives and profile config `artifact_root`, root `--config`, timestamp/latest/run-id routing for key export flows, and local artifact resolution for selected browse/list/summary/review/plan paths.
+- Tests: updated focused Rust parser/test literals for changed option shapes; no test execution.
+- Test Run: not run per user instruction.
+- Impact: `rust/src/common/artifact_workspace.rs`, `rust/src/commands/config/profile/config.rs`, `rust/src/cli/mod.rs`, `rust/src/cli/dispatch.rs`, Rust dashboard/snapshot/datasource/access command modules, selected Rust tests, and AI trace docs.
+- Rollback/Risk: medium CLI behavior expansion guarded by explicit artifact flags or `--local`; rollback by removing artifact resolver usage and keeping existing explicit `--input-dir`/`--output-dir` paths.
+- Follow-up: add generated docs/contracts and broaden artifact local support for dashboard import/diff and access import/diff if desired.
+
 ## 2026-04-18 - Fix Rust 1.95 sync review clippy failure
 - Summary: fixed the GitHub Actions `rust-quality` failure by rewriting sync review TUI key handling to use guarded `match` arms instead of nested `if diff_mode` blocks that Rust 1.95 clippy reports as `collapsible_match`.
 - Tests: no behavior change; preserved existing sync review TUI key behavior.

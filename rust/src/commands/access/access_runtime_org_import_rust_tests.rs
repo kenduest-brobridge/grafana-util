@@ -7,6 +7,8 @@ fn org_export_with_request_writes_bundle_with_users() {
         common: make_basic_common_no_org_id(),
         org_id: None,
         output_dir: temp_dir.path().to_path_buf(),
+        run: None,
+        run_id: None,
         overwrite: true,
         dry_run: false,
         name: Some("Main Org".to_string()),

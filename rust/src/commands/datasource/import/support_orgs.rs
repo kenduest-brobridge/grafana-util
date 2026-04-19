@@ -118,7 +118,10 @@ pub(crate) fn discover_export_org_import_scopes(
     if !args.use_export_org {
         return Ok(Vec::new());
     }
-    let import_root = super::resolve_datasource_export_root_dir(&args.input_dir)?;
+    let input_dir = args.input_dir.as_ref().ok_or_else(|| {
+        message("Datasource import with --use-export-org requires --input-dir or --local.")
+    })?;
+    let import_root = super::resolve_datasource_export_root_dir(input_dir)?;
     let metadata_path = import_root.join(EXPORT_METADATA_FILENAME);
     if !metadata_path.is_file() {
         return Err(message(format!(
@@ -175,7 +178,7 @@ pub(crate) fn discover_export_org_import_scopes(
         if !missing.is_empty() {
             return Err(message(format!(
                 "Selected exported org IDs were not found in {}: {}",
-                args.input_dir.display(),
+                input_dir.display(),
                 missing.join(", ")
             )));
         }
@@ -183,14 +186,14 @@ pub(crate) fn discover_export_org_import_scopes(
     if scopes.is_empty() {
         match args.input_format {
             DatasourceImportInputFormat::Inventory => {
-                if args.input_dir.join(EXPORT_METADATA_FILENAME).is_file() {
+                if input_dir.join(EXPORT_METADATA_FILENAME).is_file() {
                     return Err(message(
                         "Datasource import with --use-export-org expects the combined export root, not one org export directory.",
                     ));
                 }
             }
             DatasourceImportInputFormat::Provisioning => {
-                if resolve_provisioning_import_source_path(&args.input_dir).is_ok() {
+                if resolve_provisioning_import_source_path(input_dir).is_ok() {
                     return Err(message(
                         "Datasource import with --use-export-org expects the combined export root, not one org provisioning directory or YAML file.",
                     ));

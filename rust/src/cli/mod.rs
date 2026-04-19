@@ -6,6 +6,7 @@
 //! - Route to domain runners without carrying transport logic.
 
 use clap::{Args, Parser, Subcommand};
+use std::path::PathBuf;
 
 use crate::access::{
     AccessCliArgs, OrgExportArgs, ServiceAccountExportArgs, TeamExportArgs, UserExportArgs,
@@ -388,8 +389,17 @@ pub struct VersionArgs {
 pub struct CliArgs {
     #[arg(
         long,
+        global = true,
+        value_name = "FILE",
+        help_heading = "Global Options",
+        help = "Read grafana-util profile and artifact workspace settings from this config file. Overrides GRAFANA_UTIL_CONFIG."
+    )]
+    pub config: Option<PathBuf>,
+    #[arg(
+        long,
         value_enum,
         default_value_t = CliColorChoice::Auto,
+        help_heading = "Global Options",
         help = "Colorize JSON output. Use auto, always, or never."
     )]
     pub color: CliColorChoice,
@@ -412,6 +422,7 @@ where
 // in `cli_dispatch` and exits through one shared dispatch path.
 pub fn run_cli(args: CliArgs) -> Result<()> {
     set_json_color_choice(args.color);
+    crate::profile_config::set_profile_config_path_override(args.config.clone());
     dispatch_with_handlers(
         args,
         crate::dashboard::run_dashboard_cli,

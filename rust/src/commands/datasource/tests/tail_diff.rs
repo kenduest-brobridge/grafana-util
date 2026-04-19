@@ -18,7 +18,7 @@ fn parse_datasource_diff_preserves_requested_path() {
 
     match args.command {
         DatasourceGroupCommand::Diff(inner) => {
-            assert_eq!(inner.diff_dir, Path::new("./datasources"));
+            assert_eq!(inner.diff_dir.as_deref(), Some(Path::new("./datasources")));
             assert_eq!(inner.input_format, DatasourceImportInputFormat::Inventory);
         }
         _ => panic!("expected datasource diff"),
@@ -38,7 +38,10 @@ fn parse_datasource_diff_supports_provisioning_input_format() {
 
     match args.command {
         DatasourceGroupCommand::Diff(inner) => {
-            assert_eq!(inner.diff_dir, Path::new("./datasources/provisioning"));
+            assert_eq!(
+                inner.diff_dir.as_deref(),
+                Some(Path::new("./datasources/provisioning"))
+            );
             assert_eq!(
                 inner.input_format,
                 DatasourceImportInputFormat::Provisioning

@@ -53,7 +53,7 @@ fn scoped_access_plan_args(
 ) -> AccessPlanArgs {
     let mut scoped = args.clone();
     scoped.resource = resource;
-    scoped.input_dir = input_dir.into();
+    scoped.input_dir = Some(input_dir.into());
     scoped
 }
 
@@ -75,8 +75,12 @@ where
 {
     let mut resources = Vec::new();
     let mut actions = Vec::new();
+    let input_dir = args
+        .input_dir
+        .as_ref()
+        .ok_or_else(|| message("Access plan requires --input-dir or --local."))?;
 
-    let user_dir = args.input_dir.join(DEFAULT_ACCESS_USER_EXPORT_DIR);
+    let user_dir = input_dir.join(DEFAULT_ACCESS_USER_EXPORT_DIR);
     if user_dir.join(ACCESS_USER_EXPORT_FILENAME).is_file() {
         let scoped = scoped_access_plan_args(args, AccessPlanResource::User, user_dir);
         append_access_plan_document(
@@ -92,7 +96,7 @@ where
         ));
     }
 
-    let org_dir = args.input_dir.join(DEFAULT_ACCESS_ORG_EXPORT_DIR);
+    let org_dir = input_dir.join(DEFAULT_ACCESS_ORG_EXPORT_DIR);
     if org_dir.join(ACCESS_ORG_EXPORT_FILENAME).is_file() {
         let scoped = scoped_access_plan_args(args, AccessPlanResource::Org, org_dir);
         append_access_plan_document(
@@ -108,7 +112,7 @@ where
         ));
     }
 
-    let team_dir = args.input_dir.join(DEFAULT_ACCESS_TEAM_EXPORT_DIR);
+    let team_dir = input_dir.join(DEFAULT_ACCESS_TEAM_EXPORT_DIR);
     if team_dir.join(ACCESS_TEAM_EXPORT_FILENAME).is_file() {
         let scoped = scoped_access_plan_args(args, AccessPlanResource::Team, team_dir);
         append_access_plan_document(
@@ -129,9 +133,7 @@ where
         ));
     }
 
-    let service_account_dir = args
-        .input_dir
-        .join(DEFAULT_ACCESS_SERVICE_ACCOUNT_EXPORT_DIR);
+    let service_account_dir = input_dir.join(DEFAULT_ACCESS_SERVICE_ACCOUNT_EXPORT_DIR);
     if service_account_dir
         .join(ACCESS_SERVICE_ACCOUNT_EXPORT_FILENAME)
         .is_file()
@@ -160,7 +162,7 @@ where
     if actions.is_empty() && resources.iter().all(|item| !item.bundle_present) {
         return Err(message(format!(
             "access plan --resource all did not find any access bundle directories under {}. Expected {}, {}, {}, or {}.",
-            args.input_dir.display(),
+            input_dir.display(),
             DEFAULT_ACCESS_USER_EXPORT_DIR,
             DEFAULT_ACCESS_ORG_EXPORT_DIR,
             DEFAULT_ACCESS_TEAM_EXPORT_DIR,

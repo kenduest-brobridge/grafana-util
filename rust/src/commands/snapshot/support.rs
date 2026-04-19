@@ -22,6 +22,111 @@ use crate::datasource::{DatasourceExportArgs, DatasourceGroupCommand};
 use crate::overview::{OverviewArgs, OverviewOutputFormat};
 use crate::staged_export_scopes::resolve_datasource_export_scope_dirs;
 
+#[derive(Debug, Clone)]
+struct SnapshotArtifactRunResolution {
+    scope_root: PathBuf,
+    profile: String,
+    run_id: String,
+    run_root: PathBuf,
+}
+
+fn snapshot_artifact_selector_from_flags(
+    run: Option<&str>,
+    run_id: Option<&str>,
+    default_latest: bool,
+) -> Result<Option<crate::artifact_workspace::RunSelector>> {
+    if let Some(run_id) = run_id {
+        return Ok(Some(crate::artifact_workspace::RunSelector::RunId(
+            run_id.to_string(),
+        )));
+    }
+    if let Some(run) = run {
+        return match run {
+            "latest" => Ok(Some(crate::artifact_workspace::RunSelector::Latest)),
+            "timestamp" => Ok(Some(crate::artifact_workspace::RunSelector::Timestamp)),
+            other => Err(crate::common::message(format!(
+                "Unsupported artifact run selector '{other}'. Use latest or timestamp."
+            ))),
+        };
+    }
+    if default_latest {
+        return Ok(Some(crate::artifact_workspace::RunSelector::Latest));
+    }
+    Ok(None)
+}
+
+fn snapshot_artifact_scope_root_for_profile(profile: Option<&str>) -> Result<(PathBuf, String)> {
+    let config_path = crate::profile_config::resolve_profile_config_path();
+    let config = if config_path.is_file() {
+        Some(crate::profile_config::load_profile_config_file(
+            &config_path,
+        )?)
+    } else {
+        None
+    };
+    let artifact_root =
+        crate::profile_config::resolve_artifact_root_path(config.as_ref(), &config_path);
+    let profile_name = crate::artifact_workspace::profile_scope_name(profile).to_string();
+    Ok((
+        crate::artifact_workspace::profile_scope_path(&artifact_root, profile),
+        profile_name,
+    ))
+}
+
+fn resolve_snapshot_artifact_run(
+    profile: Option<&str>,
+    selector: &crate::artifact_workspace::RunSelector,
+) -> Result<SnapshotArtifactRunResolution> {
+    let (scope_root, profile_name) = snapshot_artifact_scope_root_for_profile(profile)?;
+    let run_id = crate::artifact_workspace::resolve_run_id(&scope_root, selector)?;
+    let run_root = crate::artifact_workspace::run_root_path(&scope_root, &run_id);
+    Ok(SnapshotArtifactRunResolution {
+        scope_root,
+        profile: profile_name,
+        run_id,
+        run_root,
+    })
+}
+
+fn prepare_snapshot_export_artifact_run(
+    args: &mut super::SnapshotExportArgs,
+) -> Result<Option<SnapshotArtifactRunResolution>> {
+    let Some(selector) =
+        snapshot_artifact_selector_from_flags(args.run.as_deref(), args.run_id.as_deref(), false)?
+    else {
+        return Ok(None);
+    };
+    let resolved = resolve_snapshot_artifact_run(args.common.profile.as_deref(), &selector)?;
+    if args.output_dir.as_path() == Path::new("snapshot") {
+        args.output_dir = resolved.run_root.clone();
+    }
+    Ok(Some(resolved))
+}
+
+fn record_snapshot_latest_run(resolved: &SnapshotArtifactRunResolution) -> Result<()> {
+    crate::artifact_workspace::record_latest_run(
+        &resolved.scope_root,
+        &resolved.profile,
+        &resolved.run_id,
+    )?;
+    Ok(())
+}
+
+fn resolve_snapshot_review_input_dir(args: &super::SnapshotReviewArgs) -> Result<PathBuf> {
+    let selector = snapshot_artifact_selector_from_flags(
+        args.run.as_deref(),
+        args.run_id.as_deref(),
+        args.local,
+    )?;
+    if let Some(selector) = selector {
+        let resolved = resolve_snapshot_artifact_run(None, &selector)?;
+        if args.input_dir.as_path() == Path::new("snapshot") {
+            return Ok(resolved.run_root);
+        }
+    }
+    Ok(args.input_dir.clone())
+}
+
 #[derive(Debug, Clone, Default)]
 pub(crate) struct SnapshotAccessReviewCounts {
     pub(crate) user_count: usize,
@@ -130,6 +235,8 @@ fn build_snapshot_access_user_export_args(args: &super::SnapshotExportArgs) -> U
         dry_run: false,
         scope: Scope::Org,
         with_teams: true,
+        run: None,
+        run_id: None,
     }
 }
 
@@ -142,6 +249,8 @@ fn build_snapshot_access_team_export_args(args: &super::SnapshotExportArgs) -> T
         overwrite: args.overwrite,
         dry_run: false,
         with_members: true,
+        run: None,
+        run_id: None,
     }
 }
 
@@ -156,6 +265,8 @@ fn build_snapshot_access_org_export_args(args: &super::SnapshotExportArgs) -> Or
         dry_run: false,
         name: None,
         with_users: true,
+        run: None,
+        run_id: None,
     }
 }
 
@@ -169,6 +280,8 @@ fn build_snapshot_access_service_account_export_args(
             .join(super::SNAPSHOT_ACCESS_SERVICE_ACCOUNTS_DIR),
         overwrite: args.overwrite,
         dry_run: false,
+        run: None,
+        run_id: None,
     }
 }
 
@@ -466,7 +579,9 @@ pub fn root_command() -> clap::Command {
 
 #[allow(dead_code)]
 pub fn build_snapshot_overview_args(args: &super::SnapshotReviewArgs) -> OverviewArgs {
-    let paths = build_snapshot_paths(&args.input_dir);
+    let input_dir =
+        resolve_snapshot_review_input_dir(args).unwrap_or_else(|_| args.input_dir.clone());
+    let paths = build_snapshot_paths(&input_dir);
     OverviewArgs {
         dashboard_export_dir: Some(paths.dashboards),
         dashboard_provisioning_dir: None,
@@ -511,6 +626,8 @@ pub fn build_snapshot_dashboard_export_args(
         dry_run: false,
         progress: false,
         verbose: false,
+        run: None,
+        run_id: None,
     }
 }
 
@@ -520,7 +637,9 @@ pub fn build_snapshot_datasource_export_args(
     let paths = build_snapshot_paths(&args.output_dir);
     DatasourceExportArgs {
         common: args.common.clone(),
-        output_dir: paths.datasources,
+        output_dir: Some(paths.datasources),
+        run: None,
+        run_id: None,
         org_id: None,
         all_orgs: true,
         overwrite: args.overwrite,
@@ -663,6 +782,7 @@ pub fn run_snapshot_export(args: super::SnapshotExportArgs) -> Result<()> {
     // each lane (dashboard/datasource/access) shares auth materialization and a single selection contract.
     let mut args = args;
     args.common = materialize_snapshot_common_auth(args.common)?;
+    let artifact_run = prepare_snapshot_export_artifact_run(&mut args)?;
     let selection = if args.prompt {
         match super::prompt_snapshot_export_selection()? {
             Some(selection) => selection,
@@ -677,7 +797,11 @@ pub fn run_snapshot_export(args: super::SnapshotExportArgs) -> Result<()> {
         dashboard::run_dashboard_cli,
         crate::datasource::run_datasource_cli,
         access::run_access_cli,
-    )
+    )?;
+    if let Some(resolved) = artifact_run {
+        record_snapshot_latest_run(&resolved)?;
+    }
+    Ok(())
 }
 
 fn normalize_snapshot_datasource_dir(temp_root: &Path, datasource_dir: &Path) -> Result<PathBuf> {
@@ -767,7 +891,8 @@ pub(crate) fn run_snapshot_review_document_with_handler<FO>(
 where
     FO: FnMut(Value) -> Result<()>,
 {
-    let paths = build_snapshot_paths(&args.input_dir);
+    let input_dir = resolve_snapshot_review_input_dir(&args)?;
+    let paths = build_snapshot_paths(&input_dir);
     let temp_dir = TempInspectDir::new("snapshot-review")?;
     let datasource_dir = normalize_snapshot_datasource_dir(&temp_dir.path, &paths.datasources)?;
     let document = super::build_snapshot_review_document(

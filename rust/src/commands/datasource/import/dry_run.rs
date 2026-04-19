@@ -3,7 +3,7 @@
 use serde_json::{Map, Value};
 use std::path::Path;
 
-use crate::common::{render_json_value, tool_version, Result};
+use crate::common::{message, render_json_value, tool_version, Result};
 use crate::dashboard::DEFAULT_ORG_ID;
 use crate::datasource::resolve_match;
 use crate::datasource_secret::{
@@ -110,7 +110,11 @@ pub(crate) fn collect_datasource_import_dry_run_report(
     args: &DatasourceImportArgs,
 ) -> Result<DatasourceImportDryRunReport> {
     let replace_existing = args.replace_existing || args.update_existing_only;
-    let (metadata, records) = load_import_records(&args.input_dir, args.input_format)?;
+    let input_dir = args
+        .input_dir
+        .as_ref()
+        .ok_or_else(|| message("Datasource import dry-run requires --input-dir or --local."))?;
+    let (metadata, records) = load_import_records(input_dir, args.input_format)?;
     validate_matching_export_org(client, args, &records)?;
     let live = DatasourceResourceClient::new(client).list_datasources()?;
     let target_org = fetch_current_org(client)?;
@@ -179,7 +183,7 @@ pub(crate) fn collect_datasource_import_dry_run_report(
     }
     Ok(DatasourceImportDryRunReport {
         mode: mode.to_string(),
-        input_dir: args.input_dir.clone(),
+        input_dir: input_dir.clone(),
         input_format: args.input_format,
         source_org_id: records
             .iter()

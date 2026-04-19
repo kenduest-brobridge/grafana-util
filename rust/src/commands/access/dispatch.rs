@@ -1,15 +1,78 @@
 use reqwest::Method;
 use serde_json::Value;
+use std::path::PathBuf;
 
+use crate::artifact_workspace::{ArtifactLane, RunSelector};
 use crate::common::{message, Result};
 use crate::http::JsonHttpClient;
 
+use super::artifact_workspace::{
+    access_lane_path, access_run_root, access_run_selector, lane_for_plan_resource,
+};
 use super::cli_defs::{build_http_client, build_http_client_no_org_id};
 use super::{
     access_plan, browse_support, browse_terminal, org, pending_delete, service_account, team,
-    team_browse, user, user_browse, AccessCliArgs, AccessCommand, OrgCommand,
+    team_browse, user, user_browse, AccessCliArgs, AccessCommand, AccessPlanArgs, OrgCommand,
     ServiceAccountCommand, ServiceAccountTokenCommand, TeamCommand, UserCommand,
 };
+
+fn local_access_lane_path(
+    profile: Option<&str>,
+    run: Option<super::cli_defs::AccessArtifactRunMode>,
+    run_id: Option<&str>,
+    lane: ArtifactLane,
+) -> Result<PathBuf> {
+    access_lane_path(
+        profile,
+        access_run_selector(run, run_id, RunSelector::Latest),
+        lane,
+        false,
+    )
+}
+
+fn export_access_lane_path(
+    profile: Option<&str>,
+    run: Option<super::cli_defs::AccessArtifactRunMode>,
+    run_id: Option<&str>,
+    lane: ArtifactLane,
+    dry_run: bool,
+) -> Result<Option<PathBuf>> {
+    if run.is_none() && run_id.is_none() {
+        return Ok(None);
+    }
+    access_lane_path(
+        profile,
+        access_run_selector(run, run_id, RunSelector::Timestamp),
+        lane,
+        !dry_run,
+    )
+    .map(Some)
+}
+
+fn resolve_access_plan_args(args: &AccessPlanArgs) -> Result<AccessPlanArgs> {
+    let mut resolved = args.clone();
+    if resolved.local && resolved.input_dir.is_none() {
+        resolved.input_dir = if let Some(lane) = lane_for_plan_resource(&resolved.resource) {
+            Some(local_access_lane_path(
+                resolved.common.profile.as_deref(),
+                resolved.run,
+                resolved.run_id.as_deref(),
+                lane,
+            )?)
+        } else {
+            Some(access_run_root(
+                resolved.common.profile.as_deref(),
+                access_run_selector(
+                    resolved.run,
+                    resolved.run_id.as_deref(),
+                    RunSelector::Latest,
+                ),
+                false,
+            )?)
+        };
+    }
+    Ok(resolved)
+}
 
 pub fn run_access_cli_with_client(client: &JsonHttpClient, args: &AccessCliArgs) -> Result<()> {
     run_access_cli_with_request(
@@ -29,22 +92,45 @@ where
 fn run_user_access_cli(command: &UserCommand, args: &AccessCliArgs) -> Result<()> {
     match command {
         UserCommand::List(inner) => {
+            let mut inner = inner.clone();
+            if inner.local && inner.input_dir.is_none() {
+                inner.input_dir = Some(local_access_lane_path(
+                    inner.common.profile.as_deref(),
+                    inner.run,
+                    inner.run_id.as_deref(),
+                    ArtifactLane::AccessUsers,
+                )?);
+            }
             if inner.input_dir.is_some() {
-                user::list_users_from_input_dir(inner)?;
+                user::list_users_from_input_dir(&inner)?;
                 Ok(())
             } else {
                 run_access_cli_with_common(&inner.common, args, build_http_client)
             }
         }
         UserCommand::Browse(inner) => {
+            let mut inner = inner.clone();
+            if inner.local && inner.input_dir.is_none() {
+                inner.input_dir = Some(local_access_lane_path(
+                    inner.common.profile.as_deref(),
+                    inner.run,
+                    inner.run_id.as_deref(),
+                    ArtifactLane::AccessUsers,
+                )?);
+            }
             if inner.input_dir.is_some() {
+                let local_args = AccessCliArgs {
+                    command: AccessCommand::User {
+                        command: UserCommand::Browse(inner),
+                    },
+                };
                 run_access_cli_with_request(
                     |_method, _path, _params, _payload| {
                         Err(message(
                             "Local access user browse should not call the live request layer.",
                         ))
                     },
-                    args,
+                    &local_args,
                 )
             } else {
                 run_access_cli_with_common(&inner.common, args, build_http_client)
@@ -57,7 +143,33 @@ fn run_user_access_cli(command: &UserCommand, args: &AccessCliArgs) -> Result<()
             run_access_cli_with_common(&inner.common, args, build_http_client)
         }
         UserCommand::Export(inner) => {
-            run_access_cli_with_common(&inner.common, args, build_http_client)
+            let mut inner = inner.clone();
+            if let Some(output_dir) = export_access_lane_path(
+                inner.common.profile.as_deref(),
+                inner.run,
+                inner.run_id.as_deref(),
+                ArtifactLane::AccessUsers,
+                inner.dry_run,
+            )? {
+                inner.output_dir = output_dir;
+                let resolved_args = AccessCliArgs {
+                    command: AccessCommand::User {
+                        command: UserCommand::Export(inner),
+                    },
+                };
+                run_access_cli_with_common(
+                    match &resolved_args.command {
+                        AccessCommand::User {
+                            command: UserCommand::Export(inner),
+                        } => &inner.common,
+                        _ => unreachable!(),
+                    },
+                    &resolved_args,
+                    build_http_client,
+                )
+            } else {
+                run_access_cli_with_common(&inner.common, args, build_http_client)
+            }
         }
         UserCommand::Import(inner) => {
             run_access_cli_with_common(&inner.common, args, build_http_client)
@@ -74,8 +186,17 @@ fn run_user_access_cli(command: &UserCommand, args: &AccessCliArgs) -> Result<()
 fn run_org_access_cli(command: &OrgCommand, args: &AccessCliArgs) -> Result<()> {
     match command {
         OrgCommand::List(inner) => {
+            let mut inner = inner.clone();
+            if inner.local && inner.input_dir.is_none() {
+                inner.input_dir = Some(local_access_lane_path(
+                    inner.common.profile.as_deref(),
+                    inner.run,
+                    inner.run_id.as_deref(),
+                    ArtifactLane::AccessOrgs,
+                )?);
+            }
             if inner.input_dir.is_some() {
-                org::list_orgs_from_input_dir(inner)?;
+                org::list_orgs_from_input_dir(&inner)?;
                 Ok(())
             } else {
                 run_access_cli_with_common(&inner.common, args, build_http_client_no_org_id)
@@ -88,7 +209,33 @@ fn run_org_access_cli(command: &OrgCommand, args: &AccessCliArgs) -> Result<()> 
             run_access_cli_with_common(&inner.common, args, build_http_client_no_org_id)
         }
         OrgCommand::Export(inner) => {
-            run_access_cli_with_common(&inner.common, args, build_http_client_no_org_id)
+            let mut inner = inner.clone();
+            if let Some(output_dir) = export_access_lane_path(
+                inner.common.profile.as_deref(),
+                inner.run,
+                inner.run_id.as_deref(),
+                ArtifactLane::AccessOrgs,
+                inner.dry_run,
+            )? {
+                inner.output_dir = output_dir;
+                let resolved_args = AccessCliArgs {
+                    command: AccessCommand::Org {
+                        command: OrgCommand::Export(inner),
+                    },
+                };
+                run_access_cli_with_common(
+                    match &resolved_args.command {
+                        AccessCommand::Org {
+                            command: OrgCommand::Export(inner),
+                        } => &inner.common,
+                        _ => unreachable!(),
+                    },
+                    &resolved_args,
+                    build_http_client_no_org_id,
+                )
+            } else {
+                run_access_cli_with_common(&inner.common, args, build_http_client_no_org_id)
+            }
         }
         OrgCommand::Import(inner) => {
             run_access_cli_with_common(&inner.common, args, build_http_client_no_org_id)
@@ -105,22 +252,45 @@ fn run_org_access_cli(command: &OrgCommand, args: &AccessCliArgs) -> Result<()> 
 fn run_team_access_cli(command: &TeamCommand, args: &AccessCliArgs) -> Result<()> {
     match command {
         TeamCommand::List(inner) => {
+            let mut inner = inner.clone();
+            if inner.local && inner.input_dir.is_none() {
+                inner.input_dir = Some(local_access_lane_path(
+                    inner.common.profile.as_deref(),
+                    inner.run,
+                    inner.run_id.as_deref(),
+                    ArtifactLane::AccessTeams,
+                )?);
+            }
             if inner.input_dir.is_some() {
-                team::list_teams_from_input_dir(inner)?;
+                team::list_teams_from_input_dir(&inner)?;
                 Ok(())
             } else {
                 run_access_cli_with_common(&inner.common, args, build_http_client)
             }
         }
         TeamCommand::Browse(inner) => {
+            let mut inner = inner.clone();
+            if inner.local && inner.input_dir.is_none() {
+                inner.input_dir = Some(local_access_lane_path(
+                    inner.common.profile.as_deref(),
+                    inner.run,
+                    inner.run_id.as_deref(),
+                    ArtifactLane::AccessTeams,
+                )?);
+            }
             if inner.input_dir.is_some() {
+                let local_args = AccessCliArgs {
+                    command: AccessCommand::Team {
+                        command: TeamCommand::Browse(inner),
+                    },
+                };
                 run_access_cli_with_request(
                     |_method, _path, _params, _payload| {
                         Err(message(
                             "Local access team browse should not call the live request layer.",
                         ))
                     },
-                    args,
+                    &local_args,
                 )
             } else {
                 run_access_cli_with_common(&inner.common, args, build_http_client)
@@ -133,7 +303,33 @@ fn run_team_access_cli(command: &TeamCommand, args: &AccessCliArgs) -> Result<()
             run_access_cli_with_common(&inner.common, args, build_http_client)
         }
         TeamCommand::Export(inner) => {
-            run_access_cli_with_common(&inner.common, args, build_http_client)
+            let mut inner = inner.clone();
+            if let Some(output_dir) = export_access_lane_path(
+                inner.common.profile.as_deref(),
+                inner.run,
+                inner.run_id.as_deref(),
+                ArtifactLane::AccessTeams,
+                inner.dry_run,
+            )? {
+                inner.output_dir = output_dir;
+                let resolved_args = AccessCliArgs {
+                    command: AccessCommand::Team {
+                        command: TeamCommand::Export(inner),
+                    },
+                };
+                run_access_cli_with_common(
+                    match &resolved_args.command {
+                        AccessCommand::Team {
+                            command: TeamCommand::Export(inner),
+                        } => &inner.common,
+                        _ => unreachable!(),
+                    },
+                    &resolved_args,
+                    build_http_client,
+                )
+            } else {
+                run_access_cli_with_common(&inner.common, args, build_http_client)
+            }
         }
         TeamCommand::Import(inner) => {
             run_access_cli_with_common(&inner.common, args, build_http_client)
@@ -153,8 +349,17 @@ fn run_service_account_access_cli(
 ) -> Result<()> {
     match command {
         ServiceAccountCommand::List(inner) => {
+            let mut inner = inner.clone();
+            if inner.local && inner.input_dir.is_none() {
+                inner.input_dir = Some(local_access_lane_path(
+                    inner.common.profile.as_deref(),
+                    inner.run,
+                    inner.run_id.as_deref(),
+                    ArtifactLane::AccessServiceAccounts,
+                )?);
+            }
             if inner.input_dir.is_some() {
-                service_account::list_service_accounts_from_input_dir(inner)?;
+                service_account::list_service_accounts_from_input_dir(&inner)?;
                 Ok(())
             } else {
                 run_access_cli_with_common(&inner.common, args, build_http_client)
@@ -164,7 +369,33 @@ fn run_service_account_access_cli(
             run_access_cli_with_common(&inner.common, args, build_http_client)
         }
         ServiceAccountCommand::Export(inner) => {
-            run_access_cli_with_common(&inner.common, args, build_http_client)
+            let mut inner = inner.clone();
+            if let Some(output_dir) = export_access_lane_path(
+                inner.common.profile.as_deref(),
+                inner.run,
+                inner.run_id.as_deref(),
+                ArtifactLane::AccessServiceAccounts,
+                inner.dry_run,
+            )? {
+                inner.output_dir = output_dir;
+                let resolved_args = AccessCliArgs {
+                    command: AccessCommand::ServiceAccount {
+                        command: ServiceAccountCommand::Export(inner),
+                    },
+                };
+                run_access_cli_with_common(
+                    match &resolved_args.command {
+                        AccessCommand::ServiceAccount {
+                            command: ServiceAccountCommand::Export(inner),
+                        } => &inner.common,
+                        _ => unreachable!(),
+                    },
+                    &resolved_args,
+                    build_http_client,
+                )
+            } else {
+                run_access_cli_with_common(&inner.common, args, build_http_client)
+            }
         }
         ServiceAccountCommand::Import(inner) => {
             run_access_cli_with_common(&inner.common, args, build_http_client)
@@ -193,7 +424,18 @@ pub(crate) fn run_access_cli_with_materialized_args(args: &AccessCliArgs) -> Res
         AccessCommand::Team { command } => run_team_access_cli(command, args),
         AccessCommand::ServiceAccount { command } => run_service_account_access_cli(command, args),
         AccessCommand::Plan(plan_args) => {
-            run_access_cli_with_common(&plan_args.common, args, build_http_client)
+            let plan_args = resolve_access_plan_args(plan_args)?;
+            let resolved_args = AccessCliArgs {
+                command: AccessCommand::Plan(plan_args),
+            };
+            run_access_cli_with_common(
+                match &resolved_args.command {
+                    AccessCommand::Plan(plan_args) => &plan_args.common,
+                    _ => unreachable!(),
+                },
+                &resolved_args,
+                build_http_client,
+            )
         }
     }
 }
@@ -394,7 +636,8 @@ where
             },
         },
         AccessCommand::Plan(args) => {
-            let _ = access_plan::access_plan_with_request(&mut request_json, args)?;
+            let args = resolve_access_plan_args(args)?;
+            let _ = access_plan::access_plan_with_request(&mut request_json, &args)?;
         }
     }
     Ok(())

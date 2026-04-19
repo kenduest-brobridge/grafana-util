@@ -39,7 +39,10 @@ fn write_team_bundle(dir: &Path, records: serde_json::Value) {
 fn make_args(dir: &Path, prune: bool) -> AccessPlanArgs {
     AccessPlanArgs {
         common: make_common(),
-        input_dir: dir.to_path_buf(),
+        input_dir: Some(dir.to_path_buf()),
+        local: false,
+        run: None,
+        run_id: None,
         resource: AccessPlanResource::Team,
         prune,
         output_columns: Vec::new(),

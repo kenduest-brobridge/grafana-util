@@ -126,6 +126,8 @@ pub fn execute_dashboard_inspect_live(
         dry_run: false,
         progress: args.progress,
         verbose: false,
+        run: None,
+        run_id: None,
     };
     let _ = export::export_dashboards_with_org_clients(&export_args)?;
     let inspect_import_dir = inspect_live::prepare_inspect_live_import_dir(&temp_dir.path, args)?;

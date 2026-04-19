@@ -86,6 +86,9 @@ fn snapshot_review_wrapper_normalizes_combined_datasource_root_before_building_d
     let seen = Rc::new(RefCell::new(None));
     let review_args = SnapshotReviewArgs {
         input_dir: snapshot_root,
+        local: false,
+        run: None,
+        run_id: None,
         interactive: false,
         output_format: OverviewOutputFormat::Text,
     };
@@ -218,6 +221,9 @@ fn snapshot_review_document_reports_observational_warnings_for_org_mismatch() {
     let seen = Rc::new(RefCell::new(None));
     let review_args = SnapshotReviewArgs {
         input_dir: snapshot_root,
+        local: false,
+        run: None,
+        run_id: None,
         interactive: false,
         output_format: OverviewOutputFormat::Text,
     };

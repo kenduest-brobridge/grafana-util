@@ -5,7 +5,7 @@ use serde_json::{Map, Value};
 use std::collections::BTreeMap;
 use std::path::Path;
 
-use crate::common::{load_json_object_file, string_field, tool_version, Result};
+use crate::common::{load_json_object_file, message, string_field, tool_version, Result};
 use crate::review_contract::{
     REVIEW_ACTION_BLOCKED, REVIEW_ACTION_EXTRA_REMOTE, REVIEW_ACTION_SAME,
     REVIEW_ACTION_WOULD_CREATE, REVIEW_ACTION_WOULD_DELETE, REVIEW_ACTION_WOULD_UPDATE,
@@ -302,13 +302,16 @@ pub(crate) fn build_team_access_plan_document<F>(
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
-    let metadata = load_team_plan_metadata(&args.input_dir);
-    let records = load_team_import_records(&args.input_dir, ACCESS_EXPORT_KIND_TEAMS)?;
+    let input_dir = args
+        .input_dir
+        .as_ref()
+        .ok_or_else(|| message("Access plan requires --input-dir or --local."))?;
+    let metadata = load_team_plan_metadata(input_dir);
+    let records = load_team_import_records(input_dir, ACCESS_EXPORT_KIND_TEAMS)?;
     let include_members = records.iter().any(team_has_membership_payload);
     let scope = plan_team_scope(metadata.as_ref());
 
-    let local_map =
-        build_team_diff_map(&records, &args.input_dir.to_string_lossy(), include_members)?;
+    let local_map = build_team_diff_map(&records, &input_dir.to_string_lossy(), include_members)?;
     let local_rows_by_key = team_rows_by_key(&records);
     let live_rows = build_live_team_rows(&mut request_json, include_members)?;
     let live_map = build_team_diff_map(&live_rows, "Grafana live teams", include_members)?;
@@ -326,6 +329,8 @@ where
 
     let source_path = args
         .input_dir
+        .as_ref()
+        .ok_or_else(|| crate::common::message("Access team plan requires --input-dir or --local."))?
         .join(ACCESS_TEAM_EXPORT_FILENAME)
         .to_string_lossy()
         .to_string();

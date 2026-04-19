@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::{Mutex, OnceLock};
 
 use reqwest::Url;
 
@@ -22,10 +23,14 @@ use crate::profile_secret_store::{
 pub const DEFAULT_PROFILE_CONFIG_FILENAME: &str = "grafana-util.yaml";
 pub const PROFILE_CONFIG_ENV_VAR: &str = "GRAFANA_UTIL_CONFIG";
 
+static PROFILE_CONFIG_PATH_OVERRIDE: OnceLock<Mutex<Option<PathBuf>>> = OnceLock::new();
+
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ProfileConfigFile {
     #[serde(default)]
     pub default_profile: Option<String>,
+    #[serde(default)]
+    pub artifact_root: Option<PathBuf>,
     #[serde(default)]
     pub profiles: BTreeMap<String, ConnectionProfile>,
 }
@@ -101,9 +106,53 @@ pub fn default_profile_config_path() -> PathBuf {
 }
 
 pub fn resolve_profile_config_path() -> PathBuf {
+    if let Some(path) = PROFILE_CONFIG_PATH_OVERRIDE
+        .get_or_init(|| Mutex::new(None))
+        .lock()
+        .expect("profile config override lock poisoned")
+        .clone()
+    {
+        return path;
+    }
     env_value(PROFILE_CONFIG_ENV_VAR)
         .map(PathBuf::from)
         .unwrap_or_else(default_profile_config_path)
+}
+
+pub fn set_profile_config_path_override(path: Option<PathBuf>) {
+    *PROFILE_CONFIG_PATH_OVERRIDE
+        .get_or_init(|| Mutex::new(None))
+        .lock()
+        .expect("profile config override lock poisoned") = path;
+}
+
+pub fn default_artifact_root_path_for_config_path(config_path: &Path) -> PathBuf {
+    let config_dir = config_path
+        .parent()
+        .filter(|path| !path.as_os_str().is_empty())
+        .unwrap_or(Path::new("."));
+    config_dir.join(".grafana-util").join("artifacts")
+}
+
+pub fn resolve_artifact_root_path(
+    config: Option<&ProfileConfigFile>,
+    config_path: &Path,
+) -> PathBuf {
+    let default_root = default_artifact_root_path_for_config_path(config_path);
+    let Some(config) = config else {
+        return default_root;
+    };
+    let Some(root) = config.artifact_root.as_ref() else {
+        return default_root;
+    };
+    if root.is_absolute() {
+        return root.clone();
+    }
+    let config_dir = config_path
+        .parent()
+        .filter(|path| !path.as_os_str().is_empty())
+        .unwrap_or(Path::new("."));
+    config_dir.join(root)
 }
 
 pub fn load_profile_config_file(path: &Path) -> Result<ProfileConfigFile> {
@@ -414,9 +463,9 @@ fn resolve_stored_profile_secret_with_store<S: OsSecretStore>(
 mod tests {
     use super::{
         default_profile_config_path, load_profile_config_file, render_profile_init_template,
-        resolve_connection_settings, resolve_stored_profile_secret_with_store,
-        save_profile_config_file, select_profile, ConnectionMergeInput, ConnectionProfile,
-        ProfileConfigFile, SelectedProfile,
+        resolve_artifact_root_path, resolve_connection_settings,
+        resolve_stored_profile_secret_with_store, save_profile_config_file, select_profile,
+        ConnectionMergeInput, ConnectionProfile, ProfileConfigFile, SelectedProfile,
     };
     use crate::common::{validation, Result};
     use crate::profile_secret_store::{
@@ -427,6 +476,16 @@ mod tests {
     use std::env;
     use std::fs;
     use std::path::{Path, PathBuf};
+    use std::sync::{Mutex, MutexGuard, OnceLock};
+
+    static TEST_ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+
+    fn env_lock() -> MutexGuard<'static, ()> {
+        TEST_ENV_LOCK
+            .get_or_init(|| Mutex::new(()))
+            .lock()
+            .expect("test env lock poisoned")
+    }
     use tempfile::tempdir;
 
     #[derive(Default)]
@@ -479,6 +538,7 @@ mod tests {
         let config = ProfileConfigFile {
             default_profile: Some("prod".to_string()),
             profiles,
+            ..ProfileConfigFile::default()
         };
 
         let selected = select_profile(&config, Some("dev"), Path::new("./grafana-util.yaml"))
@@ -566,6 +626,7 @@ mod tests {
 
     #[test]
     fn resolve_connection_settings_supports_grafana_url_env() {
+        let _env_guard = env_lock();
         env::set_var("GRAFANA_URL", "https://env-grafana.example.com");
         let resolved = resolve_connection_settings(
             ConnectionMergeInput {
@@ -591,6 +652,7 @@ mod tests {
 
     #[test]
     fn resolve_connection_settings_ignores_credentials_in_grafana_url_env() {
+        let _env_guard = env_lock();
         env::set_var("GRAFANA_URL", "https://admin:secret@grafana.example.com");
         let resolved = resolve_connection_settings(
             ConnectionMergeInput {
@@ -618,6 +680,7 @@ mod tests {
 
     #[test]
     fn resolve_connection_settings_ignores_credentials_in_profile_url() {
+        let _env_guard = env_lock();
         env::remove_var("GRAFANA_URL");
         let selected_profile = super::SelectedProfile {
             name: "prod".to_string(),
@@ -652,6 +715,7 @@ mod tests {
 
     #[test]
     fn resolve_connection_settings_requires_url_when_cli_env_and_profile_are_missing() {
+        let _env_guard = env_lock();
         env::remove_var("GRAFANA_URL");
         let error = resolve_connection_settings(
             ConnectionMergeInput {
@@ -728,6 +792,7 @@ profiles:
             &ProfileConfigFile {
                 default_profile: Some("dev".to_string()),
                 profiles,
+                ..ProfileConfigFile::default()
             },
         )
         .unwrap();
@@ -739,6 +804,45 @@ profiles:
             let mode = fs::metadata(&config_path).unwrap().permissions().mode() & 0o777;
             assert_eq!(mode, 0o600);
         }
+    }
+
+    #[test]
+    fn resolve_artifact_root_path_defaults_under_config_dir() {
+        let dir = tempdir().unwrap();
+        let config_path = dir.path().join("grafana-util.yaml");
+
+        let resolved = resolve_artifact_root_path(None, &config_path);
+
+        assert_eq!(resolved, dir.path().join(".grafana-util").join("artifacts"));
+    }
+
+    #[test]
+    fn resolve_artifact_root_path_resolves_relative_to_config_dir() {
+        let dir = tempdir().unwrap();
+        let config_path = dir.path().join("grafana-util.yaml");
+        let config = ProfileConfigFile {
+            artifact_root: Some(PathBuf::from("my-artifacts")),
+            ..ProfileConfigFile::default()
+        };
+
+        let resolved = resolve_artifact_root_path(Some(&config), &config_path);
+
+        assert_eq!(resolved, dir.path().join("my-artifacts"));
+    }
+
+    #[test]
+    fn resolve_artifact_root_path_keeps_absolute_root() {
+        let dir = tempdir().unwrap();
+        let config_path = dir.path().join("grafana-util.yaml");
+        let absolute_root = dir.path().join("abs-root");
+        let config = ProfileConfigFile {
+            artifact_root: Some(absolute_root.clone()),
+            ..ProfileConfigFile::default()
+        };
+
+        let resolved = resolve_artifact_root_path(Some(&config), &config_path);
+
+        assert_eq!(resolved, absolute_root);
     }
 
     #[test]

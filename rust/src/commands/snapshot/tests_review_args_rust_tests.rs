@@ -7,6 +7,9 @@ use serde_json::json;
 fn snapshot_review_builds_overview_args_for_interactive_output() {
     let review_args = SnapshotReviewArgs {
         input_dir: std::path::PathBuf::from("./snapshot"),
+        local: false,
+        run: None,
+        run_id: None,
         interactive: false,
         output_format: OverviewOutputFormat::Interactive,
     };
@@ -91,6 +94,9 @@ fn snapshot_review_parses_all_supported_output_modes() {
     for (output, expected) in cases {
         let review_args = SnapshotReviewArgs {
             input_dir: std::path::PathBuf::from("./snapshot"),
+            local: false,
+            run: None,
+            run_id: None,
             interactive: false,
             output_format: expected,
         };

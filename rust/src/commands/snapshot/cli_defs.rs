@@ -31,6 +31,20 @@ pub struct SnapshotExportArgs {
     )]
     pub output_dir: PathBuf,
     #[arg(
+        long = "run",
+        value_name = "latest|timestamp",
+        conflicts_with = "run_id",
+        help = "Resolve the snapshot export root under an artifact workspace run. Use latest to reuse the latest run or timestamp to create a new timestamped run."
+    )]
+    pub run: Option<String>,
+    #[arg(
+        long = "run-id",
+        value_name = "NAME",
+        conflicts_with = "run",
+        help = "Resolve the snapshot export root under this artifact workspace run id."
+    )]
+    pub run_id: Option<String>,
+    #[arg(
         long,
         help = "Replace an existing snapshot export root instead of failing when the dashboard or datasource export directories already exist."
     )]
@@ -133,6 +147,26 @@ pub struct SnapshotReviewArgs {
         help = "Directory containing a previously exported snapshot root. The review reads the dashboard and datasource inventory under this root."
     )]
     pub input_dir: PathBuf,
+    #[arg(
+        long = "local",
+        default_value_t = false,
+        help = "Review the latest artifact workspace snapshot run when --input-dir is not set."
+    )]
+    pub local: bool,
+    #[arg(
+        long = "run",
+        value_name = "latest",
+        conflicts_with = "run_id",
+        help = "Review an artifact workspace snapshot run. Use latest to read the latest recorded run."
+    )]
+    pub run: Option<String>,
+    #[arg(
+        long = "run-id",
+        value_name = "NAME",
+        conflicts_with = "run",
+        help = "Review this artifact workspace snapshot run id."
+    )]
+    pub run_id: Option<String>,
     #[arg(
         long,
         default_value_t = false,

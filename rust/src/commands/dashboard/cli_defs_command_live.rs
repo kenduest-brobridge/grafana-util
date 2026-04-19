@@ -191,6 +191,30 @@ pub struct BrowseArgs {
     )]
     pub input_dir: Option<PathBuf>,
     #[arg(
+        long = "local",
+        default_value_t = false,
+        conflicts_with_all = ["workspace", "input_dir"],
+        help = "Browse dashboards from the latest artifact workspace dashboard run instead of live Grafana.",
+        help_heading = "Input Options"
+    )]
+    pub local: bool,
+    #[arg(
+        long = "run",
+        value_name = "latest|timestamp",
+        conflicts_with_all = ["workspace", "input_dir", "run_id"],
+        help = "Browse dashboards from an artifact workspace dashboard run.",
+        help_heading = "Input Options"
+    )]
+    pub run: Option<String>,
+    #[arg(
+        long = "run-id",
+        value_name = "NAME",
+        conflicts_with_all = ["workspace", "input_dir", "run"],
+        help = "Browse dashboards from this artifact workspace run id.",
+        help_heading = "Input Options"
+    )]
+    pub run_id: Option<String>,
+    #[arg(
         long,
         value_enum,
         default_value_t = super::DashboardImportInputFormat::Raw,

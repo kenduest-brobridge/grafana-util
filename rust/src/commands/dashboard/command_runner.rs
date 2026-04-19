@@ -2,6 +2,7 @@
 use crate::common::{message, print_supported_columns, set_json_color_choice, Result};
 use crate::http::JsonHttpClient;
 use serde_json::Value;
+use std::path::{Path, PathBuf};
 
 use super::browse;
 use super::delete;
@@ -57,6 +58,145 @@ const DASHBOARD_IMPORT_OUTPUT_COLUMNS: &[&str] = &[
     "reason",
     "file",
 ];
+
+#[derive(Debug, Clone)]
+struct ArtifactRunResolution {
+    scope_root: PathBuf,
+    profile: String,
+    run_id: String,
+    run_root: PathBuf,
+}
+
+fn artifact_selector_from_flags(
+    run: Option<&str>,
+    run_id: Option<&str>,
+    default_latest: bool,
+) -> Result<Option<crate::artifact_workspace::RunSelector>> {
+    if let Some(run_id) = run_id {
+        return Ok(Some(crate::artifact_workspace::RunSelector::RunId(
+            run_id.to_string(),
+        )));
+    }
+    if let Some(run) = run {
+        return match run {
+            "latest" => Ok(Some(crate::artifact_workspace::RunSelector::Latest)),
+            "timestamp" => Ok(Some(crate::artifact_workspace::RunSelector::Timestamp)),
+            other => Err(message(format!(
+                "Unsupported artifact run selector '{other}'. Use latest or timestamp."
+            ))),
+        };
+    }
+    if default_latest {
+        return Ok(Some(crate::artifact_workspace::RunSelector::Latest));
+    }
+    Ok(None)
+}
+
+fn artifact_scope_root_for_profile(profile: Option<&str>) -> Result<(PathBuf, String)> {
+    let config_path = crate::profile_config::resolve_profile_config_path();
+    let config = if config_path.is_file() {
+        Some(crate::profile_config::load_profile_config_file(
+            &config_path,
+        )?)
+    } else {
+        None
+    };
+    let artifact_root =
+        crate::profile_config::resolve_artifact_root_path(config.as_ref(), &config_path);
+    let profile_name = crate::artifact_workspace::profile_scope_name(profile).to_string();
+    Ok((
+        crate::artifact_workspace::profile_scope_path(&artifact_root, profile),
+        profile_name,
+    ))
+}
+
+fn resolve_dashboard_artifact_run(
+    profile: Option<&str>,
+    selector: &crate::artifact_workspace::RunSelector,
+) -> Result<ArtifactRunResolution> {
+    let (scope_root, profile_name) = artifact_scope_root_for_profile(profile)?;
+    let run_id = crate::artifact_workspace::resolve_run_id(&scope_root, selector)?;
+    let run_root = crate::artifact_workspace::run_root_path(&scope_root, &run_id);
+    Ok(ArtifactRunResolution {
+        scope_root,
+        profile: profile_name,
+        run_id,
+        run_root,
+    })
+}
+
+fn dashboard_artifact_lane_path(run_root: &Path) -> PathBuf {
+    crate::artifact_workspace::lane_root_path(
+        run_root,
+        crate::artifact_workspace::ArtifactLane::Dashboards,
+    )
+}
+
+fn prepare_dashboard_export_artifact_run(
+    args: &mut super::ExportArgs,
+) -> Result<Option<ArtifactRunResolution>> {
+    let Some(selector) =
+        artifact_selector_from_flags(args.run.as_deref(), args.run_id.as_deref(), false)?
+    else {
+        return Ok(None);
+    };
+    let resolved = resolve_dashboard_artifact_run(args.common.profile.as_deref(), &selector)?;
+    if args.output_dir.as_path() == Path::new(super::DEFAULT_EXPORT_DIR) {
+        args.output_dir = dashboard_artifact_lane_path(&resolved.run_root);
+    }
+    Ok(Some(resolved))
+}
+
+fn record_dashboard_latest_run(resolved: &ArtifactRunResolution) -> Result<()> {
+    crate::artifact_workspace::record_latest_run(
+        &resolved.scope_root,
+        &resolved.profile,
+        &resolved.run_id,
+    )?;
+    Ok(())
+}
+
+fn resolve_dashboard_local_artifact_input(
+    profile: Option<&str>,
+    run: Option<&str>,
+    run_id: Option<&str>,
+    local: bool,
+) -> Result<Option<PathBuf>> {
+    let Some(selector) = artifact_selector_from_flags(run, run_id, local)? else {
+        return Ok(None);
+    };
+    let resolved = resolve_dashboard_artifact_run(profile, &selector)?;
+    Ok(Some(dashboard_artifact_lane_path(&resolved.run_root)))
+}
+
+fn materialize_dashboard_artifact_args(args: &mut DashboardCliArgs) -> Result<()> {
+    match &mut args.command {
+        DashboardCommand::Browse(inner)
+            if inner.input_dir.is_none() && inner.workspace.is_none() =>
+        {
+            if let Some(input_dir) = resolve_dashboard_local_artifact_input(
+                inner.common.profile.as_deref(),
+                inner.run.as_deref(),
+                inner.run_id.as_deref(),
+                inner.local,
+            )? {
+                inner.input_dir = Some(input_dir);
+            }
+        }
+        DashboardCommand::Summary(inner) if inner.input_dir.is_none() => {
+            if let Some(input_dir) = resolve_dashboard_local_artifact_input(
+                inner.common.profile.as_deref(),
+                inner.run.as_deref(),
+                inner.run_id.as_deref(),
+                inner.local,
+            )? {
+                inner.input_dir = Some(input_dir);
+            }
+        }
+        _ => {}
+    }
+    Ok(())
+}
 
 fn print_supported_dashboard_report_columns() {
     print_supported_columns(SUPPORTED_REPORT_COLUMN_IDS);
@@ -230,7 +370,12 @@ pub fn run_dashboard_cli_with_client(
             Ok(())
         }
         DashboardCommand::Export(export_args) => {
+            let mut export_args = export_args;
+            let artifact_run = prepare_dashboard_export_artifact_run(&mut export_args)?;
             let _ = export::export_dashboards_with_client(client, &export_args)?;
+            if let Some(resolved) = artifact_run {
+                record_dashboard_latest_run(&resolved)?;
+            }
             Ok(())
         }
         DashboardCommand::Get(get_args) => {
@@ -343,6 +488,7 @@ pub fn run_dashboard_cli_with_client(
 pub fn run_dashboard_cli(args: DashboardCliArgs) -> Result<()> {
     set_json_color_choice(args.color);
     let mut args = super::normalize_dashboard_cli_args(args);
+    materialize_dashboard_artifact_args(&mut args)?;
     match &args.command {
         DashboardCommand::List(list_args) if list_args.list_columns => {
             print_supported_columns(DASHBOARD_LIST_OUTPUT_COLUMNS);
@@ -369,6 +515,7 @@ pub fn run_dashboard_cli(args: DashboardCliArgs) -> Result<()> {
             Ok(())
         }
         DashboardCommand::Export(export_args) => {
+            let mut export_args = export_args;
             if export_args.without_dashboard_raw
                 && export_args.without_dashboard_prompt
                 && export_args.without_dashboard_provisioning
@@ -377,7 +524,11 @@ pub fn run_dashboard_cli(args: DashboardCliArgs) -> Result<()> {
                     "At least one export variant must stay enabled. Remove --without-raw, --without-prompt, or --without-provisioning.",
                 ));
             }
+            let artifact_run = prepare_dashboard_export_artifact_run(&mut export_args)?;
             let _ = export::export_dashboards_with_org_clients(&export_args)?;
+            if let Some(resolved) = artifact_run {
+                record_dashboard_latest_run(&resolved)?;
+            }
             Ok(())
         }
         DashboardCommand::Get(get_args) => {

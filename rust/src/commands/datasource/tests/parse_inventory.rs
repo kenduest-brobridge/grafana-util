@@ -17,7 +17,7 @@ fn parse_datasource_import_preserves_requested_path() {
 
     match args.command {
         crate::datasource::DatasourceGroupCommand::Import(inner) => {
-            assert_eq!(inner.input_dir, Path::new("./datasources"));
+            assert_eq!(inner.input_dir.as_deref(), Some(Path::new("./datasources")));
             assert_eq!(inner.input_format, DatasourceImportInputFormat::Inventory);
             assert_eq!(inner.org_id, Some(7));
             assert!(inner.dry_run);
@@ -88,7 +88,10 @@ fn parse_datasource_import_supports_provisioning_input_format() {
                 inner.input_format,
                 DatasourceImportInputFormat::Provisioning
             );
-            assert_eq!(inner.input_dir, Path::new("./datasources/provisioning"));
+            assert_eq!(
+                inner.input_dir.as_deref(),
+                Some(Path::new("./datasources/provisioning"))
+            );
             assert!(inner.dry_run);
         }
         _ => panic!("expected datasource import"),
@@ -191,7 +194,10 @@ fn parse_datasource_export_supports_org_scope_flags() {
 
     match args.command {
         crate::datasource::DatasourceGroupCommand::Export(inner) => {
-            assert_eq!(inner.output_dir, Path::new("./datasources"));
+            assert_eq!(
+                inner.output_dir.as_deref(),
+                Some(Path::new("./datasources"))
+            );
             assert_eq!(inner.org_id, Some(7));
             assert!(!inner.all_orgs);
         }

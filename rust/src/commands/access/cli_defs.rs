@@ -70,6 +70,13 @@ fn parse_team_list_output_column(value: &str) -> std::result::Result<String, Str
     }
 }
 
+/// Artifact workspace run selector for access commands.
+#[derive(Debug, Clone, Copy, ValueEnum)]
+pub enum AccessArtifactRunMode {
+    Latest,
+    Timestamp,
+}
+
 fn parse_access_plan_output_column(value: &str) -> std::result::Result<String, String> {
     match value {
         "all" => Ok("all".to_string()),
@@ -100,6 +107,26 @@ pub struct TeamListArgs {
         help = "List teams from a local export bundle directory instead of live Grafana."
     )]
     pub input_dir: Option<PathBuf>,
+    #[arg(
+        long,
+        default_value_t = false,
+        conflicts_with = "input_dir",
+        help = "List teams from the artifact workspace instead of live Grafana."
+    )]
+    pub local: bool,
+    #[arg(
+        long,
+        value_enum,
+        requires = "local",
+        help = "With --local, select the artifact run to read from. Defaults to latest."
+    )]
+    pub run: Option<AccessArtifactRunMode>,
+    #[arg(
+        long = "run-id",
+        requires = "local",
+        help = "With --local, read from this explicit artifact run id."
+    )]
+    pub run_id: Option<String>,
     #[arg(long, help = "Filter teams by a free-text search.")]
     pub query: Option<String>,
     #[arg(long, help = "Filter teams by exact team name.")]
@@ -158,6 +185,26 @@ pub struct TeamBrowseArgs {
         help = "Browse teams from a local export bundle directory instead of live Grafana."
     )]
     pub input_dir: Option<PathBuf>,
+    #[arg(
+        long,
+        default_value_t = false,
+        conflicts_with = "input_dir",
+        help = "Browse teams from the artifact workspace instead of live Grafana."
+    )]
+    pub local: bool,
+    #[arg(
+        long,
+        value_enum,
+        requires = "local",
+        help = "With --local, select the artifact run to read from. Defaults to latest."
+    )]
+    pub run: Option<AccessArtifactRunMode>,
+    #[arg(
+        long = "run-id",
+        requires = "local",
+        help = "With --local, read from this explicit artifact run id."
+    )]
+    pub run_id: Option<String>,
     #[arg(long, help = "Filter teams by a free-text search.")]
     pub query: Option<String>,
     #[arg(long, help = "Filter teams by exact team name.")]
@@ -216,6 +263,17 @@ pub struct TeamExportArgs {
         help = "Directory to write teams.json and export-metadata.json."
     )]
     pub output_dir: PathBuf,
+    #[arg(
+        long,
+        value_enum,
+        help = "Write into an artifact workspace run instead of the default output directory."
+    )]
+    pub run: Option<AccessArtifactRunMode>,
+    #[arg(
+        long = "run-id",
+        help = "Write into this explicit artifact run id instead of --run."
+    )]
+    pub run_id: Option<String>,
     #[arg(
         long,
         default_value_t = false,
@@ -356,6 +414,26 @@ pub struct OrgListArgs {
         help = "List organizations from a local export bundle directory instead of live Grafana."
     )]
     pub input_dir: Option<PathBuf>,
+    #[arg(
+        long,
+        default_value_t = false,
+        conflicts_with = "input_dir",
+        help = "List organizations from the artifact workspace instead of live Grafana."
+    )]
+    pub local: bool,
+    #[arg(
+        long,
+        value_enum,
+        requires = "local",
+        help = "With --local, select the artifact run to read from. Defaults to latest."
+    )]
+    pub run: Option<AccessArtifactRunMode>,
+    #[arg(
+        long = "run-id",
+        requires = "local",
+        help = "With --local, read from this explicit artifact run id."
+    )]
+    pub run_id: Option<String>,
     #[arg(long = "org-id", help = "Filter to one exact organization id.")]
     pub org_id: Option<i64>,
     #[arg(long, help = "Filter organizations by exact name.")]
@@ -479,6 +557,17 @@ pub struct OrgExportArgs {
     pub output_dir: PathBuf,
     #[arg(
         long,
+        value_enum,
+        help = "Write into an artifact workspace run instead of the default output directory."
+    )]
+    pub run: Option<AccessArtifactRunMode>,
+    #[arg(
+        long = "run-id",
+        help = "Write into this explicit artifact run id instead of --run."
+    )]
+    pub run_id: Option<String>,
+    #[arg(
+        long,
         default_value_t = false,
         help = "Overwrite existing export files instead of failing."
     )]
@@ -560,9 +649,30 @@ pub struct AccessPlanArgs {
     pub common: CommonCliArgs,
     #[arg(
         long = "input-dir",
+        required_unless_present = "local",
         help = "Directory that contains one or more access export bundles to review."
     )]
-    pub input_dir: PathBuf,
+    pub input_dir: Option<PathBuf>,
+    #[arg(
+        long,
+        default_value_t = false,
+        conflicts_with = "input_dir",
+        help = "Read the selected access bundle from the artifact workspace instead of --input-dir."
+    )]
+    pub local: bool,
+    #[arg(
+        long,
+        value_enum,
+        requires = "local",
+        help = "With --local, select the artifact run to read from. Defaults to latest."
+    )]
+    pub run: Option<AccessArtifactRunMode>,
+    #[arg(
+        long = "run-id",
+        requires = "local",
+        help = "With --local, read from this explicit artifact run id."
+    )]
+    pub run_id: Option<String>,
     #[arg(
         long,
         value_enum,

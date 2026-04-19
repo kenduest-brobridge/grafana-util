@@ -17,6 +17,9 @@ pub(crate) fn default_team_browse_args_from_user(args: &UserBrowseArgs) -> TeamB
     TeamBrowseArgs {
         common: args.common.clone(),
         input_dir: args.input_dir.clone(),
+        local: args.local,
+        run: args.run,
+        run_id: args.run_id.clone(),
         query: None,
         name: None,
         with_members: true,
@@ -30,6 +33,9 @@ pub(crate) fn default_user_browse_args_from_team(args: &TeamBrowseArgs) -> UserB
     UserBrowseArgs {
         common: args.common.clone(),
         input_dir: args.input_dir.clone(),
+        local: args.local,
+        run: args.run,
+        run_id: args.run_id.clone(),
         scope: Scope::Global,
         all_orgs: false,
         current_org: false,

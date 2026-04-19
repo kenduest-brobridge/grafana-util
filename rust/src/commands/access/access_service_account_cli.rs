@@ -11,6 +11,7 @@ use super::access_cli_shared::{
     parse_bool_text, parse_positive_usize, CommonCliArgs, DryRunOutputFormat, ListOutputFormat,
     DEFAULT_ACCESS_SERVICE_ACCOUNT_EXPORT_DIR, DEFAULT_PAGE_SIZE,
 };
+use super::AccessArtifactRunMode;
 
 fn parse_service_account_list_output_column(value: &str) -> std::result::Result<String, String> {
     match value {
@@ -49,6 +50,26 @@ pub struct ServiceAccountListArgs {
         help = "List service accounts from a local export bundle directory instead of live Grafana."
     )]
     pub input_dir: Option<PathBuf>,
+    #[arg(
+        long,
+        default_value_t = false,
+        conflicts_with = "input_dir",
+        help = "List service accounts from the artifact workspace instead of live Grafana."
+    )]
+    pub local: bool,
+    #[arg(
+        long,
+        value_enum,
+        requires = "local",
+        help = "With --local, select the artifact run to read from. Defaults to latest."
+    )]
+    pub run: Option<AccessArtifactRunMode>,
+    #[arg(
+        long = "run-id",
+        requires = "local",
+        help = "With --local, read from this explicit artifact run id."
+    )]
+    pub run_id: Option<String>,
     #[arg(long, help = "Filter service accounts by a free-text search.")]
     pub query: Option<String>,
     #[arg(
@@ -124,6 +145,17 @@ pub struct ServiceAccountExportArgs {
         help = "Directory to write service-accounts.json and export-metadata.json."
     )]
     pub output_dir: PathBuf,
+    #[arg(
+        long,
+        value_enum,
+        help = "Write into an artifact workspace run instead of the default output directory."
+    )]
+    pub run: Option<AccessArtifactRunMode>,
+    #[arg(
+        long = "run-id",
+        help = "Write into this explicit artifact run id instead of --run."
+    )]
+    pub run_id: Option<String>,
     #[arg(
         long,
         default_value_t = false,

@@ -1,6 +1,6 @@
 //! CLI definitions for Core command surface and option compatibility behavior.
 
-use clap::{ArgAction, Args, CommandFactory, Parser, Subcommand};
+use clap::{ArgAction, Args, CommandFactory, Parser, Subcommand, ValueEnum};
 use std::path::PathBuf;
 
 #[cfg(test)]
@@ -9,7 +9,12 @@ use crate::common::{CliColorChoice, DiffOutputFormat};
 use crate::dashboard::{CommonCliArgs, SimpleOutputFormat};
 use crate::datasource_catalog::DatasourcePresetProfile;
 
-const DEFAULT_EXPORT_DIR: &str = "datasources";
+/// Artifact workspace run selector for commands that integrate with artifact workspace lanes.
+#[derive(Debug, Clone, Copy, ValueEnum)]
+pub enum ArtifactRunMode {
+    Latest,
+    Timestamp,
+}
 
 #[path = "formats.rs"]
 mod datasource_formats;
@@ -48,6 +53,29 @@ pub struct DatasourceListArgs {
         help_heading = "Input Options"
     )]
     pub input_dir: Option<PathBuf>,
+    #[arg(
+        long,
+        default_value_t = false,
+        conflicts_with = "input_dir",
+        help = "Read datasource inventory from the artifact workspace instead of live Grafana. When set (and --input-dir is omitted), the datasource lane is resolved from the selected profile and --run/--run-id.",
+        help_heading = "Input Options"
+    )]
+    pub local: bool,
+    #[arg(
+        long,
+        value_enum,
+        requires = "local",
+        help = "With --local and no --input-dir, select which artifact run to read from. Defaults to latest.",
+        help_heading = "Input Options"
+    )]
+    pub run: Option<ArtifactRunMode>,
+    #[arg(
+        long = "run-id",
+        requires = "local",
+        help = "With --local and no --input-dir, read from this explicit artifact run id (overrides --run).",
+        help_heading = "Input Options"
+    )]
+    pub run_id: Option<String>,
     #[arg(
         long,
         value_enum,
@@ -143,10 +171,24 @@ pub struct DatasourceExportArgs {
     pub common: CommonCliArgs,
     #[arg(
         long = "output-dir",
-        default_value = DEFAULT_EXPORT_DIR,
         help = "Directory to write exported datasource inventory into. Export writes datasources.json plus index/manifest files at that root, and writes provisioning/datasources.yaml by default."
     )]
-    pub output_dir: PathBuf,
+    pub output_dir: Option<PathBuf>,
+    #[arg(
+        long,
+        value_enum,
+        conflicts_with = "output_dir",
+        help = "When writing to the artifact workspace (no --output-dir), select which run id to write into: timestamp (new run id) or latest (existing recorded run). Defaults to timestamp.",
+        help_heading = "Artifact Options"
+    )]
+    pub run: Option<ArtifactRunMode>,
+    #[arg(
+        long = "run-id",
+        conflicts_with = "output_dir",
+        help = "When writing to the artifact workspace (no --output-dir), write into this explicit run id instead of --run.",
+        help_heading = "Artifact Options"
+    )]
+    pub run_id: Option<String>,
     #[arg(
         long,
         conflicts_with = "all_orgs",
@@ -186,10 +228,34 @@ pub struct DatasourceImportArgs {
     pub common: CommonCliArgs,
     #[arg(
         long = "input-dir",
+        required_unless_present = "local",
+        conflicts_with = "local",
         help = "Import datasource inventory from this path. For inventory input, point this at the datasource export root that contains datasources.json and export-metadata.json. For provisioning input, point this at the export root, provisioning directory, or concrete datasources.yaml file.",
         help_heading = "Input Options"
     )]
-    pub input_dir: PathBuf,
+    pub input_dir: Option<PathBuf>,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Import datasource inventory from the artifact workspace datasource lane instead of --input-dir.",
+        help_heading = "Input Options"
+    )]
+    pub local: bool,
+    #[arg(
+        long,
+        value_enum,
+        requires = "local",
+        help = "With --local and no --input-dir, select which artifact run to read from. Defaults to latest.",
+        help_heading = "Input Options"
+    )]
+    pub run: Option<ArtifactRunMode>,
+    #[arg(
+        long = "run-id",
+        requires = "local",
+        help = "With --local and no --input-dir, import from this explicit artifact run id (overrides --run).",
+        help_heading = "Input Options"
+    )]
+    pub run_id: Option<String>,
     #[arg(
         long,
         value_enum,
@@ -322,10 +388,34 @@ pub struct DatasourceDiffArgs {
     pub common: CommonCliArgs,
     #[arg(
         long,
+        required_unless_present = "local",
+        conflicts_with = "local",
         help = "Compare datasource inventory from this directory against live Grafana and print an operator-summary diff report. For provisioning input, point this at the export root, provisioning directory, or concrete datasources.yaml file.",
         help_heading = "Input Options"
     )]
-    pub diff_dir: PathBuf,
+    pub diff_dir: Option<PathBuf>,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Diff datasource inventory from the artifact workspace datasource lane instead of --diff-dir.",
+        help_heading = "Input Options"
+    )]
+    pub local: bool,
+    #[arg(
+        long,
+        value_enum,
+        requires = "local",
+        help = "With --local and no --diff-dir, select which artifact run to read from. Defaults to latest.",
+        help_heading = "Input Options"
+    )]
+    pub run: Option<ArtifactRunMode>,
+    #[arg(
+        long = "run-id",
+        requires = "local",
+        help = "With --local and no --diff-dir, diff from this explicit artifact run id (overrides --run).",
+        help_heading = "Input Options"
+    )]
+    pub run_id: Option<String>,
     #[arg(
         long,
         value_enum,
@@ -349,10 +439,34 @@ pub struct DatasourcePlanArgs {
     pub common: CommonCliArgs,
     #[arg(
         long = "input-dir",
+        required_unless_present = "local",
+        conflicts_with = "local",
         help = "Local datasource bundle to plan against live Grafana. For provisioning input, point this at the export root, provisioning directory, or concrete datasources.yaml file.",
         help_heading = "Input Options"
     )]
-    pub input_dir: PathBuf,
+    pub input_dir: Option<PathBuf>,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Plan against datasource inventory from the artifact workspace datasource lane instead of --input-dir.",
+        help_heading = "Input Options"
+    )]
+    pub local: bool,
+    #[arg(
+        long,
+        value_enum,
+        requires = "local",
+        help = "With --local and no --input-dir, select which artifact run to read from. Defaults to latest.",
+        help_heading = "Input Options"
+    )]
+    pub run: Option<ArtifactRunMode>,
+    #[arg(
+        long = "run-id",
+        requires = "local",
+        help = "With --local and no --input-dir, plan from this explicit artifact run id (overrides --run).",
+        help_heading = "Input Options"
+    )]
+    pub run_id: Option<String>,
     #[arg(
         long,
         value_enum,
