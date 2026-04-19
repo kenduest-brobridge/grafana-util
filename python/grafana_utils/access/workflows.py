@@ -1597,6 +1597,73 @@ def import_orgs_with_client(args, client):
     return 0
 
 
+def diff_orgs_with_client(args, client):
+    """Diff orgs with client implementation."""
+    bundle = _load_access_import_bundle(
+        args.diff_dir,
+        ACCESS_ORG_EXPORT_FILENAME,
+        ACCESS_EXPORT_KIND_ORGS,
+    )
+    local_records = []
+    for item in bundle.get("records") or []:
+        if not isinstance(item, dict):
+            raise GrafanaError(
+                "Access import entry in %s must be an object." % bundle["bundle_path"]
+            )
+        local_records.append(item)
+    include_users = any(bool(record.get("users")) for record in local_records)
+    local_map = _build_org_diff_map(
+        local_records,
+        bundle["bundle_path"],
+        include_users=include_users,
+    )
+    live_records = [_normalize_org_record(item) for item in client.list_organizations()]
+    if include_users:
+        for record in live_records:
+            org_id = record.get("id") or ""
+            record["users"] = [
+                _normalize_org_user_record(member)
+                for member in client.list_organization_users(org_id)
+            ]
+            record["userCount"] = str(len(record["users"]))
+    live_map = _build_org_diff_map(
+        live_records,
+        "Grafana live organizations",
+        include_users=include_users,
+    )
+
+    differences = 0
+    checked = 0
+
+    for key in sorted(local_map.keys()):
+        checked += 1
+        local_identity = local_map[key]["identity"]
+        local_payload = local_map[key]["payload"]
+        if key not in live_map:
+            print("Diff missing-live org %s" % local_identity)
+            differences += 1
+            continue
+        changed = _record_diff_fields(local_payload, live_map[key]["payload"])
+        if changed:
+            differences += 1
+            print("Diff different org %s fields=%s" % (local_identity, ",".join(changed)))
+        else:
+            print("Diff same org %s" % local_identity)
+
+    for key in sorted(live_map.keys()):
+        if key in local_map:
+            continue
+        checked += 1
+        differences += 1
+        print("Diff extra-live org %s" % live_map[key]["identity"])
+
+    if differences:
+        print("Diff checked %s org(s); %s difference(s) found." % (checked, differences))
+    else:
+        print("No org differences across %s org(s)." % checked)
+    return differences
+
+
 def import_users_with_client(args, client):
     """Import users with client implementation."""
     # Call graph: see callers/callees.
@@ -2450,6 +2517,32 @@ def format_deleted_service_account_token_summary_line(token):
 
 def list_users_with_client(args, client):
     """List users with client implementation."""
+    input_dir = _resolve_access_local_input_dir(args, "access/users")
+    if input_dir:
+        bundle = _build_user_import_records(input_dir)
+        users = [_normalize_user_record(record) for record in bundle["records"]]
+        for user in users:
+            user["scope"] = str(getattr(args, "scope", "") or "org")
+        users = [user for user in users if user_matches_filters(user, args)]
+        users.sort(
+            key=lambda item: (str(item.get("login") or ""), str(item.get("email") or ""))
+        )
+        users = paginate_users(users, args.page, args.per_page)
+        if args.csv:
+            render_user_csv(users)
+            return 0
+        if args.json:
+            print(render_user_json(users))
+            return 0
+        if args.table:
+            for line in render_user_table(users):
+                print(line)
+        else:
+            for user in users:
+                print(format_user_summary_line(user))
+        print("")
+        print("Listed %s user(s) from %s" % (len(users), input_dir))
+        return 0
     if getattr(args, "all_orgs", False):
         args.scope = "global"
     if getattr(args, "current_org", False):
@@ -2541,6 +2634,36 @@ def browse_users_with_client(args, client):
 
 def list_service_accounts_with_client(args, client):
     """List service accounts with client implementation."""
+    input_dir = _resolve_access_local_input_dir(args, "access/service-accounts")
+    if input_dir:
+        bundle = _build_service_account_import_records(input_dir)
+        rows = [
+            _normalize_service_account_record(item)
+            for item in bundle["records"]
+        ]
+        if args.query:
+            rows = [
+                row for row in rows if service_account_matches_query(row, args.query)
+            ]
+        rows.sort(
+            key=lambda item: (str(item.get("name") or ""), str(item.get("login") or ""))
+        )
+        rows = paginate_users(rows, args.page, args.per_page)
+        if args.csv:
+            render_service_account_csv(rows)
+            return 0
+        if args.json:
+            print(render_service_account_json(rows))
+            return 0
+        if args.table:
+            for line in render_service_account_table(rows):
+                print(line)
+        else:
+            for row in rows:
+                print(format_service_account_summary_line(row))
+        print("")
+        print("Listed %s service account(s) from %s" % (len(rows), input_dir))
+        return 0
     items = client.list_service_accounts(
         query=args.query,
         page=args.page,
@@ -2571,6 +2694,30 @@ def list_service_accounts_with_client(args, client):
 
 def list_teams_with_client(args, client):
     """List teams with client implementation."""
+    input_dir = _resolve_access_local_input_dir(args, "access/teams")
+    if input_dir:
+        bundle = _build_team_import_records(input_dir)
+        teams = [_normalize_team_record(record) for record in bundle["records"]]
+        teams = [team for team in teams if team_matches_filters(team, args)]
+        teams.sort(
+            key=lambda item: (str(item.get("name") or ""), str(item.get("email") or ""))
+        )
+        teams = paginate_teams(teams, args.page, args.per_page)
+        if args.csv:
+            render_team_csv(teams)
+            return 0
+        if args.json:
+            print(render_team_json(teams))
+            return 0
+        if args.table:
+            for line in render_team_table(teams):
+                print(line)
+        else:
+            for team in teams:
+                print(format_team_summary_line(team))
+        print("")
+        print("Listed %s team(s) from %s" % (len(teams), input_dir))
+        return 0
     teams = build_team_rows(client, args)
     if args.csv:
         render_team_csv(teams)
@@ -2720,6 +2867,30 @@ def _format_org_summary_line(row):
 
 def list_orgs_with_client(args, client):
     """List orgs with client implementation."""
+    input_dir = _resolve_access_local_input_dir(args, "access/orgs")
+    if input_dir:
+        bundle = _build_org_import_records(input_dir)
+        rows = [
+            _normalize_org_record(item)
+            for item in bundle["records"]
+            if isinstance(item, dict)
+        ]
+        rows.sort(key=lambda item: (item.get("name") or "", item.get("id") or ""))
+        if args.csv:
+            _render_org_csv(rows)
+            return 0
+        if args.json:
+            print(_render_org_json(rows))
+            return 0
+        if args.table:
+            for line in _render_org_table(rows):
+                print(line)
+        else:
+            for row in rows:
+                print(_format_org_summary_line(row))
+        print("")
+        print("Listed %s org(s) from %s" % (len(rows), input_dir))
+        return 0
     # Call graph: see callers/callees.
     #   Upstream callers: 3059
     #   Downstream callees: 2364, 2392, 2422, 2444, 2449
