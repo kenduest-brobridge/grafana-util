@@ -1,8 +1,9 @@
 use super::*;
 use crate::common::CliColorChoice;
-use crate::dashboard::{BrowseArgs, CommonCliArgs};
+use crate::dashboard::{BrowseArgs, CommonCliArgs, DashboardImportInputFormat};
 use serde_json::json;
 use std::fs;
+use std::path::PathBuf;
 use tempfile::tempdir;
 
 fn make_browse_args(input_dir: std::path::PathBuf) -> BrowseArgs {

@@ -56,6 +56,16 @@ mod datasource_mutation_support;
 mod datasource_plan;
 #[path = "runtime.rs"]
 mod datasource_runtime;
+#[path = "runtime_artifacts.rs"]
+mod datasource_runtime_artifacts;
+#[path = "runtime_guardrails.rs"]
+mod datasource_runtime_guardrails;
+#[path = "runtime_list.rs"]
+mod datasource_runtime_list;
+#[path = "runtime_mutation.rs"]
+mod datasource_runtime_mutation;
+#[path = "runtime_sync.rs"]
+mod datasource_runtime_sync;
 
 pub(crate) use datasource_cli_defs::{normalize_datasource_group_command, root_command};
 pub use datasource_cli_defs::{

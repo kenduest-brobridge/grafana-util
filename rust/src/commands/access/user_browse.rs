@@ -20,6 +20,9 @@ use super::browse_terminal::TerminalSession;
 #[path = "user_browse_dialog.rs"]
 mod user_browse_dialog;
 #[cfg(feature = "tui")]
+#[path = "user_browse_dispatch.rs"]
+mod user_browse_dispatch;
+#[cfg(feature = "tui")]
 #[path = "user_browse_input.rs"]
 mod user_browse_input;
 #[cfg(feature = "tui")]

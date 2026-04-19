@@ -1,4 +1,5 @@
 use crate::project_status::{ProjectDomainStatus, PROJECT_STATUS_PARTIAL, PROJECT_STATUS_READY};
+use crate::project_status_model::StatusReading;
 
 use super::{
     LiveReviewSignalGroup, LiveScopeReading, ACCESS_DOMAIN_ID, ACCESS_MODE,
@@ -92,23 +93,24 @@ pub(super) fn build_access_live_domain_status_from_readings(
         (PROJECT_STATUS_READY, ACCESS_REASON_READY)
     };
 
-    Some(ProjectDomainStatus {
+    Some(
+        StatusReading {
         id: ACCESS_DOMAIN_ID.to_string(),
         scope: ACCESS_SCOPE.to_string(),
         mode: ACCESS_MODE.to_string(),
         status: status.to_string(),
         reason_code: reason_code.to_string(),
         primary_count: total_count,
-        blocker_count: 0,
-        warning_count: warnings.iter().map(|item| item.count).sum(),
         source_kinds,
         signal_keys: ACCESS_SIGNAL_KEYS
             .iter()
             .map(|item| (*item).to_string())
             .collect(),
         blockers: Vec::new(),
-        warnings,
+        warnings: warnings.into_iter().map(Into::into).collect(),
         next_actions: build_next_actions(readings, total_count),
         freshness: Default::default(),
-    })
+        }
+        .into_project_domain_status(),
+    )
 }

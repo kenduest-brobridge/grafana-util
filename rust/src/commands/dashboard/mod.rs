@@ -16,6 +16,7 @@ mod browse_edit_dialog;
 mod browse_external_edit_dialog;
 mod browse_history_dialog;
 mod browse_input;
+mod browse_load;
 mod browse_live_detail;
 mod browse_render;
 mod browse_state;

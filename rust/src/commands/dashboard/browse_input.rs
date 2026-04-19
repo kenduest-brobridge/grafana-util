@@ -11,6 +11,8 @@ mod browse_input_delete;
 mod browse_input_edit;
 #[path = "browse_input_external_edit.rs"]
 mod browse_input_external_edit;
+#[path = "browse_external_edit_workflow.rs"]
+mod browse_external_edit_workflow;
 #[path = "browse_input_history.rs"]
 mod browse_input_history;
 #[path = "browse_input_refresh.rs"]
@@ -378,7 +380,7 @@ mod tests {
 
     #[test]
     fn external_edit_preview_lines_hide_staging_path_noise() {
-        let lines = super::browse_input_external_edit::render_external_edit_preview_lines(
+        let lines = super::browse_external_edit_workflow::render_external_edit_preview_lines(
             "create-or-update",
             &[[
                 "two-prom-query-smoke".to_string(),
