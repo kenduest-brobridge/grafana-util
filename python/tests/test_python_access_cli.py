@@ -472,6 +472,26 @@ class AccessCliTests(unittest.TestCase):
         self.assertTrue(service_account_args.table)
         self.assertFalse(service_account_args.csv)
 
+    def test_access_parse_args_supports_plan_mode(self):
+        args = access_utils.parse_args(
+            [
+                "plan",
+                "--input-dir",
+                "./access-users",
+                "--resource",
+                "user",
+                "--prune",
+                "--output-format",
+                "json",
+            ]
+        )
+
+        self.assertEqual(args.resource, "plan")
+        self.assertEqual(args.input_dir, "./access-users")
+        self.assertEqual(args.plan_resource, "user")
+        self.assertTrue(args.prune)
+        self.assertEqual(args.output_format, "json")
+
     def test_access_parse_args_rejects_access_output_format_with_legacy_flags(self):
         with self.assertRaises(SystemExit):
             access_utils.parse_args(
@@ -2398,6 +2418,72 @@ class AccessCliTests(unittest.TestCase):
 
             self.assertEqual(result, 4)
             self.assertIn("Diff checked", output.getvalue())
+
+    def test_access_plan_users_with_client_outputs_review_actions(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_dir = Path(temp_dir)
+            (input_dir / "users.json").write_text(
+                json.dumps(
+                    [
+                        {
+                            "login": "alice",
+                            "email": "alice@example.com",
+                            "name": "Alice",
+                            "orgRole": "Admin",
+                            "grafanaAdmin": True,
+                        },
+                        {
+                            "login": "bob",
+                            "email": "bob@example.com",
+                            "name": "Bob",
+                            "orgRole": "Viewer",
+                            "grafanaAdmin": False,
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            args = access_utils.parse_args(
+                [
+                    "plan",
+                    "--input-dir",
+                    str(input_dir),
+                    "--resource",
+                    "user",
+                    "--prune",
+                    "--output-format",
+                    "json",
+                ]
+            )
+            client = FakeAccessClient(
+                org_users=[
+                    {
+                        "userId": "11",
+                        "login": "alice",
+                        "email": "alice@example.com",
+                        "name": "Alice",
+                        "role": "Editor",
+                    },
+                    {
+                        "userId": "12",
+                        "login": "carol",
+                        "email": "carol@example.com",
+                        "name": "Carol",
+                        "role": "Viewer",
+                    },
+                ],
+            )
+            output = io.StringIO()
+            with redirect_stdout(output):
+                result = access_utils.plan_access_with_client(args, client)
+
+        self.assertEqual(result, 0)
+        payload = json.loads(output.getvalue())
+        self.assertEqual(payload["kind"], "grafana-utils-access-plan")
+        actions = {item["identity"]: item["action"] for item in payload["actions"]}
+        self.assertEqual(actions["alice"], "update")
+        self.assertEqual(actions["bob"], "create")
+        self.assertEqual(actions["carol"], "delete")
 
     def test_access_diff_teams_with_client_returns_expected_difference_count(self):
         with tempfile.TemporaryDirectory() as temp_dir:

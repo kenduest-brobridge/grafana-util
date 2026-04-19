@@ -551,16 +551,24 @@ def diff_users_with_client(args, client):
     #   Upstream callers: 3059
     #   Downstream callees: 328, 392, 429, 439, 896
 
+    diff_dir = _resolve_access_artifact_dir(
+        args,
+        "access/users",
+        "diff_dir",
+        "--diff-dir",
+    )
+    if diff_dir is None:
+        raise GrafanaError("User diff requires --diff-dir or --local.")
     local_records = [
         _normalize_user_record(item)
         for item in _load_access_import_bundle(
-            args.diff_dir,
+            diff_dir,
             ACCESS_USER_EXPORT_FILENAME,
             ACCESS_EXPORT_KIND_USERS,
         )["records"]
     ]
     include_teams = any(bool(record.get("teams")) for record in local_records)
-    local_map = _build_user_diff_map(local_records, args.diff_dir)
+    local_map = _build_user_diff_map(local_records, diff_dir)
 
     live_map = _build_user_diff_map(
         _build_user_export_for_diff_records(
@@ -613,10 +621,18 @@ def diff_teams_with_client(args, client):
     #   Upstream callers: 3059
     #   Downstream callees: 341, 373, 410, 429, 466, 818, 896
 
+    diff_dir = _resolve_access_artifact_dir(
+        args,
+        "access/teams",
+        "diff_dir",
+        "--diff-dir",
+    )
+    if diff_dir is None:
+        raise GrafanaError("Team diff requires --diff-dir or --local.")
     local_records = [
         _normalize_team_record(item)
         for item in _load_access_import_bundle(
-            args.diff_dir,
+            diff_dir,
             ACCESS_TEAM_EXPORT_FILENAME,
             ACCESS_EXPORT_KIND_TEAMS,
         )["records"]
@@ -628,7 +644,7 @@ def diff_teams_with_client(args, client):
         local_records = [_normalize_team_for_diff(item, True) for item in local_records]
     local_map = _build_team_diff_map(
         local_records,
-        args.diff_dir,
+        diff_dir,
         include_members=include_members,
     )
     live_records = _build_team_export_for_diff_records(client, include_members)
@@ -778,8 +794,16 @@ def diff_service_accounts_with_client(args, client):
     #   Upstream callers: 3059
     #   Downstream callees: 429, 624, 643, 673, 896
 
+    diff_dir = _resolve_access_artifact_dir(
+        args,
+        "access/service-accounts",
+        "diff_dir",
+        "--diff-dir",
+    )
+    if diff_dir is None:
+        raise GrafanaError("Service-account diff requires --diff-dir or --local.")
     bundle = _load_access_import_bundle(
-        args.diff_dir,
+        diff_dir,
         ACCESS_SERVICE_ACCOUNT_EXPORT_FILENAME,
         ACCESS_EXPORT_KIND_SERVICE_ACCOUNTS,
     )
@@ -1477,7 +1501,15 @@ def import_orgs_with_client(args, client):
     #   Upstream callers: 3059
     #   Downstream callees: 1149, 1329, 202, 818
 
-    bundle = _build_org_import_records(args.import_dir)
+    import_dir = _resolve_access_artifact_dir(
+        args,
+        "access/orgs",
+        "import_dir",
+        "--import-dir",
+    )
+    if import_dir is None:
+        raise GrafanaError("Org import requires --import-dir or --local.")
+    bundle = _build_org_import_records(import_dir)
     raw_records = bundle.get("records") or []
     records = []
     for item in raw_records:
@@ -1592,15 +1624,23 @@ def import_orgs_with_client(args, client):
 
     print(
         "Import summary: processed=%s created=%s updated=%s skipped=%s source=%s"
-        % (processed, created, updated, skipped, args.import_dir)
+        % (processed, created, updated, skipped, import_dir)
     )
     return 0
 
 
 def diff_orgs_with_client(args, client):
     """Diff orgs with client implementation."""
+    diff_dir = _resolve_access_artifact_dir(
+        args,
+        "access/orgs",
+        "diff_dir",
+        "--diff-dir",
+    )
+    if diff_dir is None:
+        raise GrafanaError("Org diff requires --diff-dir or --local.")
     bundle = _load_access_import_bundle(
-        args.diff_dir,
+        diff_dir,
         ACCESS_ORG_EXPORT_FILENAME,
         ACCESS_EXPORT_KIND_ORGS,
     )
@@ -1664,13 +1704,560 @@ def diff_orgs_with_client(args, client):
     return differences
 
 
+_ACCESS_PLAN_OUTPUT_COLUMN_ALIASES = {
+    "actionId": "action_id",
+    "resourceKind": "resource_kind",
+    "changedFields": "changed_fields",
+    "blockedReason": "blocked_reason",
+    "reviewHints": "review_hints",
+    "sourcePath": "source_path",
+}
+
+
+def _normalize_access_plan_output_columns(raw_columns):
+    """Normalize access plan output columns implementation."""
+    if not raw_columns:
+        return list(ACCESS_PLAN_DEFAULT_COLUMNS)
+    if isinstance(raw_columns, (list, tuple)):
+        values = []
+        for item in raw_columns:
+            values.extend(str(item or "").split(","))
+    else:
+        values = str(raw_columns or "").split(",")
+    normalized = []
+    for value in values:
+        column = _ACCESS_PLAN_OUTPUT_COLUMN_ALIASES.get(value.strip(), value.strip())
+        if not column:
+            continue
+        if column == "all":
+            return [value for value in ACCESS_PLAN_SUPPORTED_COLUMNS if value != "all"]
+        if column not in ACCESS_PLAN_SUPPORTED_COLUMNS:
+            raise GrafanaError(
+                "Unsupported --output-columns value '%s'. Supported values: all, %s."
+                % (column, ", ".join(value for value in ACCESS_PLAN_SUPPORTED_COLUMNS if value != "all"))
+            )
+        if column not in normalized:
+            normalized.append(column)
+    return normalized or list(ACCESS_PLAN_DEFAULT_COLUMNS)
+
+
+def print_access_plan_columns():
+    """Print supported access plan columns implementation."""
+    print(
+        "Supported --output-columns values: all, %s"
+        % ", ".join(value for value in ACCESS_PLAN_SUPPORTED_COLUMNS if value != "all")
+    )
+
+
+def _plan_scalar(value):
+    if isinstance(value, dict):
+        return {key: _plan_scalar(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_plan_scalar(item) for item in value]
+    if value is True:
+        return True
+    if value is False:
+        return False
+    if value is None:
+        return None
+    return value
+
+
+def _plan_render_cell(value):
+    if isinstance(value, (dict, list)):
+        return json.dumps(value, ensure_ascii=False, sort_keys=True)
+    if value is True:
+        return "true"
+    if value is False:
+        return "false"
+    if value is None:
+        return ""
+    return str(value)
+
+
+def _plan_build_table(rows, columns, no_header=False):
+    headers = [column.replace("_", " ").upper() for column in columns]
+    widths = [len(header) for header in headers]
+    rendered_rows = []
+    for row in rows:
+        rendered = [_plan_render_cell(row.get(column)) for column in columns]
+        rendered_rows.append(rendered)
+        for index, value in enumerate(rendered):
+            widths[index] = max(widths[index], len(value))
+
+    def _format(items):
+        return "  ".join(items[index].ljust(widths[index]) for index in range(len(items)))
+
+    lines = []
+    if not no_header:
+        lines.append(_format(headers))
+        lines.append(_format(["-" * width for width in widths]))
+    for row in rendered_rows:
+        lines.append(_format(row))
+    return lines
+
+
+def _plan_build_row(
+    resource_kind,
+    identity,
+    action,
+    status,
+    source_path,
+    changed_fields=None,
+    changes=None,
+    target=None,
+    blocked_reason=None,
+    review_hints=None,
+):
+    return {
+        "action_id": "access:%s:%s" % (resource_kind, identity),
+        "resource_kind": resource_kind,
+        "identity": identity,
+        "action": action,
+        "status": status,
+        "changed_fields": list(changed_fields or []),
+        "changes": list(changes or []),
+        "target": target,
+        "blocked_reason": blocked_reason,
+        "review_hints": list(review_hints or []),
+        "source_path": source_path,
+    }
+
+
+def _plan_compare_maps(resource_kind, local_map, live_map, source_path, prune=False):
+    rows = []
+    summary = {
+        "resource_kind": resource_kind,
+        "source_path": source_path,
+        "bundle_present": True,
+        "source_count": len(local_map),
+        "live_count": len(live_map),
+        "checked": 0,
+        "same": 0,
+        "create": 0,
+        "update": 0,
+        "extra_remote": 0,
+        "delete": 0,
+        "blocked": 0,
+        "warning": 0,
+        "scope": None,
+        "notes": ["review-only access plan"],
+    }
+    for key in sorted(local_map.keys()):
+        summary["checked"] += 1
+        local_identity = local_map[key]["identity"]
+        local_payload = local_map[key]["payload"]
+        if key not in live_map:
+            summary["create"] += 1
+            rows.append(
+                _plan_build_row(
+                    resource_kind,
+                    local_identity,
+                    "create",
+                    "ready",
+                    source_path,
+                    changed_fields=[],
+                    changes=[],
+                    target=_plan_scalar(local_payload),
+                    review_hints=["create candidate from local bundle"],
+                )
+            )
+            continue
+        live_payload = live_map[key]["payload"]
+        changed_fields = _record_diff_fields(local_payload, live_payload)
+        if not changed_fields:
+            summary["same"] += 1
+            rows.append(
+                _plan_build_row(
+                    resource_kind,
+                    local_identity,
+                    "same",
+                    "same",
+                    source_path,
+                    target=_plan_scalar(live_payload),
+                )
+            )
+            continue
+        summary["update"] += 1
+        summary["warning"] += 1
+        rows.append(
+            _plan_build_row(
+                resource_kind,
+                local_identity,
+                "update",
+                "warning",
+                source_path,
+                changed_fields=changed_fields,
+                changes=[
+                    {
+                        "field": field,
+                        "before": _plan_scalar(local_payload.get(field)),
+                        "after": _plan_scalar(live_payload.get(field)),
+                    }
+                    for field in changed_fields
+                ],
+                target=_plan_scalar(live_payload),
+                review_hints=["review changed fields before applying"],
+            )
+        )
+
+    for key in sorted(live_map.keys()):
+        if key in local_map:
+            continue
+        summary["checked"] += 1
+        summary["extra_remote"] += 1
+        if prune:
+            summary["delete"] += 1
+            action = "delete"
+            status = "ready"
+            hints = ["prune removes live-only records"]
+        else:
+            action = "extra_remote"
+            status = "warning"
+            summary["warning"] += 1
+            hints = ["live-only record present"]
+        rows.append(
+            _plan_build_row(
+                resource_kind,
+                live_map[key]["identity"],
+                action,
+                status,
+                source_path,
+                target=_plan_scalar(live_map[key]["payload"]),
+                review_hints=hints,
+            )
+        )
+
+    return summary, rows
+
+
+def _plan_load_bundle_for_resource(args, resource_kind):
+    """Load one access bundle for plan comparison."""
+    if resource_kind == "user":
+        if getattr(args, "plan_resource", "user") == "all":
+            raise GrafanaError("Use one resource planner at a time.")
+        input_dir = _resolve_access_artifact_dir(
+            args,
+            "access/users",
+            "input_dir",
+            "--input-dir",
+        )
+        bundle = _build_user_import_records(input_dir)
+        scope = "global" if str((bundle.get("metadata") or {}).get("scope") or "").lower() == "global" else "org"
+        local_records = [
+            _normalize_user_record(item)
+            for item in bundle["records"]
+            if isinstance(item, dict)
+        ]
+        for record in local_records:
+            record["scope"] = scope
+        include_teams = any(bool(record.get("teams")) for record in local_records)
+        local_map = _build_user_diff_map(local_records, bundle["bundle_path"])
+        live_records = _build_user_export_for_diff_records(
+            args.client,
+            scope,
+            include_teams,
+        )
+        live_map = _build_user_diff_map(live_records, "Grafana live users")
+        summary, rows = _plan_compare_maps(
+            "user",
+            local_map,
+            live_map,
+            bundle["bundle_path"],
+            prune=bool(getattr(args, "prune", False)),
+        )
+        summary["scope"] = scope
+        return summary, rows
+    if resource_kind == "team":
+        input_dir = _resolve_access_artifact_dir(
+            args,
+            "access/teams",
+            "input_dir",
+            "--input-dir",
+        )
+        bundle = _build_team_import_records(input_dir)
+        local_records = [
+            _normalize_team_record(item)
+            for item in bundle["records"]
+            if isinstance(item, dict)
+        ]
+        include_members = any(
+            bool(item.get("members") or item.get("admins")) for item in local_records
+        )
+        if include_members:
+            local_records = [
+                _normalize_team_for_diff(item, True) for item in local_records
+            ]
+        local_map = _build_team_diff_map(
+            local_records,
+            bundle["bundle_path"],
+            include_members=include_members,
+        )
+        live_records = _build_team_export_for_diff_records(args.client, include_members)
+        live_map = {}
+        for item in live_records:
+            team_name = str(item.get("name") or "").strip()
+            if not team_name:
+                continue
+            key = _normalize_access_import_identity(team_name)
+            live_map[key] = {
+                "identity": team_name,
+                "payload": _normalize_team_for_diff(item, include_members),
+            }
+        return _plan_compare_maps(
+            "team",
+            local_map,
+            live_map,
+            bundle["bundle_path"],
+            prune=bool(getattr(args, "prune", False)),
+        )
+    if resource_kind == "org":
+        input_dir = _resolve_access_artifact_dir(
+            args,
+            "access/orgs",
+            "input_dir",
+            "--input-dir",
+        )
+        bundle = _build_org_import_records(input_dir)
+        local_records = [
+            item for item in bundle["records"] if isinstance(item, dict)
+        ]
+        include_users = any(bool(record.get("users")) for record in local_records)
+        local_map = _build_org_diff_map(
+            local_records,
+            bundle["bundle_path"],
+            include_users=include_users,
+        )
+        live_records = [_normalize_org_record(item) for item in args.client.list_organizations()]
+        if include_users:
+            for record in live_records:
+                org_id = record.get("id") or ""
+                record["users"] = [
+                    _normalize_org_user_record(member)
+                    for member in args.client.list_organization_users(org_id)
+                ]
+                record["userCount"] = str(len(record["users"]))
+        live_map = _build_org_diff_map(
+            live_records,
+            "Grafana live organizations",
+            include_users=include_users,
+        )
+        return _plan_compare_maps(
+            "org",
+            local_map,
+            live_map,
+            bundle["bundle_path"],
+            prune=bool(getattr(args, "prune", False)),
+        )
+    if resource_kind == "service-account":
+        input_dir = _resolve_access_artifact_dir(
+            args,
+            "access/service-accounts",
+            "input_dir",
+            "--input-dir",
+        )
+        bundle = _build_service_account_import_records(input_dir)
+        local_records = [
+            _normalize_service_account_record(item)
+            for item in bundle["records"]
+            if isinstance(item, dict)
+        ]
+        local_map = _build_service_account_diff_map(
+            local_records,
+            bundle["bundle_path"],
+        )
+        live_records = [
+            _normalize_service_account_record(item)
+            for item in _iter_service_accounts(args.client)
+        ]
+        live_map = _build_service_account_diff_map(
+            live_records,
+            "Grafana live service accounts",
+        )
+        return _plan_compare_maps(
+            "service-account",
+            local_map,
+            live_map,
+            bundle["bundle_path"],
+            prune=bool(getattr(args, "prune", False)),
+        )
+    raise GrafanaError("Unsupported access plan resource: %s" % resource_kind)
+
+
+def _plan_load_all_bundles(args):
+    """Load all access bundles for plan comparison."""
+    bundle_map = {}
+    if getattr(args, "local", False):
+        bundle_map["user"] = _resolve_access_artifact_dir(
+            args, "access/users", "input_dir", "--input-dir"
+        )
+        bundle_map["team"] = _resolve_access_artifact_dir(
+            args, "access/teams", "input_dir", "--input-dir"
+        )
+        bundle_map["org"] = _resolve_access_artifact_dir(
+            args, "access/orgs", "input_dir", "--input-dir"
+        )
+        bundle_map["service-account"] = _resolve_access_artifact_dir(
+            args, "access/service-accounts", "input_dir", "--input-dir"
+        )
+    else:
+        root_dir = getattr(args, "input_dir", None)
+        if not root_dir:
+            raise GrafanaError("Access plan requires --input-dir or --local.")
+        root = Path(root_dir)
+        bundle_map["user"] = root / DEFAULT_ACCESS_USER_EXPORT_DIR
+        bundle_map["team"] = root / DEFAULT_ACCESS_TEAM_EXPORT_DIR
+        bundle_map["org"] = root / DEFAULT_ACCESS_ORG_EXPORT_DIR
+        bundle_map["service-account"] = root / DEFAULT_ACCESS_SERVICE_ACCOUNT_EXPORT_DIR
+    return bundle_map
+
+
+def plan_access_with_client(args, client):
+    """Plan access changes with client implementation."""
+    if getattr(args, "list_columns", False):
+        print_access_plan_columns()
+        return 0
+    if args.output_format == "json" and getattr(args, "output_columns", None):
+        raise GrafanaError(
+            "--output-columns is only supported with text or table output for access plan."
+        )
+    args.client = client
+    resource = getattr(args, "plan_resource", "user")
+    if resource == "all":
+        bundle_map = _plan_load_all_bundles(args)
+        summaries = []
+        rows = []
+        for current_resource in ("user", "org", "team", "service-account"):
+            current_args = argparse.Namespace(**vars(args))
+            current_args.plan_resource = current_resource
+            current_args.input_dir = str(bundle_map[current_resource])
+            current_args.local = False
+            current_summary, current_rows = _plan_load_bundle_for_resource(
+                current_args, current_resource
+            )
+            summaries.append(current_summary)
+            rows.extend(current_rows)
+        summary = {
+            "resource_count": len(summaries),
+            "checked": sum(item["checked"] for item in summaries),
+            "same": sum(item["same"] for item in summaries),
+            "create": sum(item["create"] for item in summaries),
+            "update": sum(item["update"] for item in summaries),
+            "extra_remote": sum(item["extra_remote"] for item in summaries),
+            "delete": sum(item["delete"] for item in summaries),
+            "blocked": sum(item["blocked"] for item in summaries),
+            "warning": sum(item["warning"] for item in summaries),
+            "prune": bool(getattr(args, "prune", False)),
+        }
+        document = {
+            "kind": "grafana-utils-access-plan",
+            "mode": "interactive" if args.interactive else "review",
+            "resource": "all",
+            "summary": summary,
+            "resources": summaries,
+            "actions": rows,
+        }
+    else:
+        summary, rows = _plan_load_bundle_for_resource(args, resource)
+        document = {
+            "kind": "grafana-utils-access-plan",
+            "mode": "interactive" if args.interactive else "review",
+            "resource": resource,
+            "summary": {
+                "resource_count": 1,
+                "checked": summary["checked"],
+                "same": summary["same"],
+                "create": summary["create"],
+                "update": summary["update"],
+                "extra_remote": summary["extra_remote"],
+                "delete": summary["delete"],
+                "blocked": summary["blocked"],
+                "warning": summary["warning"],
+                "prune": bool(getattr(args, "prune", False)),
+            },
+            "resources": [summary],
+            "actions": rows,
+        }
+
+    rows = sorted(
+        document["actions"],
+        key=lambda row: (
+            str(row.get("resource_kind") or ""),
+            str(row.get("identity") or ""),
+            str(row.get("action") or ""),
+        ),
+    )
+    document["actions"] = rows
+    columns = _normalize_access_plan_output_columns(getattr(args, "output_columns", None))
+    if not getattr(args, "show_same", False):
+        rows = [row for row in rows if row.get("action") != "same"]
+    if args.output_format == "json":
+        print(json.dumps(document, indent=2, ensure_ascii=False))
+        return 0
+    if args.output_format == "table":
+        if args.interactive:
+            print("mode: interactive")
+        for line in _plan_build_table(rows, columns, no_header=bool(getattr(args, "no_header", False))):
+            print(line)
+        return 0
+    if args.interactive:
+        print("mode: interactive")
+    print(
+        "access plan: resources=%s checked=%s same=%s create=%s update=%s extra_remote=%s delete=%s blocked=%s warning=%s prune=%s"
+        % (
+            document["summary"]["resource_count"],
+            document["summary"]["checked"],
+            document["summary"]["same"],
+            document["summary"]["create"],
+            document["summary"]["update"],
+            document["summary"]["extra_remote"],
+            document["summary"]["delete"],
+            document["summary"]["blocked"],
+            document["summary"]["warning"],
+            str(document["summary"]["prune"]).lower(),
+        )
+    )
+    for resource_report in document["resources"]:
+        print(
+            "- %s source=%s bundle=%s checked=%s same=%s create=%s update=%s extra=%s delete=%s blocked=%s warning=%s"
+            % (
+                resource_report["resource_kind"],
+                resource_report["source_path"],
+                "present" if resource_report.get("bundle_present") else "missing",
+                resource_report["checked"],
+                resource_report["same"],
+                resource_report["create"],
+                resource_report["update"],
+                resource_report["extra_remote"],
+                resource_report["delete"],
+                resource_report["blocked"],
+                resource_report["warning"],
+            )
+        )
+    for row in rows:
+        parts = [
+            "%s=%s" % (column, _plan_render_cell(row.get(column)))
+            for column in columns
+        ]
+        print(" ".join(parts))
+    return 0
+
+
 def import_users_with_client(args, client):
     """Import users with client implementation."""
     # Call graph: see callers/callees.
     #   Upstream callers: 3059
     #   Downstream callees: 1131, 2040, 2057, 2079, 328, 818, 823, 939, 950
 
-    bundle = _build_user_import_records(args.import_dir)
+    import_dir = _resolve_access_artifact_dir(
+        args,
+        "access/users",
+        "import_dir",
+        "--import-dir",
+    )
+    if import_dir is None:
+        raise GrafanaError("User import requires --import-dir or --local.")
+    bundle = _build_user_import_records(import_dir)
     raw_records = bundle.get("records") or []
     records = []
     for item in raw_records:
@@ -1873,7 +2460,7 @@ def import_users_with_client(args, client):
 
     print(
         "Import summary: processed=%s created=%s updated=%s skipped=%s source=%s"
-        % (processed, len(created), len(updated), len(skipped), args.import_dir)
+        % (processed, len(created), len(updated), len(skipped), import_dir)
     )
     return 0
 
@@ -1926,7 +2513,17 @@ def import_service_accounts_with_client(args, client):
     #   Downstream callees: 1158, 1167, 1206, 1236, 176, 643, 695
 
     validate_service_account_import_dry_run_output(args)
-    bundle = _build_service_account_import_records(args.import_dir)
+    import_dir = _resolve_access_artifact_dir(
+        args,
+        "access/service-accounts",
+        "import_dir",
+        "--import-dir",
+    )
+    if import_dir is None:
+        raise GrafanaError(
+            "Service-account import requires --import-dir or --local."
+        )
+    bundle = _build_service_account_import_records(import_dir)
     raw_records = bundle.get("records") or []
     records = []
     for item in raw_records:
@@ -2077,7 +2674,7 @@ def import_service_accounts_with_client(args, client):
         "created": created,
         "updated": updated,
         "skipped": skipped,
-        "source": args.import_dir,
+        "source": import_dir,
     }
     if dry_run_structured:
         _emit_service_account_import_dry_run_output(args, dry_run_rows, summary)
@@ -2085,7 +2682,7 @@ def import_service_accounts_with_client(args, client):
             return 0
     print(
         "Import summary: processed=%s created=%s updated=%s skipped=%s source=%s"
-        % (processed, created, updated, skipped, args.import_dir)
+        % (processed, created, updated, skipped, import_dir)
     )
     return 0
 
@@ -2134,7 +2731,15 @@ def import_teams_with_client(args, client):
     #   Upstream callers: 3059
     #   Downstream callees: 1001, 1140, 2040, 341, 818, 823, 966
 
-    bundle = _build_team_import_records(args.import_dir)
+    import_dir = _resolve_access_artifact_dir(
+        args,
+        "access/teams",
+        "import_dir",
+        "--import-dir",
+    )
+    if import_dir is None:
+        raise GrafanaError("Team import requires --import-dir or --local.")
+    bundle = _build_team_import_records(import_dir)
     raw_records = bundle.get("records") or []
     records = []
     for item in raw_records:
@@ -2235,7 +2840,7 @@ def import_teams_with_client(args, client):
 
     print(
         "Import summary: processed=%s created=%s updated=%s skipped=%s source=%s"
-        % (created + updated + skipped, created, updated, skipped, args.import_dir)
+        % (created + updated + skipped, created, updated, skipped, import_dir)
     )
     return 0
 
@@ -3507,6 +4112,8 @@ def dispatch_access_command(args, client, auth_mode):
     #   Upstream callers: 無
     #   Downstream callees: 123, 1248, 1282, 138, 1386, 1506, 161, 166, 1693, 171, 1730, 1881, 1915, 2291, 2314, 2344, 2459, 2479, 2535, 2552, 2584, 2608, 2648, 2699, 2748, 2913, 2945, 2968, 2997, 3038, 493, 555, 59, 718, 76, 85
 
+    if args.resource == "plan":
+        return plan_access_with_client(args, client)
     if args.resource == "org" and args.command == "list":
         validate_org_auth(auth_mode)
         return list_orgs_with_client(args, client)
@@ -3525,6 +4132,9 @@ def dispatch_access_command(args, client, auth_mode):
     if args.resource == "org" and args.command == "import":
         validate_org_auth(auth_mode)
         return import_orgs_with_client(args, client)
+    if args.resource == "org" and args.command == "diff":
+        validate_org_auth(auth_mode)
+        return diff_orgs_with_client(args, client)
     if args.resource == "user" and args.command == "list":
         validate_user_list_auth(args, auth_mode)
         return list_users_with_client(args, client)
