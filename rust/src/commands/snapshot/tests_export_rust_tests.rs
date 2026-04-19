@@ -1,8 +1,5 @@
 //! Snapshot export wrapper tests.
 
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use super::tests_fixtures::sample_common_args;
 use crate::access::{AccessCommand, OrgCommand, ServiceAccountCommand, TeamCommand, UserCommand};
 use crate::datasource::DatasourceGroupCommand;
@@ -10,6 +7,8 @@ use crate::snapshot::{
     run_snapshot_export_selected_with_handlers, run_snapshot_export_with_handlers,
     SnapshotExportArgs, SnapshotExportLane, SnapshotExportSelection,
 };
+use std::cell::RefCell;
+use std::rc::Rc;
 use tempfile::tempdir;
 
 #[test]

@@ -17,6 +17,13 @@ Current AI change log only.
 - Older entries moved to [`ai-changes-archive-2026-04-19.md`](docs/internal/archive/ai-changes-archive-2026-04-19.md).
 - Older entries moved to [`ai-changes-archive-2026-04-20.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-changes-archive-2026-04-20.md).
 
+## 2026-04-20 - Continue Rust architecture cleanup
+- Summary: split dashboard artifact workflow coverage into a dedicated Rust test module, moved dashboard facade re-exports into `facade_exports.rs`, and added snapshot artifact-workspace timestamp/latest-run coverage.
+- Tests: preserved behavior while narrowing test ownership and keeping the dashboard module root focused on module registration, constants, wrappers, and type definitions.
+- Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `cargo test --manifest-path rust/Cargo.toml --quiet dashboard_artifact_workflow --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet dashboard_cli_parser_help_workflow --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet snapshot_export_run_timestamp_uses_artifact_snapshot_root_and_records_latest_run --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet dashboard --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet snapshot --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet`; `python3 scripts/rust_maintainability_report.py`; `make quality-ai-workflow`.
+- Impact: `rust/src/commands/dashboard/mod.rs`, `rust/src/commands/dashboard/facade_exports.rs`, dashboard artifact/parser workflow tests, `rust/src/commands/snapshot/support.rs`, snapshot export tests, and AI trace docs. Public CLI paths and output contracts are intentionally unchanged.
+- Rollback/Risk: low mechanical architecture cleanup plus test coverage. Rollback would move facade re-exports and artifact tests back into their previous files and remove the snapshot artifact test.
+
 ## 2026-04-20 - Split dashboard artifact command routing
 - Summary: moved dashboard artifact workspace run resolution and local input materialization out of the command runner into a focused Rust helper module while preserving existing dashboard CLI behavior.
 - Tests: verified the refactor with focused dashboard parser, artifact, and dashboard command scopes plus formatter and maintainability checks.
@@ -83,10 +90,3 @@ Current AI change log only.
 - Impact: Rust sync review TUI internals and AI trace docs. Public CLI behavior, generated docs, README files, JSON contracts, and Python implementation were intentionally left unchanged.
 - Rollback/Risk: low behavior-preserving clippy compatibility refactor. Rollback would restore the Rust 1.95 CI failure.
 - Follow-up: verify GitHub Actions after pushing because local stable is older than the CI toolchain.
-
-## 2026-04-19 - Clarify contract ownership map
-- Summary: clarified the maintainer contract map so runtime golden output contracts, CLI/docs routing contracts, docs-entrypoint navigation, and schema/help manifests each have a distinct source of truth. This keeps `scripts/contracts/output-contracts.json`, `scripts/contracts/command-surface.json`, `scripts/contracts/docs-entrypoints.json`, and `schemas/manifests/` in separate ownership lanes.
-- Tests: no runtime behavior change.
-- Test Run: `python3 scripts/check_ai_workflow.py` initially reported that maintainer/contract/architecture docs changed without a matching trace update; the trace files were then updated to satisfy the repo’s workflow guard.
-- Impact: `docs/internal/contract-doc-map.md`, `docs/internal/ai-status.md`, and `docs/internal/ai-changes.md`. Runtime code, public CLI behavior, generated docs, README files, JSON contracts, and Python implementation were intentionally left unchanged.
-- Rollback/Risk: low documentation-only change. Rollback would return the contract map to the less explicit ownership wording.

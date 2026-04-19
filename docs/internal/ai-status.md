@@ -17,6 +17,13 @@ Current AI-maintained status only.
 - Older entries moved to [`ai-status-archive-2026-04-19.md`](docs/internal/archive/ai-status-archive-2026-04-19.md).
 - Older entries moved to [`ai-status-archive-2026-04-20.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-04-20.md).
 
+## 2026-04-20 - Continue Rust architecture cleanup
+- State: Done
+- Scope: Rust dashboard test organization, dashboard facade re-export boundary, snapshot artifact-workspace coverage, focused Rust tests, and AI trace docs. Public CLI behavior, command docs, generated docs, Python implementation, and output contracts are out of scope.
+- Baseline: Dashboard artifact workspace tests lived inside a broader parser/help workflow test file, `dashboard/mod.rs` mixed module registration with a long public/crate-private re-export block, and snapshot export had no direct latest-run pointer coverage for artifact-workspace timestamp runs.
+- Current Update: Split dashboard artifact workflow tests into a dedicated test module, moved dashboard facade re-exports into `facade_exports.rs`, and added a narrow snapshot artifact export latest-run coverage test.
+- Result: Focused dashboard artifact/parser tests, dashboard scope tests, snapshot scope tests, full Rust tests, formatter check, maintainability report, and AI workflow checks pass.
+
 ## 2026-04-20 - Split dashboard artifact command routing
 - State: Done
 - Scope: Rust dashboard command artifact workspace routing, local artifact input materialization, focused Rust tests, and AI trace docs. Public CLI behavior, command docs, generated docs, Python implementation, and output contracts are out of scope.
@@ -51,10 +58,3 @@ Current AI-maintained status only.
 - Baseline: artifact workspace support existed in Rust, but operator docs and the public command-surface contract did not yet spell out config-relative `artifact_root`, timestamp/latest/run-id behavior, or lane placement.
 - Current Update: Documented `grafana-util.yaml`, root `--config`, `artifact_root`, run layout, latest pointer, and dashboard/snapshot/datasource/access artifact lanes in English and zh-TW docs.
 - Result: Generated docs, docs-surface, and AI workflow checks pass.
-
-## 2026-04-19 - Add artifact workspace run support
-- State: Done
-- Scope: Rust profile config, artifact resolver, dashboard/snapshot/datasource/access export and local artifact routing, CLI config flag, focused parser/test literal updates, and AI trace docs. Generated docs, README files, Python implementation, and live Grafana behavior beyond explicit artifact/local flags are out of scope.
-- Baseline: Export commands had per-domain default directories and profile config resolved connection settings from `grafana-util.yaml` or `GRAFANA_UTIL_CONFIG`; local browse/summary/review commands required explicit input directories.
-- Current Update: Added config-relative `artifact_root`, run-centric artifact resolver, root `--config`, artifact `--run`/`--run-id`, and selected `--local` consumers for dashboard, snapshot, datasource, and access lanes.
-- Result: Implementation completed without running validation by request. Known limitations: dashboard import/diff required-input flows and access import/diff still prefer explicit directories; snapshot review uses the default artifact scope until profile-aware review args are added.

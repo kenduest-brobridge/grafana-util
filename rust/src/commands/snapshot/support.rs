@@ -47,7 +47,16 @@ pub fn run_snapshot_cli(command: super::SnapshotCommand) -> crate::common::Resul
 #[cfg(test)]
 mod tests {
     use super::materialize_snapshot_common_auth_with_prompt;
+    use super::snapshot_artifacts::{
+        prepare_snapshot_export_artifact_run, record_snapshot_latest_run,
+    };
+    use crate::artifact_workspace::{profile_scope_path, read_latest_run_pointer};
     use crate::dashboard::CommonCliArgs;
+    use std::path::Path;
+    use std::sync::{Mutex, OnceLock};
+    use tempfile::tempdir;
+
+    static SNAPSHOT_ARTIFACT_WORKSPACE_TEST_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
 
     fn sample_common_args() -> CommonCliArgs {
         CommonCliArgs {
@@ -62,6 +71,32 @@ mod tests {
             timeout: 30,
             verify_ssl: false,
         }
+    }
+
+    fn with_snapshot_artifact_workspace<R>(
+        profile: Option<&str>,
+        body: impl FnOnce(&Path) -> R,
+    ) -> R {
+        let _guard = SNAPSHOT_ARTIFACT_WORKSPACE_TEST_LOCK
+            .get_or_init(|| Mutex::new(()))
+            .lock()
+            .unwrap();
+        let temp = tempdir().unwrap();
+        let config_path = temp.path().join("grafana-util.yaml");
+        crate::profile_config::set_profile_config_path_override(Some(config_path));
+
+        struct ResetProfileConfig;
+
+        impl Drop for ResetProfileConfig {
+            fn drop(&mut self) {
+                crate::profile_config::set_profile_config_path_override(None);
+            }
+        }
+
+        let _reset = ResetProfileConfig;
+        let artifact_root = temp.path().join(".grafana-util").join("artifacts");
+        let scope_root = profile_scope_path(&artifact_root, profile);
+        body(&scope_root)
     }
 
     #[test]
@@ -90,5 +125,33 @@ mod tests {
         assert!(!common.prompt_token);
         assert_eq!(password_prompts, 1);
         assert_eq!(token_prompts, 0);
+    }
+
+    #[test]
+    fn snapshot_export_run_timestamp_uses_artifact_snapshot_root_and_records_latest_run() {
+        with_snapshot_artifact_workspace(Some("prod"), |scope_root| {
+            let mut args = crate::snapshot::SnapshotExportArgs {
+                common: sample_common_args(),
+                output_dir: Path::new("snapshot").to_path_buf(),
+                run: Some("timestamp".to_string()),
+                run_id: None,
+                overwrite: false,
+                prompt: false,
+            };
+
+            let resolved = prepare_snapshot_export_artifact_run(&mut args)
+                .unwrap()
+                .expect("export run");
+
+            assert_eq!(args.output_dir, resolved.run_root);
+
+            record_snapshot_latest_run(&resolved).unwrap();
+            let latest = read_latest_run_pointer(scope_root)
+                .unwrap()
+                .expect("expected latest run pointer");
+            assert_eq!(latest.profile, "prod");
+            assert_eq!(latest.run_id, resolved.run_id);
+            assert_eq!(latest.run_path, format!("runs/{}", resolved.run_id));
+        });
     }
 }
