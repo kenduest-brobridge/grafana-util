@@ -1943,11 +1943,18 @@ def _plan_load_bundle_for_resource(args, resource_kind):
             "--input-dir",
         )
         bundle = _build_user_import_records(input_dir)
-        scope = "global" if str((bundle.get("metadata") or {}).get("scope") or "").lower() == "global" else "org"
+        raw_records = [item for item in bundle["records"] if isinstance(item, dict)]
+        metadata_scope = str((bundle.get("metadata") or {}).get("scope") or "").lower()
+        if metadata_scope == "global" or any(
+            str(record.get("scope") or "").lower() == "global"
+            for record in raw_records
+        ):
+            scope = "global"
+        else:
+            scope = "org"
         local_records = [
             _normalize_user_record(item)
-            for item in bundle["records"]
-            if isinstance(item, dict)
+            for item in raw_records
         ]
         for record in local_records:
             record["scope"] = scope
