@@ -8,11 +8,17 @@ from .common import (
     GrafanaError,
 )
 from .parser import (
+    ACCESS_PLAN_DEFAULT_COLUMNS,
+    ACCESS_PLAN_SUPPORTED_COLUMNS,
     ACCESS_EXPORT_KIND_ORGS,
     ACCESS_EXPORT_KIND_TEAMS,
     ACCESS_EXPORT_KIND_USERS,
     ACCESS_EXPORT_KIND_SERVICE_ACCOUNTS,
     ACCESS_EXPORT_METADATA_FILENAME,
+    DEFAULT_ACCESS_ORG_EXPORT_DIR,
+    DEFAULT_ACCESS_SERVICE_ACCOUNT_EXPORT_DIR,
+    DEFAULT_ACCESS_TEAM_EXPORT_DIR,
+    DEFAULT_ACCESS_USER_EXPORT_DIR,
     ACCESS_ORG_EXPORT_FILENAME,
     ACCESS_EXPORT_VERSION,
     ACCESS_SERVICE_ACCOUNT_EXPORT_FILENAME,
@@ -216,6 +222,47 @@ def _normalize_org_record(record):
         "users": users,
         "userCount": str(record.get("userCount") or len(users)),
     }
+
+
+def _normalize_org_for_diff(record, include_users=False):
+    """Internal helper for normalize org diff record."""
+    payload = {
+        "id": str(record.get("id") or record.get("orgId") or ""),
+        "name": str(record.get("name") or ""),
+    }
+    if include_users:
+        users = []
+        for item in record.get("users") or []:
+            if not isinstance(item, dict):
+                continue
+            users.append(_normalize_org_user_record(item))
+        users.sort(
+            key=lambda item: (
+                item.get("login") or "",
+                item.get("email") or "",
+                item.get("userId") or "",
+            )
+        )
+        payload["users"] = users
+        payload["userCount"] = str(record.get("userCount") or len(users))
+    return payload
+
+
+def _build_org_diff_map(records, source, include_users=False):
+    """Internal helper for build org diff map."""
+    indexed = {}
+    for record in records:
+        org_name = str(record.get("name") or "").strip()
+        if not org_name:
+            raise GrafanaError("Org diff record in %s does not include name." % source)
+        key = _normalize_access_import_identity(org_name)
+        if key in indexed:
+            raise GrafanaError("Duplicate org name in %s: %s" % (source, org_name))
+        indexed[key] = {
+            "identity": org_name,
+            "payload": _normalize_org_for_diff(record, include_users),
+        }
+    return indexed
 
 
 def normalize_created_user(user_id, args):
@@ -2425,22 +2472,35 @@ def list_users_with_client(args, client):
     return 0
 
 
-def _resolve_access_local_input_dir(args, lane_path):
-    """Resolve one read-only access artifact lane for --local browse/list flows."""
-    if getattr(args, "input_dir", None) and getattr(args, "local", False):
-        raise GrafanaError("--input-dir and --local cannot be combined.")
-    if not getattr(args, "local", False):
-        return Path(args.input_dir) if getattr(args, "input_dir", None) else None
+def _resolve_access_artifact_dir(args, lane_path, explicit_dir_attr, explicit_flag_name):
+    """Resolve an explicit or local access artifact directory."""
+    explicit_dir = getattr(args, explicit_dir_attr, None)
+    local = bool(getattr(args, "local", False))
+    run = getattr(args, "run", None)
+    run_id = getattr(args, "run_id", None)
+    if explicit_dir and local:
+        raise GrafanaError("%s and --local cannot be combined." % explicit_flag_name)
+    if (run or run_id) and not local:
+        raise GrafanaError("--run and --run-id require --local.")
+    if explicit_dir:
+        return Path(explicit_dir)
+    if not local:
+        return None
     try:
         return resolve_input_lane_path(
             lane_path,
-            run=getattr(args, "run", None),
-            run_id=getattr(args, "run_id", None),
+            run=run,
+            run_id=run_id,
             profile_name=getattr(args, "profile", None),
             config_path=getattr(args, "config", None),
         )
     except ValueError as exc:
         raise GrafanaError(str(exc)) from exc
+
+
+def _resolve_access_local_input_dir(args, lane_path):
+    """Resolve one read-only access artifact lane for browse/list flows."""
+    return _resolve_access_artifact_dir(args, lane_path, "input_dir", "--input-dir")
 
 
 def _render_browsed_users(args, users, source):

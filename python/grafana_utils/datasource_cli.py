@@ -112,6 +112,7 @@ __all__ = [
     "normalize_datasource_record",
     "parse_args",
     "parse_import_dry_run_columns",
+    "plan_datasources",
     "render_data_source_csv",
     "render_data_source_json",
     "render_import_dry_run_json",
@@ -230,6 +231,15 @@ def _validate_datasource_org_routing_args(args, parser):
                 "--all-orgs cannot be combined with --org-id for datasource export."
             )
         return
+    if command == "plan":
+        use_export_org = bool(getattr(args, "use_export_org", False))
+        if getattr(args, "only_org_id", None) and not use_export_org:
+            parser.error("--only-org-id requires --use-export-org for datasource plan.")
+        if bool(getattr(args, "create_missing_orgs", False)) and not use_export_org:
+            parser.error("--create-missing-orgs requires --use-export-org for datasource plan.")
+        if use_export_org and getattr(args, "org_id", None):
+            parser.error("--use-export-org cannot be combined with --org-id for datasource plan.")
+        return
     if command != "import":
         return
     use_export_org = bool(getattr(args, "use_export_org", False))
@@ -328,6 +338,12 @@ def diff_datasources(args):
 
     _sync_facade_overrides()
     return datasource_workflows.diff_datasources(args)
+
+
+def plan_datasources(args):
+    """Build a review-first datasource plan."""
+    _sync_facade_overrides()
+    return datasource_workflows.plan_datasources(args)
 
 
 def add_datasource(args):

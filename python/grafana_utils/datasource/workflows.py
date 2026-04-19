@@ -30,6 +30,7 @@ from ..datasource_diff import (
     compare_datasource_bundle_to_live,
     load_datasource_diff_bundle,
 )
+from ..profile_config import resolve_input_lane_path
 from .live_mutation_render_safe import (
     build_live_mutation_dry_run_record,
     render_live_mutation_dry_run_json,
@@ -60,6 +61,8 @@ from .parser import (
     IMPORT_DRY_RUN_COLUMN_HEADERS,
     LIST_OUTPUT_COLUMN_ALIASES,
     LIST_OUTPUT_COLUMN_HEADERS,
+    PLAN_OUTPUT_COLUMN_ALIASES,
+    PLAN_OUTPUT_COLUMN_HEADERS,
     ROOT_INDEX_KIND,
     TOOL_SCHEMA_VERSION,
 )
@@ -1738,7 +1741,7 @@ def list_datasources(args):
     #   Upstream callers: 116, 1697, 448
     #   Downstream callees: 334, 52, 635, 647
 
-    input_dir = getattr(args, "input_dir", None)
+    input_dir = _resolve_datasource_local_input_dir(args, "input_dir")
     if input_dir:
         if getattr(args, "org_id", None) or bool(getattr(args, "all_orgs", False)):
             raise GrafanaError("Datasource list with --input-dir does not support --org-id or --all-orgs.")
@@ -1859,6 +1862,27 @@ def list_datasources(args):
     print("")
     print("Listed %s data source(s) from %s" % (len(datasources), args.url))
     return 0
+
+
+def _resolve_datasource_local_input_dir(args, attr_name):
+    """Resolve one datasource input directory from explicit path or artifact lane."""
+    explicit = getattr(args, attr_name, None)
+    if explicit and getattr(args, "local", False):
+        raise GrafanaError("--%s and --local cannot be combined." % attr_name.replace("_", "-"))
+    if explicit:
+        return Path(explicit)
+    if not getattr(args, "local", False):
+        return None
+    try:
+        return resolve_input_lane_path(
+            "datasources",
+            run=getattr(args, "run", None),
+            run_id=getattr(args, "run_id", None),
+            profile_name=getattr(args, "profile", None),
+            config_path=getattr(args, "config", None),
+        )
+    except ValueError as exc:
+        raise GrafanaError(str(exc)) from exc
 
 
 def _collect_live_datasource_records(args, client=None):
@@ -2234,10 +2258,12 @@ def _print_datasource_unified_diff(
 def diff_datasources(args):
     """Diff datasources implementation."""
     client = build_client(args)
-    bundle = load_local_datasource_bundle(Path(args.diff_dir), getattr(args, "input_format", "inventory"))
+    diff_dir = _resolve_datasource_local_input_dir(args, "diff_dir")
+    if diff_dir is None:
+        raise GrafanaError("Datasource diff requires --diff-dir or --local.")
+    bundle = load_local_datasource_bundle(diff_dir, getattr(args, "input_format", "inventory"))
     live_records = build_live_datasource_diff_records(client)
     report = compare_datasource_bundle_to_live(bundle, live_records)
-    diff_dir = Path(args.diff_dir)
 
     if getattr(args, "output_format", "text") == "json":
         print(
@@ -2296,6 +2322,192 @@ def diff_datasources(args):
         return 1
 
     print("No datasource differences across %s exported datasource(s)." % bundle_count)
+    return 0
+
+
+def _datasource_plan_action(item, prune):
+    status = item.get("status")
+    if status == "match":
+        return "same", "same", ""
+    if status == "different":
+        return "would-update", "pending", ""
+    if status == "missing-live":
+        return "would-create", "pending", ""
+    if status == "extra-live":
+        return ("would-delete", "pending", "") if prune else ("remote-only", "blocked", "use --prune to include as delete candidate")
+    if status in ("ambiguous-live-uid", "ambiguous-live-name"):
+        return "blocked", "blocked", status
+    return "blocked", "blocked", str(status or "unknown")
+
+
+def _build_datasource_plan_rows(bundle, live_records, prune=False, source_org_id="", target_org_id=""):
+    report = compare_datasource_bundle_to_live(bundle, live_records)
+    rows = []
+    for index, item in enumerate(report["items"], 1):
+        action, status, blocked_reason = _datasource_plan_action(item, prune)
+        if action == "same":
+            action_id = "same-%04d" % index
+        else:
+            action_id = "datasource-%04d" % index
+        local = item.get("local") or {}
+        live = item.get("live") or {}
+        source = local if local else live
+        rows.append(
+            {
+                "actionId": action_id,
+                "action": action,
+                "status": status,
+                "uid": str(source.get("uid") or ""),
+                "name": str(source.get("name") or ""),
+                "type": str(source.get("type") or ""),
+                "matchBasis": str(item.get("matchKey") or ""),
+                "sourceOrgId": str(local.get("orgId") or source_org_id or ""),
+                "targetOrgId": str(live.get("orgId") or target_org_id or ""),
+                "targetUid": str(live.get("uid") or ""),
+                "targetVersion": str(live.get("version") or ""),
+                "targetReadOnly": str(live.get("readOnly") or ""),
+                "changedFields": list(item.get("changedFields") or []),
+                "blockedReason": blocked_reason,
+                "sourceFile": str(item.get("identity") or ""),
+            }
+        )
+    return rows
+
+
+def _datasource_plan_summary(rows):
+    return {
+        "actionCount": len(rows),
+        "wouldCreateCount": len([row for row in rows if row["action"] == "would-create"]),
+        "wouldUpdateCount": len([row for row in rows if row["action"] == "would-update"]),
+        "wouldDeleteCount": len([row for row in rows if row["action"] == "would-delete"]),
+        "sameCount": len([row for row in rows if row["action"] == "same"]),
+        "blockedCount": len([row for row in rows if row["status"] == "blocked"]),
+    }
+
+
+def _filter_plan_rows(args, rows):
+    if getattr(args, "show_same", False):
+        return rows
+    return [row for row in rows if row.get("action") != "same"]
+
+
+def _project_plan_row(row, selected_columns):
+    if not selected_columns:
+        return row
+    projected = {}
+    for key in selected_columns:
+        value = row.get(key)
+        if isinstance(value, list):
+            value = ",".join(str(item) for item in value)
+        projected[key] = value
+    return projected
+
+
+def _render_datasource_plan_table(rows, include_header=True, selected_columns=None):
+    columns = selected_columns or list(PLAN_OUTPUT_COLUMN_HEADERS.keys())
+    headers = [PLAN_OUTPUT_COLUMN_HEADERS.get(column, column.upper()) for column in columns]
+    values = []
+    for row in rows:
+        current = []
+        for column in columns:
+            value = row.get(column, "")
+            if isinstance(value, list):
+                value = ",".join(str(item) for item in value)
+            current.append(str(value or "-"))
+        values.append(current)
+    widths = [len(header) for header in headers]
+    for row in values:
+        for index, value in enumerate(row):
+            widths[index] = max(widths[index], len(value))
+
+    def render_row(parts):
+        return "  ".join("%-*s" % (widths[index], value) for index, value in enumerate(parts))
+
+    lines = []
+    if include_header:
+        lines.append(render_row(headers))
+        lines.append(render_row(["-" * width for width in widths]))
+    for row in values:
+        lines.append(render_row(row))
+    return lines
+
+
+def _load_plan_bundle(args, input_dir):
+    if getattr(args, "input_format", "inventory") == "provisioning":
+        return load_provisioning_datasource_bundle(input_dir)
+    return load_import_bundle_preview(input_dir)
+
+
+def _run_datasource_plan_single(args, client, input_dir, source_org_id="", target_org_id=""):
+    bundle = _load_plan_bundle(args, input_dir)
+    live_records = build_live_datasource_diff_records(client)
+    return _build_datasource_plan_rows(
+        bundle,
+        live_records,
+        prune=bool(getattr(args, "prune", False)),
+        source_org_id=source_org_id,
+        target_org_id=target_org_id,
+    )
+
+
+def plan_datasources(args):
+    """Build a review-first datasource reconcile plan."""
+    input_dir = _resolve_datasource_local_input_dir(args, "input_dir")
+    if input_dir is None:
+        raise GrafanaError("Datasource plan requires --input-dir or --local.")
+    if getattr(args, "list_columns", False):
+        for column in PLAN_OUTPUT_COLUMN_HEADERS:
+            print(column)
+        return 0
+    selected_columns = parse_output_columns(
+        getattr(args, "output_columns", None),
+        PLAN_OUTPUT_COLUMN_ALIASES,
+        PLAN_OUTPUT_COLUMN_HEADERS,
+    )
+    client = build_client(args)
+    rows = _run_datasource_plan_single(args, client, input_dir)
+    visible_rows = _filter_plan_rows(args, rows)
+    document = {
+        "kind": "datasource-plan",
+        "inputDir": str(input_dir),
+        "summary": _datasource_plan_summary(rows),
+        "actions": [_project_plan_row(row, selected_columns) for row in visible_rows],
+    }
+    output_format = getattr(args, "output_format", "text")
+    if output_format == "json":
+        print(json.dumps(document, indent=2, sort_keys=False))
+        return 0
+    if output_format == "table":
+        for line in _render_datasource_plan_table(
+            visible_rows,
+            include_header=not bool(getattr(args, "no_header", False)),
+            selected_columns=selected_columns,
+        ):
+            print(line)
+        return 0
+    summary = document["summary"]
+    print(
+        "Datasource plan: %s action(s), %s blocked, %s same from %s"
+        % (
+            summary["actionCount"],
+            summary["blockedCount"],
+            summary["sameCount"],
+            input_dir,
+        )
+    )
+    for row in visible_rows:
+        print(
+            "%s action=%s status=%s uid=%s name=%s type=%s%s"
+            % (
+                row["actionId"],
+                row["action"],
+                row["status"],
+                row["uid"] or "-",
+                row["name"] or "-",
+                row["type"] or "-",
+                (" blocked=%s" % row["blockedReason"]) if row["blockedReason"] else "",
+            )
+        )
     return 0
 
 
@@ -2591,13 +2803,18 @@ def _run_import_datasources_for_single_org(args):
             "--no-header is only supported with --dry-run --table for datasource import."
         )
     client = build_effective_import_client(args, build_client(args))
+    input_dir = _resolve_datasource_local_input_dir(args, "import_dir")
+    if input_dir is None:
+        raise GrafanaError("Datasource import requires --input-dir or --local.")
+    args.import_dir = str(input_dir)
+    args.local = False
     if getattr(args, "input_format", "inventory") == "provisioning":
         if getattr(args, "use_export_org", False):
             raise GrafanaError("--use-export-org is only supported with inventory datasource import.")
-        bundle = load_provisioning_datasource_bundle(Path(args.import_dir))
+        bundle = load_provisioning_datasource_bundle(input_dir)
     else:
         bundle_loader = load_import_bundle_preview if args.dry_run else load_import_bundle
-        bundle = bundle_loader(Path(args.import_dir))
+        bundle = bundle_loader(input_dir)
     secret_values = load_secret_value_map(args)
     if secret_values is not None:
         bundle["records"] = [
@@ -2733,6 +2950,11 @@ def import_datasources(args):
     #   Upstream callers: 1697
     #   Downstream callees: 1446, 1561, 52
 
+    input_dir = _resolve_datasource_local_input_dir(args, "import_dir")
+    if input_dir is None:
+        raise GrafanaError("Datasource import requires --input-dir or --local.")
+    args.import_dir = str(input_dir)
+    args.local = False
     if bool(getattr(args, "use_export_org", False)):
         return _run_import_datasources_by_export_org(args, build_client(args))
     return _run_import_datasources_for_single_org(args)
@@ -2776,4 +2998,6 @@ def dispatch_datasource_command(args):
         return modify_datasource(args)
     if args.command == "delete":
         return delete_datasource(args)
+    if args.command == "plan":
+        return plan_datasources(args)
     return diff_datasources(args)

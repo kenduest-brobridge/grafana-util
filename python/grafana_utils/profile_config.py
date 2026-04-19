@@ -109,19 +109,19 @@ def resolve_artifact_run_id(scope_root: Path | str, run: Optional[str], run_id: 
     selector = _normalize_text(run, "latest")
     if selector == "latest":
         return read_latest_run_id(scope_root)
-    if selector == "previous":
+    if selector == "timestamp":
         runs_root = Path(scope_root) / "runs"
         candidates = sorted(
             path.name
             for path in runs_root.iterdir()
             if path.is_dir() and path.name not in {".", ".."}
         ) if runs_root.is_dir() else []
-        if len(candidates) < 2:
-            raise ValueError(f"No previous run recorded under {runs_root}.")
-        selected = candidates[-2]
+        if not candidates:
+            raise ValueError(f"No timestamp run recorded under {runs_root}.")
+        selected = candidates[-1]
         _validate_run_id(selected)
         return selected
-    raise ValueError(f"Unsupported artifact run selector '{selector}'. Use latest or previous.")
+    raise ValueError(f"Unsupported artifact run selector '{selector}'. Use latest or timestamp.")
 
 
 def resolve_input_lane_path(

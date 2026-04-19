@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
@@ -15,8 +16,25 @@ from .cli_shared import (
     build_live_clients,
     dump_document,
 )
+from .profile_config import (
+    LATEST_RUN_POINTER_FILENAME,
+    load_profile_document,
+    profile_scope_path,
+    read_latest_run_id,
+    resolve_artifact_root_path,
+    resolve_input_lane_path,
+)
 
 SNAPSHOT_BUNDLE_FILENAME = "snapshot.json"
+SNAPSHOT_RUN_SELECTOR_CHOICES = ("latest", "timestamp")
+SNAPSHOT_LANE_FILE_COUNT_PATHS = {
+    "dashboards": "dashboards",
+    "datasources": "datasources",
+    "users": "access/users",
+    "teams": "access/teams",
+    "organizations": "access/orgs",
+    "serviceAccounts": "access/service-accounts",
+}
 
 
 def build_parser(prog: Optional[str] = None) -> argparse.ArgumentParser:
@@ -46,6 +64,17 @@ def build_parser(prog: Optional[str] = None) -> argparse.ArgumentParser:
         help="Dashboard search page size when collecting live inventory.",
     )
     export_parser.add_argument(
+        "--run",
+        choices=SNAPSHOT_RUN_SELECTOR_CHOICES,
+        default=None,
+        help="Select the run to export into when using the artifact workspace.",
+    )
+    export_parser.add_argument(
+        "--run-id",
+        default=None,
+        help="Target one explicit artifact run id when using the artifact workspace.",
+    )
+    export_parser.add_argument(
         "--output-dir",
         default="snapshot",
         help="Directory to write the snapshot bundle into.",
@@ -64,6 +93,22 @@ def build_parser(prog: Optional[str] = None) -> argparse.ArgumentParser:
 
     review_parser = subparsers.add_parser(
         "review", help="Review a local snapshot bundle without touching Grafana."
+    )
+    review_parser.add_argument(
+        "--local",
+        action="store_true",
+        help="Review the selected artifact workspace snapshot root.",
+    )
+    review_parser.add_argument(
+        "--run",
+        choices=SNAPSHOT_RUN_SELECTOR_CHOICES,
+        default=None,
+        help="Select the run to review when using the artifact workspace.",
+    )
+    review_parser.add_argument(
+        "--run-id",
+        default=None,
+        help="Target one explicit artifact run id when using the artifact workspace.",
     )
     review_parser.add_argument(
         "--input-dir",
@@ -88,6 +133,46 @@ def build_parser(prog: Optional[str] = None) -> argparse.ArgumentParser:
     )
 
     return parser
+
+
+def _resolve_snapshot_artifact_root(args: argparse.Namespace) -> Path:
+    """Resolve one artifact workspace snapshot root from the selected run."""
+    return resolve_input_lane_path(
+        ".",
+        run=getattr(args, "run", None),
+        run_id=getattr(args, "run_id", None),
+        profile_name=getattr(args, "profile", None),
+        config_path=getattr(args, "config", None),
+    )
+
+
+def _resolve_snapshot_output_dir(args: argparse.Namespace) -> Path:
+    """Resolve the export output directory, defaulting into the artifact workspace."""
+    output_dir = Path(args.output_dir)
+    if (
+        str(args.output_dir or "").strip() == "snapshot"
+        and (getattr(args, "run", None) or getattr(args, "run_id", None))
+    ):
+        document = load_profile_document(getattr(args, "config", None))
+        scope_root = profile_scope_path(
+            resolve_artifact_root_path(document, getattr(args, "config", None)),
+            getattr(args, "profile", None),
+        )
+        if getattr(args, "run_id", None):
+            run_id = str(args.run_id).strip()
+        elif getattr(args, "run", None) == "latest":
+            run_id = read_latest_run_id(scope_root)
+        else:
+            run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        if not run_id or run_id in {".", ".."} or "/" in run_id or "\\" in run_id:
+            raise ValueError("Invalid artifact run id: %s" % run_id)
+        scope_root.mkdir(parents=True, exist_ok=True)
+        (scope_root / LATEST_RUN_POINTER_FILENAME).write_text(
+            json.dumps({"runId": run_id}, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        return scope_root / "runs" / run_id
+    return output_dir
 
 
 def _snapshot_bundle(args: argparse.Namespace) -> dict[str, Any]:
@@ -128,7 +213,7 @@ def _snapshot_bundle(args: argparse.Namespace) -> dict[str, Any]:
 
 def export_command(args: argparse.Namespace) -> int:
     document = _snapshot_bundle(args)
-    output_dir = Path(args.output_dir)
+    output_dir = _resolve_snapshot_output_dir(args)
     output_dir.mkdir(parents=True, exist_ok=True)
     output_file = output_dir / SNAPSHOT_BUNDLE_FILENAME
     if output_file.exists() and not bool(args.overwrite):
@@ -148,19 +233,75 @@ def export_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def _count_json_files(path: Path) -> int:
+    if not path.exists():
+        return 0
+    if path.is_file():
+        return 1 if path.suffix == ".json" else 0
+    return len([item for item in path.rglob("*.json") if item.is_file()])
+
+
+def _build_snapshot_lane_document(root: Path) -> dict[str, Any]:
+    lane_counts = {
+        key: _count_json_files(root / relative_path)
+        for key, relative_path in SNAPSHOT_LANE_FILE_COUNT_PATHS.items()
+    }
+    return {
+        "kind": "snapshot-root",
+        "summary": {
+            "dashboardCount": lane_counts["dashboards"],
+            "datasourceCount": lane_counts["datasources"],
+            "userCount": lane_counts["users"],
+            "teamCount": lane_counts["teams"],
+            "organizationCount": lane_counts["organizations"],
+            "serviceAccountCount": lane_counts["serviceAccounts"],
+        },
+        "dashboards": [{} for _ in range(lane_counts["dashboards"])],
+        "datasources": [{} for _ in range(lane_counts["datasources"])],
+        "access": {
+            "users": [{} for _ in range(lane_counts["users"])],
+            "teams": [{} for _ in range(lane_counts["teams"])],
+            "organizations": [{} for _ in range(lane_counts["organizations"])],
+            "serviceAccounts": [{} for _ in range(lane_counts["serviceAccounts"])],
+        },
+        "alerts": [],
+    }
+
+
+def _resolve_snapshot_input_path(args: argparse.Namespace) -> Path:
+    if getattr(args, "local", False) and (
+        getattr(args, "input_dir", None) or getattr(args, "input_file", None)
+    ):
+        raise ValueError("--input-dir, --input-file, and --local cannot be combined.")
+    if getattr(args, "input_dir", None) and getattr(args, "input_file", None):
+        raise ValueError("Provide only one of --input-dir or --input-file.")
+    if getattr(args, "local", False):
+        return _resolve_snapshot_artifact_root(args)
+    if getattr(args, "input_file", None):
+        return Path(args.input_file)
+    if getattr(args, "input_dir", None):
+        return Path(args.input_dir)
+    raise ValueError("Provide either --input-dir, --input-file, or --local.")
+
+
 def _load_snapshot_document(args: argparse.Namespace) -> dict[str, Any]:
-    if args.input_file:
-        path = Path(args.input_file)
-    elif args.input_dir:
-        path = Path(args.input_dir) / SNAPSHOT_BUNDLE_FILENAME
-    else:
-        raise ValueError("Provide either --input-dir or --input-file.")
-    if not path.is_file():
+    path = _resolve_snapshot_input_path(args)
+    if path.is_file():
+        data = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(data, dict):
+            raise ValueError("Snapshot bundle must be a JSON object: %s" % path)
+        return data
+    if not path.exists():
         raise ValueError("Snapshot bundle not found: %s" % path)
-    data = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(data, dict):
-        raise ValueError("Snapshot bundle must be a JSON object: %s" % path)
-    return data
+    if not path.is_dir():
+        raise ValueError("Snapshot bundle not found: %s" % path)
+    snapshot_file = path / SNAPSHOT_BUNDLE_FILENAME
+    if snapshot_file.is_file():
+        data = json.loads(snapshot_file.read_text(encoding="utf-8"))
+        if not isinstance(data, dict):
+            raise ValueError("Snapshot bundle must be a JSON object: %s" % snapshot_file)
+        return data
+    return _build_snapshot_lane_document(path)
 
 
 def review_command(args: argparse.Namespace) -> int:

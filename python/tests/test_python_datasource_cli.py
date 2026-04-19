@@ -1088,6 +1088,47 @@ class DatasourceCliTests(unittest.TestCase):
         self.assertEqual(args.input_format, "inventory")
         self.assertEqual(args.output_format, "json")
 
+    def test_datasource_parse_args_supports_plan_mode(self):
+        args = datasource_cli.parse_args(
+            [
+                "plan",
+                "--input-dir",
+                "./datasources",
+                "--use-export-org",
+                "--only-org-id",
+                "2",
+                "--create-missing-orgs",
+                "--prune",
+                "--output-format",
+                "json",
+            ]
+        )
+
+        self.assertEqual(args.command, "plan")
+        self.assertEqual(args.input_dir, "./datasources")
+        self.assertTrue(args.use_export_org)
+        self.assertEqual(args.only_org_id, ["2"])
+        self.assertTrue(args.create_missing_orgs)
+        self.assertTrue(args.prune)
+        self.assertEqual(args.output_format, "json")
+
+    def test_datasource_parse_args_supports_local_run_id_for_artifact_consumers(self):
+        for command, path_attr in (
+            ("list", "input_dir"),
+            ("import", "import_dir"),
+            ("diff", "diff_dir"),
+            ("plan", "input_dir"),
+        ):
+            with self.subTest(command=command):
+                argv = [command, "--local", "--run-id", "run-1"]
+                if command == "import":
+                    argv.append("--dry-run")
+                args = datasource_cli.parse_args(argv)
+                self.assertEqual(args.command, command)
+                self.assertTrue(args.local)
+                self.assertEqual(args.run_id, "run-1")
+                self.assertIsNone(getattr(args, path_attr))
+
     def test_datasource_parse_args_rejects_multiple_list_output_modes(self):
         with self.assertRaises(SystemExit):
             datasource_cli.parse_args(["list", "--table", "--csv"])
@@ -1690,6 +1731,107 @@ class DatasourceCliTests(unittest.TestCase):
         self.assertIn("NAME", output)
         self.assertIn("prom_uid", output)
         self.assertIn("Prometheus Main", output)
+
+    def test_datasource_list_datasources_from_local_artifact_run(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            config_path = root / "grafana-util.yaml"
+            config_path.write_text("artifact_root: artifacts\nprofiles: {}\n", encoding="utf-8")
+            lane = root / "artifacts" / "default" / "runs" / "run-1" / "datasources"
+            lane.mkdir(parents=True)
+            self._write_datasource_bundle(
+                lane,
+                [
+                    {
+                        "uid": "prom_uid",
+                        "name": "Prometheus Main",
+                        "type": "prometheus",
+                        "access": "proxy",
+                        "url": "http://prometheus:9090",
+                    }
+                ],
+            )
+            args = datasource_cli.parse_args(
+                ["list", "--local", "--run-id", "run-1", "--json"]
+            )
+            with (
+                mock.patch.dict("os.environ", {"GRAFANA_UTIL_CONFIG": str(config_path)}),
+                mock.patch.object(
+                    datasource_cli.datasource_workflows,
+                    "build_client",
+                    side_effect=AssertionError("live client should not be used"),
+                ),
+                redirect_stdout(io.StringIO()) as stdout,
+            ):
+                result = datasource_cli.list_datasources(args)
+
+        self.assertEqual(result, 0)
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(payload[0]["uid"], "prom_uid")
+
+    def test_datasource_plan_outputs_review_only_json(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            bundle_dir = Path(tmpdir)
+            self._write_datasource_bundle(
+                bundle_dir,
+                [
+                    {
+                        "uid": "prom_uid",
+                        "name": "Prometheus Main",
+                        "type": "prometheus",
+                        "access": "proxy",
+                        "url": "http://prometheus-new:9090",
+                    },
+                    {
+                        "uid": "loki_uid",
+                        "name": "Loki",
+                        "type": "loki",
+                        "access": "proxy",
+                        "url": "http://loki:3100",
+                    },
+                ],
+            )
+            client = FakeDatasourceClient(
+                datasources=[
+                    {
+                        "uid": "prom_uid",
+                        "name": "Prometheus Main",
+                        "type": "prometheus",
+                        "access": "proxy",
+                        "url": "http://prometheus:9090",
+                    },
+                    {
+                        "uid": "old_uid",
+                        "name": "Old",
+                        "type": "prometheus",
+                        "access": "proxy",
+                        "url": "http://old:9090",
+                    },
+                ]
+            )
+            args = datasource_cli.parse_args(
+                [
+                    "plan",
+                    "--input-dir",
+                    str(bundle_dir),
+                    "--prune",
+                    "--output-format",
+                    "json",
+                ]
+            )
+            with (
+                mock.patch.object(datasource_cli, "build_client", return_value=client),
+                redirect_stdout(io.StringIO()) as stdout,
+            ):
+                result = datasource_cli.plan_datasources(args)
+
+        self.assertEqual(result, 0)
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(payload["kind"], "datasource-plan")
+        actions = {item["uid"]: item["action"] for item in payload["actions"]}
+        self.assertEqual(actions["prom_uid"], "would-update")
+        self.assertEqual(actions["loki_uid"], "would-create")
+        self.assertEqual(actions["old_uid"], "would-delete")
 
     def test_datasource_list_datasources_renders_live_yaml_with_columns(self):
         args = datasource_cli.parse_args(

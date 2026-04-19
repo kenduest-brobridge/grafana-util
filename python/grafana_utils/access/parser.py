@@ -34,10 +34,34 @@ ACCESS_EXPORT_VERSION = 1
 SCOPE_CHOICES = ("org", "global")
 LIST_OUTPUT_FORMAT_CHOICES = ("text", "table", "csv", "json")
 DRY_RUN_OUTPUT_FORMAT_CHOICES = ("text", "table", "json")
+PLAN_OUTPUT_FORMAT_CHOICES = ("text", "table", "json")
+ACCESS_PLAN_SUPPORTED_COLUMNS = (
+    "all",
+    "action_id",
+    "resource_kind",
+    "identity",
+    "action",
+    "status",
+    "changed_fields",
+    "changes",
+    "target",
+    "blocked_reason",
+    "review_hints",
+    "source_path",
+)
+ACCESS_PLAN_DEFAULT_COLUMNS = (
+    "action_id",
+    "identity",
+    "action",
+    "status",
+    "blocked_reason",
+)
 
 ACCESS_ROOT_HELP_EXAMPLES = (
     "Examples:\n\n"
     '  grafana-util access user list --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --json\n'
+    "  grafana-util access user list --input-dir ./access-users --with-teams --output-format yaml\n"
+    "  grafana-util access plan --profile prod --input-dir ./access-users --resource user --output-format table\n"
     "  grafana-util access team import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./access-teams --dry-run --table --yes\n"
     '  grafana-util access service-account token add --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --name deploy-bot --token-name nightly'
 )
@@ -189,6 +213,12 @@ ACCESS_ROOT_HELP_EXAMPLES = """Examples:
   List org users as JSON:
     grafana-util access user list --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --json
 
+  List exported users from a local bundle:
+    grafana-util access user list --input-dir ./access-users --with-teams --output-format yaml
+
+  Plan user access changes from a local bundle:
+    grafana-util access plan --profile prod --input-dir ./access-users --resource user --output-format table
+
   Create a Grafana user with Basic auth:
     grafana-util access user add --url http://localhost:3000 --basic-user admin --basic-password admin --login alice --email alice@example.com --name Alice --password 'secret'
 
@@ -283,6 +313,10 @@ ORG_EXPORT_HELP_EXAMPLES = """Examples:
 ORG_IMPORT_HELP_EXAMPLES = """Examples:
 
   grafana-util access org import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./access-orgs --replace-existing --yes
+"""
+ORG_DIFF_HELP_EXAMPLES = """Examples:
+
+  grafana-util access org diff --url http://localhost:3000 --basic-user admin --basic-password admin --diff-dir ./access-orgs
 """
 
 SERVICE_ACCOUNT_LIST_HELP_EXAMPLES = """Examples:
@@ -383,6 +417,32 @@ def add_list_output_format_arg(parser):
     )
 
 
+def add_access_local_cli_args(parser, *, include_input_dir, input_dir_help):
+    """Add local access artifact selector args implementation."""
+    if include_input_dir:
+        parser.add_argument(
+            "--input-dir",
+            default=None,
+            help=input_dir_help,
+        )
+    parser.add_argument(
+        "--local",
+        action="store_true",
+        help="Read from the artifact workspace instead of live Grafana.",
+    )
+    parser.add_argument(
+        "--run",
+        choices=("latest", "timestamp"),
+        default=None,
+        help="With --local, select the artifact run to read from. Defaults to latest.",
+    )
+    parser.add_argument(
+        "--run-id",
+        default=None,
+        help="With --local, read from this explicit artifact run id.",
+    )
+
+
 def add_access_export_cli_args(parser, default_export_dir, resource="user"):
     """Add access export cli args implementation."""
     payload_name = access_export_filename(resource)
@@ -411,7 +471,7 @@ def add_access_import_cli_args(parser, resource, default_scope=DEFAULT_SCOPE):
     """Add access import cli args implementation."""
     parser.add_argument(
         "--import-dir",
-        required=True,
+        default=None,
         help=(
             "Import directory that contains %s for %s and %s."
             % (
@@ -446,13 +506,18 @@ def add_access_import_cli_args(parser, resource, default_scope=DEFAULT_SCOPE):
         action="store_true",
         help="Acknowledge destructive import operations (delete/missing sync).",
     )
+    add_access_local_cli_args(
+        parser,
+        include_input_dir=False,
+        input_dir_help="",
+    )
 
 
 def add_access_diff_cli_args(parser, resource, default_scope=DEFAULT_SCOPE):
     """Add access diff cli args implementation."""
     parser.add_argument(
         "--diff-dir",
-        required=True,
+        default=None,
         help=(
             "Diff directory that contains %s and %s."
             % (
@@ -471,6 +536,11 @@ def add_access_diff_cli_args(parser, resource, default_scope=DEFAULT_SCOPE):
                 % default_scope
             ),
         )
+    add_access_local_cli_args(
+        parser,
+        include_input_dir=False,
+        input_dir_help="",
+    )
 
 
 def build_parser(prog=None):
@@ -481,12 +551,88 @@ def build_parser(prog=None):
 
     parser = argparse.ArgumentParser(
         prog=prog,
-        description="List and manage Grafana users, teams, organizations, and service accounts.",
+        description=(
+            "Plan, list, and manage Grafana users, teams, organizations, and service accounts."
+        ),
         epilog=ACCESS_ROOT_HELP_EXAMPLES,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     subparsers = parser.add_subparsers(dest="resource")
     subparsers.required = True
+
+    plan_parser = subparsers.add_parser(
+        "plan",
+        help="Review local access export bundles against live Grafana records.",
+        **subparser_kwargs(
+            "Examples:\n\n"
+            "  grafana-util access plan --url http://localhost:3000 --basic-user admin --basic-password admin --input-dir ./access-users --output-format table\n"
+            "  grafana-util access plan --profile prod --input-dir ./access-users --resource user --interactive\n"
+            "  grafana-util access plan --profile prod --input-dir ./access --resource all --output-format json"
+        ),
+    )
+    add_common_cli_args(
+        plan_parser,
+        username_dest="auth_username",
+        password_dest="auth_password",
+    )
+    add_access_local_cli_args(
+        plan_parser,
+        include_input_dir=True,
+        input_dir_help=(
+            "Review a local access export bundle directory instead of live Grafana."
+        ),
+    )
+    plan_parser.add_argument(
+        "--resource",
+        dest="plan_resource",
+        choices=("user", "team", "org", "service-account", "all"),
+        default="user",
+        help=(
+            "Select which access resource bundle to plan (default: user). "
+            "Use all to aggregate user, org, team, and service-account bundles from one root directory."
+        ),
+    )
+    plan_parser.add_argument(
+        "--prune",
+        action="store_true",
+        help="Include remote-only resources as delete candidates instead of only reporting them.",
+    )
+    plan_parser.add_argument(
+        "--output-columns",
+        default=None,
+        help=(
+            "For text or table output, render only these comma-separated columns. "
+            "Use all to expand every supported column."
+        ),
+    )
+    plan_parser.add_argument(
+        "--list-columns",
+        action="store_true",
+        help="Print the supported --output-columns values and exit.",
+    )
+    plan_parser.add_argument(
+        "--no-header",
+        action="store_true",
+        help="Hide the header row from table output.",
+    )
+    plan_parser.add_argument(
+        "--show-same",
+        action="store_true",
+        help="Keep same-state rows visible in table output.",
+    )
+    plan_parser.add_argument(
+        "--interactive",
+        action="store_true",
+        help="Open a read-only interactive terminal review over the access plan.",
+    )
+    plan_parser.add_argument(
+        "--output-format",
+        choices=PLAN_OUTPUT_FORMAT_CHOICES,
+        default="text",
+        help=(
+            "Output format for access plan review. Use text, table, or json when --interactive is not set."
+        ),
+    )
 
     user_parser = subparsers.add_parser(
         "user", help="List Grafana users.", **subparser_kwargs()
@@ -501,6 +647,11 @@ def build_parser(prog=None):
     )
     add_common_cli_args(list_parser)
     add_user_list_cli_args(list_parser)
+    add_access_local_cli_args(
+        list_parser,
+        include_input_dir=True,
+        input_dir_help="List users from a local export bundle directory instead of live Grafana.",
+    )
 
     user_browse_parser = user_subparsers.add_parser(
         "browse",
@@ -514,26 +665,10 @@ def build_parser(prog=None):
         password_dest="auth_password",
     )
     add_user_list_cli_args(user_browse_parser)
-    user_browse_parser.add_argument(
-        "--input-dir",
-        default=None,
-        help="Browse users from a local export bundle directory instead of live Grafana.",
-    )
-    user_browse_parser.add_argument(
-        "--local",
-        action="store_true",
-        help="Browse users from the artifact workspace instead of live Grafana.",
-    )
-    user_browse_parser.add_argument(
-        "--run",
-        choices=("latest", "previous"),
-        default=None,
-        help="With --local, select the artifact run to read from.",
-    )
-    user_browse_parser.add_argument(
-        "--run-id",
-        default=None,
-        help="With --local, read from this explicit artifact run id.",
+    add_access_local_cli_args(
+        user_browse_parser,
+        include_input_dir=True,
+        input_dir_help="Browse users from a local export bundle directory instead of live Grafana.",
     )
     user_browse_parser.add_argument(
         "--all-orgs",
@@ -655,6 +790,11 @@ def build_parser(prog=None):
     )
     add_common_cli_args(team_list_parser)
     add_team_list_cli_args(team_list_parser)
+    add_access_local_cli_args(
+        team_list_parser,
+        include_input_dir=True,
+        input_dir_help="List teams from a local export bundle directory instead of live Grafana.",
+    )
 
     team_browse_parser = team_subparsers.add_parser(
         "browse",
@@ -663,26 +803,10 @@ def build_parser(prog=None):
     )
     add_common_cli_args(team_browse_parser)
     add_team_list_cli_args(team_browse_parser)
-    team_browse_parser.add_argument(
-        "--input-dir",
-        default=None,
-        help="Browse teams from a local export bundle directory instead of live Grafana.",
-    )
-    team_browse_parser.add_argument(
-        "--local",
-        action="store_true",
-        help="Browse teams from the artifact workspace instead of live Grafana.",
-    )
-    team_browse_parser.add_argument(
-        "--run",
-        choices=("latest", "previous"),
-        default=None,
-        help="With --local, select the artifact run to read from.",
-    )
-    team_browse_parser.add_argument(
-        "--run-id",
-        default=None,
-        help="With --local, read from this explicit artifact run id.",
+    add_access_local_cli_args(
+        team_browse_parser,
+        include_input_dir=True,
+        input_dir_help="Browse teams from a local export bundle directory instead of live Grafana.",
     )
 
     team_add_parser = team_subparsers.add_parser(
@@ -770,6 +894,11 @@ def build_parser(prog=None):
         include_org_id=False,
     )
     add_org_list_cli_args(org_list_parser)
+    add_access_local_cli_args(
+        org_list_parser,
+        include_input_dir=True,
+        input_dir_help="List organizations from a local export bundle directory instead of live Grafana.",
+    )
 
     org_add_parser = org_subparsers.add_parser(
         "add",
@@ -846,6 +975,20 @@ def build_parser(prog=None):
     )
     add_access_import_cli_args(org_import_parser, resource="org")
 
+    org_diff_parser = org_subparsers.add_parser(
+        "diff",
+        help="Diff Grafana organizations against a previously exported orgs.json file.",
+        **subparser_kwargs(ORG_DIFF_HELP_EXAMPLES),
+    )
+    add_common_cli_args(
+        org_diff_parser,
+        allow_token_auth=False,
+        username_dest="auth_username",
+        password_dest="auth_password",
+        include_org_id=False,
+    )
+    add_access_diff_cli_args(org_diff_parser, resource="org")
+
     service_account_parser = subparsers.add_parser(
         "service-account",
         help="List, create, export, import, diff, and delete Grafana service accounts.",
@@ -861,6 +1004,13 @@ def build_parser(prog=None):
     )
     add_common_cli_args(service_account_list_parser)
     add_service_account_list_cli_args(service_account_list_parser)
+    add_access_local_cli_args(
+        service_account_list_parser,
+        include_input_dir=True,
+        input_dir_help=(
+            "List service accounts from a local export bundle directory instead of live Grafana."
+        ),
+    )
 
     service_account_add_parser = service_account_subparsers.add_parser(
         "add",
@@ -1659,6 +1809,10 @@ def parse_args(argv=None):
 
     if argv == ["user"]:
         parser._subparsers._group_actions[0].choices["user"].print_help()
+        raise SystemExit(0)
+
+    if argv == ["plan"]:
+        parser._subparsers._group_actions[0].choices["plan"].print_help()
         raise SystemExit(0)
 
     if argv == ["team"]:

@@ -39,6 +39,8 @@ IMPORT_DRY_RUN_OUTPUT_FORMAT_CHOICES = ("text", "table", "json")
 LIVE_MUTATION_DRY_RUN_OUTPUT_FORMAT_CHOICES = ("text", "table", "json")
 DIFF_OUTPUT_FORMAT_CHOICES = ("text", "json")
 DATASOURCE_IMPORT_FORMAT_CHOICES = ("inventory", "provisioning")
+DATASOURCE_PLAN_OUTPUT_FORMAT_CHOICES = ("text", "table", "json")
+ARTIFACT_RUN_CHOICES = ("latest", "timestamp")
 IMPORT_DRY_RUN_COLUMN_HEADERS = OrderedDict(
     [
         ("uid", "UID"),
@@ -84,6 +86,44 @@ LIST_OUTPUT_COLUMN_ALIASES = {
     "org": "org",
     "orgId": "orgId",
     "org_id": "orgId",
+    "all": "all",
+}
+PLAN_OUTPUT_COLUMN_HEADERS = OrderedDict(
+    [
+        ("actionId", "ACTION_ID"),
+        ("action", "ACTION"),
+        ("status", "STATUS"),
+        ("uid", "UID"),
+        ("name", "NAME"),
+        ("type", "TYPE"),
+        ("matchBasis", "MATCH_BASIS"),
+        ("sourceOrgId", "SOURCE_ORG_ID"),
+        ("targetOrgId", "TARGET_ORG_ID"),
+        ("changedFields", "CHANGED_FIELDS"),
+        ("blockedReason", "BLOCKED_REASON"),
+        ("sourceFile", "SOURCE_FILE"),
+    ]
+)
+PLAN_OUTPUT_COLUMN_ALIASES = {
+    "action_id": "actionId",
+    "actionId": "actionId",
+    "action": "action",
+    "status": "status",
+    "uid": "uid",
+    "name": "name",
+    "type": "type",
+    "match_basis": "matchBasis",
+    "matchBasis": "matchBasis",
+    "source_org_id": "sourceOrgId",
+    "sourceOrgId": "sourceOrgId",
+    "target_org_id": "targetOrgId",
+    "targetOrgId": "targetOrgId",
+    "changed_fields": "changedFields",
+    "changedFields": "changedFields",
+    "blocked_reason": "blockedReason",
+    "blockedReason": "blockedReason",
+    "source_file": "sourceFile",
+    "sourceFile": "sourceFile",
     "all": "all",
 }
 LIST_HELP_EXAMPLES = (
@@ -273,6 +313,22 @@ def add_list_cli_args(parser):
         ),
     )
     parser.add_argument(
+        "--local",
+        action="store_true",
+        help="Read datasource inventory from the artifact workspace instead of live Grafana.",
+    )
+    parser.add_argument(
+        "--run",
+        choices=ARTIFACT_RUN_CHOICES,
+        default=None,
+        help="With --local, select the artifact run to read from. Defaults to latest.",
+    )
+    parser.add_argument(
+        "--run-id",
+        default=None,
+        help="With --local, read from this explicit artifact run id.",
+    )
+    parser.add_argument(
         "--input-format",
         choices=DATASOURCE_IMPORT_FORMAT_CHOICES,
         default=None,
@@ -436,11 +492,27 @@ def add_import_cli_args(parser):
     parser.add_argument(
         "--import-dir",
         "--input-dir",
-        required=True,
+        default=None,
         help=(
             "Import datasource inventory from this directory. Point this to the "
             "datasource export root that contains datasources.json and export-metadata.json."
         ),
+    )
+    parser.add_argument(
+        "--local",
+        action="store_true",
+        help="Import datasource inventory from the artifact workspace datasource lane instead of --input-dir.",
+    )
+    parser.add_argument(
+        "--run",
+        choices=ARTIFACT_RUN_CHOICES,
+        default=None,
+        help="With --local, select the artifact run to read from. Defaults to latest.",
+    )
+    parser.add_argument(
+        "--run-id",
+        default=None,
+        help="With --local, import from this explicit artifact run id.",
     )
     parser.add_argument(
         "--input-format",
@@ -581,12 +653,28 @@ def add_diff_cli_args(parser):
     """Add diff cli args implementation."""
     parser.add_argument(
         "--diff-dir",
-        required=True,
+        default=None,
         help=(
             "Compare datasource inventory from this directory against live Grafana. "
             "Point this to the datasource export root that contains datasources.json "
             "and export-metadata.json."
         ),
+    )
+    parser.add_argument(
+        "--local",
+        action="store_true",
+        help="Diff datasource inventory from the artifact workspace datasource lane instead of --diff-dir.",
+    )
+    parser.add_argument(
+        "--run",
+        choices=ARTIFACT_RUN_CHOICES,
+        default=None,
+        help="With --local, select the artifact run to read from. Defaults to latest.",
+    )
+    parser.add_argument(
+        "--run-id",
+        default=None,
+        help="With --local, diff from this explicit artifact run id.",
     )
     parser.add_argument(
         "--input-format",
@@ -603,6 +691,93 @@ def add_diff_cli_args(parser):
         choices=DIFF_OUTPUT_FORMAT_CHOICES,
         default="text",
         help="Render diff output as text or JSON.",
+    )
+
+
+def add_plan_cli_args(parser):
+    """Add datasource plan cli args implementation."""
+    parser.add_argument(
+        "--input-dir",
+        default=None,
+        help="Local datasource bundle to plan against live Grafana.",
+    )
+    parser.add_argument(
+        "--local",
+        action="store_true",
+        help="Plan against datasource inventory from the artifact workspace datasource lane.",
+    )
+    parser.add_argument(
+        "--run",
+        choices=ARTIFACT_RUN_CHOICES,
+        default=None,
+        help="With --local, select the artifact run to read from. Defaults to latest.",
+    )
+    parser.add_argument(
+        "--run-id",
+        default=None,
+        help="With --local, plan from this explicit artifact run id.",
+    )
+    parser.add_argument(
+        "--input-format",
+        choices=DATASOURCE_IMPORT_FORMAT_CHOICES,
+        default="inventory",
+        help="Select the datasource plan input format.",
+    )
+    parser.add_argument(
+        "--org-id",
+        default=None,
+        help="Plan against this Grafana organization ID instead of the current org context.",
+    )
+    parser.add_argument(
+        "--use-export-org",
+        action="store_true",
+        help="Plan a combined multi-org export root by routing each bundle back to its exported org.",
+    )
+    parser.add_argument(
+        "--only-org-id",
+        action="append",
+        default=None,
+        help="With --use-export-org, plan only these exported source org IDs. Repeat to select multiple.",
+    )
+    parser.add_argument(
+        "--create-missing-orgs",
+        action="store_true",
+        help="With --use-export-org, mark missing destination orgs as would-create instead of blocked.",
+    )
+    parser.add_argument(
+        "--prune",
+        action="store_true",
+        help="Include remote-only datasources as would-delete candidates.",
+    )
+    parser.add_argument(
+        "--show-same",
+        action="store_true",
+        help="Include same/unchanged rows in text and table output.",
+    )
+    parser.add_argument(
+        "--output-format",
+        choices=DATASOURCE_PLAN_OUTPUT_FORMAT_CHOICES,
+        default="text",
+        help="Render datasource plan output as text, table, or json.",
+    )
+    parser.add_argument(
+        "--no-header",
+        action="store_true",
+        help="For table output only, omit the table header row.",
+    )
+    parser.add_argument(
+        "--output-columns",
+        default=None,
+        help=(
+            "For table output only, render only these comma-separated columns. "
+            "Supported values: action_id, action, status, uid, name, type, "
+            "match_basis, source_org_id, target_org_id, changed_fields, blocked_reason, source_file."
+        ),
+    )
+    parser.add_argument(
+        "--list-columns",
+        action="store_true",
+        help="Print the supported --output-columns values and exit.",
     )
 
 
@@ -1047,6 +1222,22 @@ def build_parser(prog=None):
     add_diff_cli_args(diff_parser)
     diff_parser.set_defaults(_help_full_examples=HELP_FULL_EXAMPLES)
     diff_parser.add_argument(
+        "--help-full",
+        nargs=0,
+        action=HelpFullAction,
+        help="Show normal help plus extended datasource examples.",
+    )
+
+    plan_parser = subparsers.add_parser(
+        "plan",
+        help="Build a review-first datasource reconcile plan.",
+        epilog=DIFF_HELP_EXAMPLES,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    add_common_cli_args(plan_parser)
+    add_plan_cli_args(plan_parser)
+    plan_parser.set_defaults(_help_full_examples=HELP_FULL_EXAMPLES)
+    plan_parser.add_argument(
         "--help-full",
         nargs=0,
         action=HelpFullAction,
