@@ -21,6 +21,7 @@ Turn a reviewed preview into staged or live apply output.
 ## Example
 
 ```bash
+# Run this example command.
 grafana-util workspace apply --preview-file ./workspace-preview.json --approve --execute-live --profile prod
 ```
 

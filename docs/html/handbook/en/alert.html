@@ -959,6 +959,7 @@ grafana-util alert list-rules --profile prod --output-format table</code></pre>
 grafana-util alert list-contact-points --profile prod --output-format yaml</code></pre>
 <pre><code># Inspect templates and mute timings before migration.
 grafana-util alert list-templates --profile prod --output-format table
+# Run this example command.
 grafana-util alert list-mute-timings --profile prod --output-format table</code></pre>
 <p>If inventory is missing resources you expected, check token permissions and org scope before you mutate anything.</p>
 <p><code>list-rules</code> is more than a way to print rule names. It is the first sanity check before and after alert changes. When reading its output, check rule name, folder, rule group, org scope, labels, and receiver-related fields. If you are migrating rules, also look for dashboard UID / panel ID links that must still make sense in the target environment. Use <code>--output-format table</code> for human review, and JSON / YAML when CI or a saved artifact will consume the result.</p>

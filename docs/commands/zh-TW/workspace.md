@@ -20,10 +20,15 @@
 範例：
 
 ```bash
+# 執行這個範例指令。
 grafana-util workspace scan ./grafana-oac-repo
+# 執行這個範例指令。
 grafana-util workspace test ./grafana-oac-repo --fetch-live --output-format json
+# 執行這個範例指令。
 grafana-util workspace preview ./grafana-oac-repo --fetch-live --profile prod
+# 執行這個範例指令。
 grafana-util workspace package ./grafana-oac-repo --output-file ./workspace-package.json
+# 執行這個範例指令。
 grafana-util workspace apply --preview-file ./workspace-preview.json --approve --execute-live --profile prod
 ```
 

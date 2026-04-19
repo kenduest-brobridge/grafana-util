@@ -23,6 +23,7 @@ Show what would change from the current workspace inputs.
 ## Example
 
 ```bash
+# Run this example command.
 grafana-util workspace preview ./grafana-oac-repo --fetch-live --profile prod
 ```
 

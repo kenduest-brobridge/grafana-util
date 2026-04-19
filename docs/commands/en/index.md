@@ -20,6 +20,7 @@ On a single command page, read "when to use" and the success criteria before the
 For a quick terminal inventory of every public command path and its purpose, run:
 
 ```bash
+# Run this example command.
 grafana-util --help-flat
 ```
 

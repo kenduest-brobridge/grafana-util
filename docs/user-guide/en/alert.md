@@ -79,6 +79,7 @@ grafana-util alert list-contact-points --profile prod --output-format yaml
 ```bash
 # Inspect templates and mute timings before migration.
 grafana-util alert list-templates --profile prod --output-format table
+# Run this example command.
 grafana-util alert list-mute-timings --profile prod --output-format table
 ```
 

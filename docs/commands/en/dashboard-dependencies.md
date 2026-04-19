@@ -34,6 +34,7 @@ grafana-util dashboard dependencies --input-dir ./dashboards/provisioning --inpu
 ```
 
 ```bash
+# Run this example command.
 grafana-util dashboard dependencies --input-dir ./grafana-oac-repo --input-format git-sync --output-format governance
 ```
 

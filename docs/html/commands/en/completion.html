@@ -961,22 +961,27 @@ grafana-util completion zsh</code></pre>
 <p>Because the script is generated from the command tree, it should be refreshed after upgrading <code>grafana-util</code> or switching to a checkout with different command definitions.</p>
 <h2 id="install-from-github-with-completion">Install from GitHub with completion</h2>
 <p>The GitHub install script can install the binary and immediately generate completion from that same binary:</p>
-<pre><code>curl -sSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-util/main/scripts/install.sh | INSTALL_COMPLETION=auto sh</code></pre>
+<pre><code># Run this example command.
+curl -sSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-util/main/scripts/install.sh | INSTALL_COMPLETION=auto sh</code></pre>
 <p><code>auto</code> detects <code>bash</code> or <code>zsh</code> from <code>SHELL</code>. Use <code>INSTALL_COMPLETION=bash</code> or <code>INSTALL_COMPLETION=zsh</code> when you want to choose the shell explicitly. Set <code>COMPLETION_DIR=/path/to/dir</code> if your shell reads completion files from a different directory.</p>
 <p>For an interactive install, pass <code>--interactive</code> to the <code>sh</code> process after the pipe:</p>
-<pre><code>curl -sSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-util/main/scripts/install.sh | sh -s -- --interactive</code></pre>
+<pre><code># Run this example command.
+curl -sSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-util/main/scripts/install.sh | sh -s -- --interactive</code></pre>
 <p>Interactive mode asks for the binary install directory, whether to install shell completion, and the completion output directory. For Zsh, it can also update <code>~/.zshrc</code> with the required <code>fpath</code> setup so the completion file is loaded before <code>compinit</code>. It reads answers from the terminal, so it still works when the install script itself is coming from <code>curl</code>.</p>
 <p>For local checkout validation, use the Makefile wrapper instead of waiting for a release artifact:</p>
-<pre><code>make install-local-interactive</code></pre>
+<pre><code># Run this example command.
+make install-local-interactive</code></pre>
 <p>That target builds the local Rust binary, packs it into a temporary release-style archive, and runs <code>scripts/install.sh --interactive</code> against that archive.</p>
 <h2 id="install-for-bash">Install for Bash</h2>
 <p>Choose a completion directory that your Bash setup already loads. A common per-user location is:</p>
-<pre><code>mkdir -p ~/.local/share/bash-completion/completions
+<pre><code># Run this example command.
+mkdir -p ~/.local/share/bash-completion/completions
 grafana-util completion bash &gt; ~/.local/share/bash-completion/completions/grafana-util</code></pre>
 <p>Start a new shell, or reload your Bash completion setup.</p>
 <h2 id="install-for-zsh">Install for Zsh</h2>
 <p>Choose a directory that appears in <code>fpath</code>. A common per-user setup is:</p>
-<pre><code>mkdir -p ~/.zfunc
+<pre><code># Run this example command.
+mkdir -p ~/.zfunc
 grafana-util completion zsh &gt; ~/.zfunc/_grafana-util</code></pre>
 <p>Then make sure Zsh loads that directory before <code>compinit</code>:</p>
 <pre><code>fpath=(~/.zfunc $fpath)

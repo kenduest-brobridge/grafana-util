@@ -984,19 +984,22 @@ grafana-util --version</code></pre>
 <p><code>grafana-util</code> 可以從直接旗標、互動輸入、環境變數或專案本地的 profile 取得連線資訊。建議依序使用：</p>
 <p><strong>直接基本驗證 (Basic Auth)</strong></p>
 <p>適合本機引導、緊急接手 (break-glass) 與管理員作業。</p>
-<pre><code>grafana-util status live \
+<pre><code># 執行這個範例指令。
+grafana-util status live \
   --url http://localhost:3000 \
   --basic-user admin \
   --prompt-password \
   --output-format yaml</code></pre>
 <p><strong><code>config profile</code></strong></p>
 <p>適合連線已確認後的日常維運、CI 與可重複執行工作流。</p>
-<pre><code>grafana-util status live \
+<pre><code># 執行這個範例指令。
+grafana-util status live \
   --profile prod \
   --output-format yaml</code></pre>
 <p><strong>直接 Token 驗證</strong></p>
 <p>適合單一組織或權限受限的 API 自動化。</p>
-<pre><code>grafana-util status overview live \
+<pre><code># 執行這個範例指令。
+grafana-util status overview live \
   --url http://localhost:3000 \
   --token &quot;$GRAFANA_API_TOKEN&quot; \
   --output-format yaml</code></pre>

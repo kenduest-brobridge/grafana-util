@@ -984,19 +984,22 @@ grafana-util --version</code></pre>
 <p><code>grafana-util</code> can read connection settings from direct flags, prompt-based input, environment variables, or a repo-local profile. Use the auth modes in this order:</p>
 <p><strong>Direct Basic auth</strong></p>
 <p>Best for quick local checks, bootstrap, and admin-only workflows.</p>
-<pre><code>grafana-util status live \
+<pre><code># Run this example command.
+grafana-util status live \
   --url http://localhost:3000 \
   --basic-user admin \
   --prompt-password \
   --output-format yaml</code></pre>
 <p><strong><code>config profile</code></strong></p>
 <p>Best for daily operator workflows and CI jobs once the connection is proven.</p>
-<pre><code>grafana-util status live \
+<pre><code># Run this example command.
+grafana-util status live \
   --profile prod \
   --output-format yaml</code></pre>
 <p><strong>Direct token</strong></p>
 <p>Best for narrow API automation that stays inside one org or one scoped permission set.</p>
-<pre><code>grafana-util status overview live \
+<pre><code># Run this example command.
+grafana-util status overview live \
   --url http://localhost:3000 \
   --token &quot;$GRAFANA_API_TOKEN&quot; \
   --output-format yaml</code></pre>

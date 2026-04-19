@@ -961,22 +961,27 @@ grafana-util completion zsh</code></pre>
 <p>因為 script 是從 command tree 產生的，升級 <code>grafana-util</code> 或切到不同 command 定義的 checkout 後，應該重新產生一次。</p>
 <h2 id="從-github-安裝時一起安裝-completion">從 GitHub 安裝時一起安裝 completion</h2>
 <p>GitHub install script 可以安裝 binary 後，立刻用同一個 binary 產生 completion：</p>
-<pre><code>curl -sSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-util/main/scripts/install.sh | INSTALL_COMPLETION=auto sh</code></pre>
+<pre><code># 執行這個範例指令。
+curl -sSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-util/main/scripts/install.sh | INSTALL_COMPLETION=auto sh</code></pre>
 <p><code>auto</code> 會從 <code>SHELL</code> 偵測 <code>bash</code> 或 <code>zsh</code>。若想明確指定 shell，請用 <code>INSTALL_COMPLETION=bash</code> 或 <code>INSTALL_COMPLETION=zsh</code>。如果你的 shell 會從其他目錄讀取 completion file，可以設定 <code>COMPLETION_DIR=/path/to/dir</code>。</p>
 <p>若要互動安裝，請把 <code>--interactive</code> 傳給 pipe 後面的 <code>sh</code>：</p>
-<pre><code>curl -sSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-util/main/scripts/install.sh | sh -s -- --interactive</code></pre>
+<pre><code># 執行這個範例指令。
+curl -sSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-util/main/scripts/install.sh | sh -s -- --interactive</code></pre>
 <p>互動模式會詢問 binary 安裝目錄、是否安裝 shell completion，以及 completion output directory。若安裝 Zsh completion，它也可以更新 <code>~/.zshrc</code>，把必要的 <code>fpath</code> 設定放在 <code>compinit</code> 前面。它會從終端機讀取回答，所以即使 install script 本身來自 <code>curl</code> pipe，也不會把 script 內容誤當成回答。</p>
 <p>如果要驗證目前 checkout 的本地 build，不必等 release artifact，可以使用 Makefile wrapper：</p>
-<pre><code>make install-local-interactive</code></pre>
+<pre><code># 執行這個範例指令。
+make install-local-interactive</code></pre>
 <p>這個 target 會 build 本地 Rust binary，打包成暫時的 release-style archive，再用該 archive 執行 <code>scripts/install.sh --interactive</code>。</p>
 <h2 id="安裝到-bash">安裝到 Bash</h2>
 <p>選擇你的 Bash 設定已經會載入的 completion 目錄。常見的 per-user 位置是：</p>
-<pre><code>mkdir -p ~/.local/share/bash-completion/completions
+<pre><code># 執行這個範例指令。
+mkdir -p ~/.local/share/bash-completion/completions
 grafana-util completion bash &gt; ~/.local/share/bash-completion/completions/grafana-util</code></pre>
 <p>接著開一個新的 shell，或重新載入 Bash completion 設定。</p>
 <h2 id="安裝到-zsh">安裝到 Zsh</h2>
 <p>選擇一個會出現在 <code>fpath</code> 裡的目錄。常見的 per-user 設定是：</p>
-<pre><code>mkdir -p ~/.zfunc
+<pre><code># 執行這個範例指令。
+mkdir -p ~/.zfunc
 grafana-util completion zsh &gt; ~/.zfunc/_grafana-util</code></pre>
 <p>然後確認 Zsh 在 <code>compinit</code> 前載入該目錄：</p>
 <pre><code>fpath=(~/.zfunc $fpath)

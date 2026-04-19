@@ -79,6 +79,7 @@ grafana-util alert list-contact-points --profile prod --output-format yaml
 ```bash
 # 看通知模板與 mute timing，避免搬移時漏掉通知內容或靜音設定。
 grafana-util alert list-templates --profile prod --output-format table
+# 執行這個範例指令。
 grafana-util alert list-mute-timings --profile prod --output-format table
 ```
 

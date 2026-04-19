@@ -2,6 +2,16 @@
 
 當你要解析或自動化處理 `dashboard diff`、`alert diff`、`datasource diff` 的 JSON 輸出時，請看這一頁。
 
+## 適用對象
+
+需要在腳本、CI gate 或審查工具中讀取 Grafana-util diff JSON 的維運人員與自動化開發者。
+
+## 主要目標
+
+- 先說明共用 diff JSON envelope，再進入各指令的 row 欄位。
+- 明確定義 `schemaVersion` 的處理方式，避免 downstream consumer 誤判。
+- 讓 dashboard、alert、datasource 與 dashboard history diff 的讀取順序保持一致。
+
 ## Contract 形狀
 
 三個 diff 指令在 JSON 模式下都會輸出相同的 top-level envelope：

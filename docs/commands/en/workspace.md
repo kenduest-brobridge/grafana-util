@@ -20,10 +20,15 @@ Key inputs: an optional workspace path, `--desired-file`, `--dashboard-export-di
 Examples:
 
 ```bash
+# Run this example command.
 grafana-util workspace scan ./grafana-oac-repo
+# Run this example command.
 grafana-util workspace test ./grafana-oac-repo --fetch-live --output-format json
+# Run this example command.
 grafana-util workspace preview ./grafana-oac-repo --fetch-live --profile prod
+# Run this example command.
 grafana-util workspace package ./grafana-oac-repo --output-file ./workspace-package.json
+# Run this example command.
 grafana-util workspace apply --preview-file ./workspace-preview.json --approve --execute-live --profile prod
 ```
 

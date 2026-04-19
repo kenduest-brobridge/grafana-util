@@ -20,6 +20,7 @@ Validate whether the local workspace is structurally safe to continue.
 ## Example
 
 ```bash
+# Run this example command.
 grafana-util workspace test ./grafana-oac-repo --fetch-live --output-format json
 ```
 

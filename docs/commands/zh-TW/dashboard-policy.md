@@ -36,6 +36,7 @@ grafana-util dashboard policy --input-dir ./dashboards/raw --input-format raw --
 ```
 
 ```bash
+# 執行這個範例指令。
 grafana-util dashboard policy --input-dir ./grafana-oac-repo --input-format git-sync --policy-source builtin --builtin-policy default --output-format json --json-output ./governance-check.json
 ```
 

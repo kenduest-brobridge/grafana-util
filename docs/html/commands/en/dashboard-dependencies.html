@@ -962,7 +962,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 grafana-util dashboard dependencies --input-dir ./dashboards/raw --input-format raw --output-format table</code></pre>
 <pre><code># Inspect dashboard export directories through the canonical dashboard dependencies command.
 grafana-util dashboard dependencies --input-dir ./dashboards/provisioning --input-format provisioning --output-format governance-json</code></pre>
-<pre><code>grafana-util dashboard dependencies --input-dir ./grafana-oac-repo --input-format git-sync --output-format governance</code></pre>
+<pre><code># Run this example command.
+grafana-util dashboard dependencies --input-dir ./grafana-oac-repo --input-format git-sync --output-format governance</code></pre>
 <h2 id="what-success-looks-like">What success looks like</h2>
 <ul><li>you can explain what is inside an export tree without manually opening dozens of dashboard files</li><li>governance or dependency output is stable enough to hand to CI or a second operator</li><li>later checks such as <code>dashboard dependencies</code>, <code>dashboard impact</code>, or <code>dashboard policy</code> can start from the review artifacts instead of re-reading the raw tree</li></ul>
 <h2 id="failure-checks">Failure checks</h2>

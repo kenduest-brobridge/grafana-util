@@ -129,6 +129,7 @@ Profile workflows are repo-local. `grafana-util config profile` works against `g
 Best for quick local checks, bootstrap, and admin-only workflows.
 
 ```bash
+# Run this example command.
 grafana-util status live \
   --url http://localhost:3000 \
   --basic-user admin \
@@ -141,6 +142,7 @@ grafana-util status live \
 Best for daily operator workflows and CI jobs once the connection is proven.
 
 ```bash
+# Run this example command.
 grafana-util status live \
   --profile prod \
   --output-format yaml
@@ -151,6 +153,7 @@ grafana-util status live \
 Best for narrow API automation that stays inside one org or one scoped permission set.
 
 ```bash
+# Run this example command.
 grafana-util status overview live \
   --url http://localhost:3000 \
   --token "$GRAFANA_API_TOKEN" \

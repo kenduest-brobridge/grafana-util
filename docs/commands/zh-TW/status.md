@@ -11,9 +11,13 @@
 範例：
 
 ```bash
+# 執行這個範例指令。
 grafana-util status live --profile prod --output-format yaml
+# 執行這個範例指令。
 grafana-util status staged --desired-file ./desired.json --output-format json
+# 執行這個範例指令。
 grafana-util status overview --dashboard-export-dir ./dashboards/raw --alert-export-dir ./alerts --output-format table
+# 執行這個範例指令。
 grafana-util status overview live --url http://localhost:3000 --basic-user admin --basic-password admin --output-format interactive
 ```
 

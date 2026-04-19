@@ -950,9 +950,13 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <p>適用時機：當你想看 readiness、overview、snapshot，或直接讀 live 資料，但還不想進 mutation 流程時。</p>
 <p>說明：<code>status</code> 是給使用者看的唯讀入口。<code>live</code> 用來做即時 gate，<code>staged</code> 用來看本機 artifact，<code>overview</code> 用來看全域摘要，<code>snapshot</code> 用來看 bundle 風格的 review，<code>resource</code> 則用來直接讀 live resource。</p>
 <p>範例：</p>
-<pre><code>grafana-util status live --profile prod --output-format yaml
+<pre><code># 執行這個範例指令。
+grafana-util status live --profile prod --output-format yaml
+# 執行這個範例指令。
 grafana-util status staged --desired-file ./desired.json --output-format json
+# 執行這個範例指令。
 grafana-util status overview --dashboard-export-dir ./dashboards/raw --alert-export-dir ./alerts --output-format table
+# 執行這個範例指令。
 grafana-util status overview live --url http://localhost:3000 --basic-user admin --basic-password admin --output-format interactive</code></pre>
 <p>相關指令：<code>grafana-util export</code>、<code>grafana-util workspace</code>、<code>grafana-util config profile</code>。</p>
 <h2 id="live"><code>live</code></h2>

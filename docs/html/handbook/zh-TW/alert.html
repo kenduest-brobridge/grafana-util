@@ -959,6 +959,7 @@ grafana-util alert list-rules --profile prod --output-format table</code></pre>
 grafana-util alert list-contact-points --profile prod --output-format yaml</code></pre>
 <pre><code># 看通知模板與 mute timing，避免搬移時漏掉通知內容或靜音設定。
 grafana-util alert list-templates --profile prod --output-format table
+# 執行這個範例指令。
 grafana-util alert list-mute-timings --profile prod --output-format table</code></pre>
 <p>如果 inventory 少了你預期的資源，先查權限與 org scope。不要急著用 <code>import</code> 或 <code>apply</code> 補東西，因為你可能只是沒有看見完整範圍。</p>
 <p><code>list-rules</code> 的目的不是單純把規則印出來。它是 alert 變更前後的第一個 sanity check。看輸出時，先確認 rule name、folder、rule group、org scope、labels 與 receiver 相關欄位；如果你準備搬移規則，也要留意 dashboard UID / panel id 的關聯是否還能在目標環境成立。人工 review 優先用 <code>--output-format table</code>，要交給 CI 或保存成 artifact 時改用 JSON / YAML。</p>

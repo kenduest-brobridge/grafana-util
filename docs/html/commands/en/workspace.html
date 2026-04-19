@@ -957,10 +957,15 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <ol><li><code>workspace scan</code></li><li><code>workspace test</code></li><li><code>workspace preview</code></li><li><code>workspace apply</code></li></ol>
 <p>Key inputs: an optional workspace path, <code>--desired-file</code>, <code>--dashboard-export-dir</code>, <code>--dashboard-provisioning-dir</code>, <code>--alert-export-dir</code>, <code>--target-inventory</code>, <code>--availability-file</code>, <code>--mapping-file</code>, <code>--fetch-live</code>, <code>--live-file</code>, <code>--preview-file</code>, <code>--approve</code>, <code>--execute-live</code>, and <code>--output-format</code>.</p>
 <p>Examples:</p>
-<pre><code>grafana-util workspace scan ./grafana-oac-repo
+<pre><code># Run this example command.
+grafana-util workspace scan ./grafana-oac-repo
+# Run this example command.
 grafana-util workspace test ./grafana-oac-repo --fetch-live --output-format json
+# Run this example command.
 grafana-util workspace preview ./grafana-oac-repo --fetch-live --profile prod
+# Run this example command.
 grafana-util workspace package ./grafana-oac-repo --output-file ./workspace-package.json
+# Run this example command.
 grafana-util workspace apply --preview-file ./workspace-preview.json --approve --execute-live --profile prod</code></pre>
 <p>Related commands: <code>grafana-util status</code>, <code>grafana-util export</code>, <code>grafana-util config profile</code>.</p>
 <h2 id="scan"><code>scan</code></h2>

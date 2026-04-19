@@ -25,21 +25,25 @@ Use this namespace when the job is straightforward export or backup and you do n
 ## Examples
 ### Dashboard backup
 ```bash
+# Run this example command.
 grafana-util export dashboard --output-dir ./dashboards --overwrite
 ```
 
 ### Alert backup
 ```bash
+# Run this example command.
 grafana-util export alert --output-dir ./alerts --overwrite
 ```
 
 ### Datasource inventory
 ```bash
+# Run this example command.
 grafana-util export datasource --output-dir ./datasources
 ```
 
 ### Access inventory
 ```bash
+# Run this example command.
 grafana-util export access service-account --output-dir ./access-service-accounts
 ```
 

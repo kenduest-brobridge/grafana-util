@@ -35,7 +35,9 @@ grafana-util access plan --profile prod --input-dir ./access-users --resource us
 ```bash
 # 使用同一個 review contract 規劃 org、team 或 service-account bundles。
 grafana-util access plan --profile prod --input-dir ./access-orgs --resource org --output-format table
+# 執行這個範例指令。
 grafana-util access plan --profile prod --input-dir ./access-teams --resource team --output-format table
+# 執行這個範例指令。
 grafana-util access plan --profile prod --input-dir ./access-service-accounts --resource service-account --output-format json
 ```
 

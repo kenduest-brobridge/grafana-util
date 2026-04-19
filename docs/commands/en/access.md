@@ -68,6 +68,7 @@ grafana-util access org list --input-dir ./access-orgs --output-format text
 ```bash
 # Plan a saved user or team bundle before import.
 grafana-util access plan --profile prod --input-dir ./access-users --resource user --output-format table
+# Run this example command.
 grafana-util access plan --profile prod --input-dir ./access-teams --resource team --output-format table
 ```
 

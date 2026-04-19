@@ -25,21 +25,25 @@
 ## 範例
 ### Dashboard 備份
 ```bash
+# 執行這個範例指令。
 grafana-util export dashboard --output-dir ./dashboards --overwrite
 ```
 
 ### Alert 備份
 ```bash
+# 執行這個範例指令。
 grafana-util export alert --output-dir ./alerts --overwrite
 ```
 
 ### Datasource inventory
 ```bash
+# 執行這個範例指令。
 grafana-util export datasource --output-dir ./datasources
 ```
 
 ### Access inventory
 ```bash
+# 執行這個範例指令。
 grafana-util export access service-account --output-dir ./access-service-accounts
 ```
 

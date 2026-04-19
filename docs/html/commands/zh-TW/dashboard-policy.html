@@ -962,7 +962,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 grafana-util dashboard policy --url http://localhost:3000 --basic-user admin --basic-password admin --policy-source file --policy ./policy.yaml</code></pre>
 <pre><code># 直接對本地匯出樹套用治理政策檢查。
 grafana-util dashboard policy --input-dir ./dashboards/raw --input-format raw --policy-source builtin --builtin-policy default --output-format json --json-output ./governance-check.json</code></pre>
-<pre><code>grafana-util dashboard policy --input-dir ./grafana-oac-repo --input-format git-sync --policy-source builtin --builtin-policy default --output-format json --json-output ./governance-check.json</code></pre>
+<pre><code># 執行這個範例指令。
+grafana-util dashboard policy --input-dir ./grafana-oac-repo --input-format git-sync --policy-source builtin --builtin-policy default --output-format json --json-output ./governance-check.json</code></pre>
 <pre><code># 進階重用：對可重用的 review 成品套用治理政策檢查。
 grafana-util dashboard policy --policy-source builtin --builtin-policy default --governance ./governance.json --queries ./queries.json --output-format json --json-output ./governance-check.json</code></pre>
 <h2 id="成功判準">成功判準</h2>

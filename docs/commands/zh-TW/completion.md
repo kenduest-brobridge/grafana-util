@@ -36,6 +36,7 @@ grafana-util completion zsh
 GitHub install script 可以安裝 binary 後，立刻用同一個 binary 產生 completion：
 
 ```bash
+# 執行這個範例指令。
 curl -sSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-util/main/scripts/install.sh | INSTALL_COMPLETION=auto sh
 ```
 
@@ -44,6 +45,7 @@ curl -sSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-util/main
 若要互動安裝，請把 `--interactive` 傳給 pipe 後面的 `sh`：
 
 ```bash
+# 執行這個範例指令。
 curl -sSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-util/main/scripts/install.sh | sh -s -- --interactive
 ```
 
@@ -52,6 +54,7 @@ curl -sSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-util/main
 如果要驗證目前 checkout 的本地 build，不必等 release artifact，可以使用 Makefile wrapper：
 
 ```bash
+# 執行這個範例指令。
 make install-local-interactive
 ```
 
@@ -62,6 +65,7 @@ make install-local-interactive
 選擇你的 Bash 設定已經會載入的 completion 目錄。常見的 per-user 位置是：
 
 ```bash
+# 執行這個範例指令。
 mkdir -p ~/.local/share/bash-completion/completions
 grafana-util completion bash > ~/.local/share/bash-completion/completions/grafana-util
 ```
@@ -73,6 +77,7 @@ grafana-util completion bash > ~/.local/share/bash-completion/completions/grafan
 選擇一個會出現在 `fpath` 裡的目錄。常見的 per-user 設定是：
 
 ```bash
+# 執行這個範例指令。
 mkdir -p ~/.zfunc
 grafana-util completion zsh > ~/.zfunc/_grafana-util
 ```

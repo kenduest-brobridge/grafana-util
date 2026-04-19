@@ -21,6 +21,7 @@ Discover what is in one local workspace or staged package.
 ## Example
 
 ```bash
+# Run this example command.
 grafana-util workspace scan ./grafana-oac-repo
 ```
 

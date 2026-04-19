@@ -22,11 +22,11 @@ class PackagingTests(unittest.TestCase):
         self.assertTrue(SET_VERSION_SCRIPT_PATH.is_file())
         self.assertTrue(VERSION_PATH.is_file())
 
-    def test_packaging_ci_python_quality_installs_project_runtime_dependencies(self):
+    def test_packaging_ci_does_not_run_python_quality_gate(self):
         content = CI_WORKFLOW_PATH.read_text(encoding="utf-8")
 
-        self.assertIn("python3 -m pip install --upgrade pip ./python", content)
-        self.assertIn('"Pillow>=10,<12"', content)
+        self.assertNotIn("python3 -m pip install --upgrade pip ./python", content)
+        self.assertNotIn("quality-python", content)
 
     def test_packaging_pyproject_declares_console_scripts(self):
         content = PYPROJECT_PATH.read_text(encoding="utf-8")

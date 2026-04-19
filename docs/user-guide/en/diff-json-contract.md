@@ -2,6 +2,16 @@
 
 Use this guide when you need to parse or automate around `dashboard diff`, `alert diff`, or `datasource diff` JSON output.
 
+## Who It Is For
+
+Operators and automation authors who consume Grafana-util diff JSON in scripts, CI gates, or review tooling.
+
+## Primary Goals
+
+- Explain the shared diff JSON envelope before command-specific row details.
+- Make schema-version handling explicit for downstream consumers.
+- Keep dashboard, alert, datasource, and dashboard history diff consumers aligned on the same reading order.
+
 ## Contract Shape
 
 All three diff commands emit the same top-level envelope in JSON mode:

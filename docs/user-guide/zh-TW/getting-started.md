@@ -129,6 +129,7 @@ Profile 這套流程是以「專案本地設定」為中心。`grafana-util conf
 適合本機引導、緊急接手 (break-glass) 與管理員作業。
 
 ```bash
+# 執行這個範例指令。
 grafana-util status live \
   --url http://localhost:3000 \
   --basic-user admin \
@@ -141,6 +142,7 @@ grafana-util status live \
 適合連線已確認後的日常維運、CI 與可重複執行工作流。
 
 ```bash
+# 執行這個範例指令。
 grafana-util status live \
   --profile prod \
   --output-format yaml
@@ -151,6 +153,7 @@ grafana-util status live \
 適合單一組織或權限受限的 API 自動化。
 
 ```bash
+# 執行這個範例指令。
 grafana-util status overview live \
   --url http://localhost:3000 \
   --token "$GRAFANA_API_TOKEN" \

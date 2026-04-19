@@ -22,6 +22,7 @@
 ## 範例
 
 ```bash
+# 執行這個範例指令。
 grafana-util workspace scan ./grafana-oac-repo
 ```
 

@@ -62,30 +62,35 @@ CLI 主要圍繞這幾個指令家族：`status`、`workspace`、`dashboard`、`
 安裝最新版本：
 
 ```bash
+# 執行這個範例指令。
 curl -sSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-state-kit/main/scripts/install.sh | sh
 ```
 
 安裝最新版本，並替目前 shell 寫入 completion：
 
 ```bash
+# 執行這個範例指令。
 curl -sSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-state-kit/main/scripts/install.sh | INSTALL_COMPLETION=auto sh
 ```
 
 互動安裝，依提示選擇安裝目錄與是否啟用 shell completion：
 
 ```bash
+# 執行這個範例指令。
 curl -sSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-state-kit/main/scripts/install.sh | sh -s -- --interactive
 ```
 
 指定安裝版本：
 
 ```bash
+# 執行這個範例指令。
 curl -sSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-state-kit/main/scripts/install.sh | VERSION=0.10.2 sh
 ```
 
 安裝到自訂目錄：
 
 ```bash
+# 執行這個範例指令。
 curl -sSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-state-kit/main/scripts/install.sh | BIN_DIR="$HOME/.local/bin" sh
 ```
 
@@ -98,6 +103,7 @@ sh ./scripts/install.sh --help
 用同一套 installer 流程安裝並驗證目前 local 環境 checkout 進行 build：
 
 ```bash
+# 執行這個範例指令。
 make install-local-interactive
 ```
 
@@ -164,12 +170,14 @@ grafana-util config profile add dev \
 確認 Grafana 是否可連線：
 
 ```bash
+# 執行這個範例指令。
 grafana-util status live --profile prod --output-format interactive
 ```
 
 保存可重複使用的連線 profile：
 
 ```bash
+# 執行這個範例指令。
 grafana-util config profile add prod \
   --url http://grafana.example:3000 \
   --basic-user admin \
@@ -179,25 +187,30 @@ grafana-util config profile add prod \
 匯出 dashboards：
 
 ```bash
+# 執行這個範例指令。
 grafana-util export dashboard --profile prod --output-dir ./backup --overwrite
 ```
 
 以指定 profile 的連線組態列出 dashboards：
 
 ```bash
+# 執行這個範例指令。
 grafana-util dashboard list --profile prod
 ```
 
 列出 datasources：
 
 ```bash
+# 執行這個範例指令。
 grafana-util datasource list --profile prod
 ```
 
 查某個 command family 的精確語法：
 
 ```bash
+# 執行這個範例指令。
 grafana-util dashboard --help
+# 執行這個範例指令。
 grafana-util config profile --help
 ```
 

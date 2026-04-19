@@ -23,6 +23,7 @@
 ## 範例
 
 ```bash
+# 執行這個範例指令。
 grafana-util workspace preview ./grafana-oac-repo --fetch-live --profile prod
 ```
 

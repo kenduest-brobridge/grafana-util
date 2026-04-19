@@ -19,6 +19,7 @@
 ## 範例
 
 ```bash
+# 執行這個範例指令。
 grafana-util workspace test ./grafana-oac-repo --fetch-live --output-format json
 ```
 

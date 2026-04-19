@@ -21,6 +21,7 @@
 ## 範例
 
 ```bash
+# 執行這個範例指令。
 grafana-util workspace apply --preview-file ./workspace-preview.json --approve --execute-live --profile prod
 ```
 

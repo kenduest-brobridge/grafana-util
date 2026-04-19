@@ -953,10 +953,15 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <ol><li><code>workspace scan</code></li><li><code>workspace test</code></li><li><code>workspace preview</code></li><li><code>workspace apply</code></li></ol>
 <p>主要輸入：可選的 workspace 路徑、<code>--desired-file</code>、<code>--dashboard-export-dir</code>、<code>--dashboard-provisioning-dir</code>、<code>--alert-export-dir</code>、<code>workspace package</code> 的輸出檔、<code>--target-inventory</code>、<code>--availability-file</code>、<code>--mapping-file</code>、<code>--fetch-live</code>、<code>--live-file</code>、<code>--preview-file</code>、<code>--approve</code>、<code>--execute-live</code> 與 <code>--output-format</code>。</p>
 <p>範例：</p>
-<pre><code>grafana-util workspace scan ./grafana-oac-repo
+<pre><code># 執行這個範例指令。
+grafana-util workspace scan ./grafana-oac-repo
+# 執行這個範例指令。
 grafana-util workspace test ./grafana-oac-repo --fetch-live --output-format json
+# 執行這個範例指令。
 grafana-util workspace preview ./grafana-oac-repo --fetch-live --profile prod
+# 執行這個範例指令。
 grafana-util workspace package ./grafana-oac-repo --output-file ./workspace-package.json
+# 執行這個範例指令。
 grafana-util workspace apply --preview-file ./workspace-preview.json --approve --execute-live --profile prod</code></pre>
 <p>相關指令：<code>grafana-util status</code>、<code>grafana-util export</code>、<code>grafana-util config profile</code>。</p>
 <h2 id="scan"><code>scan</code></h2>

@@ -36,6 +36,7 @@ Because the script is generated from the command tree, it should be refreshed af
 The GitHub install script can install the binary and immediately generate completion from that same binary:
 
 ```bash
+# Run this example command.
 curl -sSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-util/main/scripts/install.sh | INSTALL_COMPLETION=auto sh
 ```
 
@@ -44,6 +45,7 @@ curl -sSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-util/main
 For an interactive install, pass `--interactive` to the `sh` process after the pipe:
 
 ```bash
+# Run this example command.
 curl -sSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-util/main/scripts/install.sh | sh -s -- --interactive
 ```
 
@@ -52,6 +54,7 @@ Interactive mode asks for the binary install directory, whether to install shell
 For local checkout validation, use the Makefile wrapper instead of waiting for a release artifact:
 
 ```bash
+# Run this example command.
 make install-local-interactive
 ```
 
@@ -62,6 +65,7 @@ That target builds the local Rust binary, packs it into a temporary release-styl
 Choose a completion directory that your Bash setup already loads. A common per-user location is:
 
 ```bash
+# Run this example command.
 mkdir -p ~/.local/share/bash-completion/completions
 grafana-util completion bash > ~/.local/share/bash-completion/completions/grafana-util
 ```
@@ -73,6 +77,7 @@ Start a new shell, or reload your Bash completion setup.
 Choose a directory that appears in `fpath`. A common per-user setup is:
 
 ```bash
+# Run this example command.
 mkdir -p ~/.zfunc
 grafana-util completion zsh > ~/.zfunc/_grafana-util
 ```

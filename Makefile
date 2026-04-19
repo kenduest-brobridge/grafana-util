@@ -98,7 +98,7 @@ endef
 
 define HELP_QUALITY
 $(BLUE)$(BOLD)Quality and tests$(RESET)
-  $(GREEN)make test$(RESET)  Run both Python and Rust test suites
+  $(GREEN)make test$(RESET)  Run the Rust test suite. Python is secondary and available through make test-python
   $(GREEN)make test-python$(RESET)  Run the Python unittest suite
   $(GREEN)make test-rust$(RESET)  Run the Rust cargo test suite
   $(GREEN)make fmt-rust-check$(RESET)  Run cargo fmt --check
@@ -295,7 +295,7 @@ destroy-grafana-sample-data:
 reset-grafana-all-data:
 	bash ./scripts/seed-grafana-sample-data.sh --reset-all-data --yes
 
-test: test-python test-rust
+test: test-rust
 
 test-python:
 	PYTHONPATH=$(PYTHON_DIR) $(PYTHON) -m unittest discover -s $(PYTHON_DIR)/tests -v

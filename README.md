@@ -60,30 +60,35 @@ Supported Grafana surfaces:
 Install the latest release:
 
 ```bash
+# Run this example command.
 curl -sSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-state-kit/main/scripts/install.sh | sh
 ```
 
 Install the latest release and write shell completion for your current shell:
 
 ```bash
+# Run this example command.
 curl -sSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-state-kit/main/scripts/install.sh | INSTALL_COMPLETION=auto sh
 ```
 
 Install interactively, then choose the install directory and shell completion setup when prompted:
 
 ```bash
+# Run this example command.
 curl -sSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-state-kit/main/scripts/install.sh | sh -s -- --interactive
 ```
 
 Install a specific version:
 
 ```bash
+# Run this example command.
 curl -sSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-state-kit/main/scripts/install.sh | VERSION=0.10.2 sh
 ```
 
 Install into a custom directory:
 
 ```bash
+# Run this example command.
 curl -sSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-state-kit/main/scripts/install.sh | BIN_DIR="$HOME/.local/bin" sh
 ```
 
@@ -96,6 +101,7 @@ sh ./scripts/install.sh --help
 Install and verify a local checkout build through the same installer path:
 
 ```bash
+# Run this example command.
 make install-local-interactive
 ```
 
@@ -162,12 +168,14 @@ After that:
 Check that Grafana is reachable:
 
 ```bash
+# Run this example command.
 grafana-util status live --profile prod --output-format interactive
 ```
 
 Save a reusable connection profile:
 
 ```bash
+# Run this example command.
 grafana-util config profile add prod \
   --url http://grafana.example:3000 \
   --basic-user admin \
@@ -177,25 +185,30 @@ grafana-util config profile add prod \
 Export dashboards:
 
 ```bash
+# Run this example command.
 grafana-util export dashboard --profile prod --output-dir ./backup --overwrite
 ```
 
 List dashboards using a specified connection profile:
 
 ```bash
+# Run this example command.
 grafana-util dashboard list --profile prod
 ```
 
 List datasources:
 
 ```bash
+# Run this example command.
 grafana-util datasource list --profile prod
 ```
 
 Look up exact syntax for a command family:
 
 ```bash
+# Run this example command.
 grafana-util dashboard --help
+# Run this example command.
 grafana-util config profile --help
 ```
 

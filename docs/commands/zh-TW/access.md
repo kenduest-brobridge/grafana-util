@@ -85,6 +85,7 @@ grafana-util access org list --input-dir ./access-orgs --output-format table
 ```bash
 # 先規劃 access bundle 套到 live 會造成什麼變更。
 grafana-util access plan --profile prod --input-dir ./access-users --resource user --output-format table
+# 執行這個範例指令。
 grafana-util access plan --profile prod --input-dir ./access-teams --resource team --output-format table
 ```
 
