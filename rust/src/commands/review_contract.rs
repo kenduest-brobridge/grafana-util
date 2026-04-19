@@ -173,7 +173,10 @@ fn summarize_review_domains(
 ) -> Vec<ReviewMutationDomain> {
     let mut grouped: BTreeMap<String, Vec<&ReviewMutationAction>> = BTreeMap::new();
     for action in actions {
-        grouped.entry(action.domain.clone()).or_default().push(action);
+        grouped
+            .entry(action.domain.clone())
+            .or_default()
+            .push(action);
     }
     let mut domains = grouped
         .into_iter()
@@ -205,7 +208,10 @@ fn summarize_review_domains(
                 .count();
             let raw = Value::Object(Map::from_iter(vec![
                 ("id".to_string(), Value::String(domain.clone())),
-                ("checked".to_string(), Value::Number((checked as i64).into())),
+                (
+                    "checked".to_string(),
+                    Value::Number((checked as i64).into()),
+                ),
                 (
                     REVIEW_ACTION_SAME.to_string(),
                     Value::Number((same as i64).into()),
@@ -268,7 +274,8 @@ fn summarize_review_domains(
         });
     }
     domains.sort_by(|left, right| {
-        create_update_domain_rank(left.id.as_str()).cmp(&create_update_domain_rank(right.id.as_str()))
+        create_update_domain_rank(left.id.as_str())
+            .cmp(&create_update_domain_rank(right.id.as_str()))
     });
     domains
 }

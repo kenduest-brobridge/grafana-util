@@ -5,14 +5,14 @@ use serde_json::Value;
 
 use crate::common::Result;
 
+#[path = "browse_external_edit_workflow.rs"]
+mod browse_external_edit_workflow;
 #[path = "browse_input_delete.rs"]
 mod browse_input_delete;
 #[path = "browse_input_edit.rs"]
 mod browse_input_edit;
 #[path = "browse_input_external_edit.rs"]
 mod browse_input_external_edit;
-#[path = "browse_external_edit_workflow.rs"]
-mod browse_external_edit_workflow;
 #[path = "browse_input_history.rs"]
 mod browse_input_history;
 #[path = "browse_input_refresh.rs"]

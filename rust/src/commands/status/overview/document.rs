@@ -1,10 +1,11 @@
 //! Overview document assembly and text rendering.
 
 use super::{
-    overview_kind::parse_overview_artifact_kind, overview_sections::build_overview_summary_item,
+    overview_kind::parse_overview_artifact_kind,
+    overview_sections::build_overview_summary_item,
     overview_summary_projection::{
-        build_overview_summary, render_overview_decision_order,
-        render_overview_finding_summary, render_overview_signal_summary,
+        build_overview_summary, render_overview_decision_order, render_overview_finding_summary,
+        render_overview_signal_summary,
     },
     OverviewArtifact, OverviewDocument, OVERVIEW_KIND, OVERVIEW_SCHEMA_VERSION,
 };

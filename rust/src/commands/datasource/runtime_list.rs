@@ -47,11 +47,13 @@ pub(super) fn run_datasource_types(args: super::DatasourceTypesArgs) -> Result<(
 
 pub(super) fn run_datasource_list(mut args: super::DatasourceListArgs) -> Result<()> {
     if args.local && args.input_dir.is_none() {
-        args.input_dir = Some(super::datasource_runtime_artifacts::resolve_datasource_artifact_input_dir(
-            args.common.profile.as_deref(),
-            args.run,
-            args.run_id.as_deref(),
-        )?);
+        args.input_dir = Some(
+            super::datasource_runtime_artifacts::resolve_datasource_artifact_input_dir(
+                args.common.profile.as_deref(),
+                args.run,
+                args.run_id.as_deref(),
+            )?,
+        );
     }
     if args.input_dir.is_some() {
         return super::run_local_datasource_list(&args);

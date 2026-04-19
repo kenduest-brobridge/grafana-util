@@ -43,7 +43,9 @@ where
 {
     let kind = operation.kind.as_str();
     match kind {
-        "folder" => apply_folder_operation_with_request(request_json, operation, allow_folder_delete),
+        "folder" => {
+            apply_folder_operation_with_request(request_json, operation, allow_folder_delete)
+        }
         "dashboard" => apply_dashboard_operation_with_request(request_json, operation),
         "datasource" => apply_datasource_operation_with_request(request_json, operation),
         "alert"

@@ -7,7 +7,13 @@ use crate::dashboard::build_http_client;
 use crate::grafana_api::DatasourceResourceClient;
 
 pub(super) fn run_datasource_add(args: super::DatasourceAddArgs) -> Result<()> {
-    super::validate_live_mutation_dry_run_args(args.table, args.json, args.dry_run, args.no_header, "add")?;
+    super::validate_live_mutation_dry_run_args(
+        args.table,
+        args.json,
+        args.dry_run,
+        args.no_header,
+        "add",
+    )?;
     let payload = super::build_add_payload(&args)?;
     let client = build_http_client(&args.common)?;
     let datasource_client = DatasourceResourceClient::new(&client);
@@ -20,11 +26,17 @@ pub(super) fn run_datasource_add(args: super::DatasourceAddArgs) -> Result<()> {
         args.datasource_type.clone(),
         matching.destination.to_string(),
         matching.action.to_string(),
-        matching.target_id.map(|id| id.to_string()).unwrap_or_default(),
+        matching
+            .target_id
+            .map(|id| id.to_string())
+            .unwrap_or_default(),
     ];
     if args.dry_run {
         if args.json {
-            print!("{}", render_json_value(&super::render_live_mutation_json(&[row]))?);
+            print!(
+                "{}",
+                render_json_value(&super::render_live_mutation_json(&[row]))?
+            );
         } else if args.table {
             for line in super::render_live_mutation_table(&[row], !args.no_header) {
                 println!("{line}");
@@ -65,31 +77,38 @@ pub(super) fn run_datasource_add(args: super::DatasourceAddArgs) -> Result<()> {
 }
 
 pub(super) fn run_datasource_modify(args: super::DatasourceModifyArgs) -> Result<()> {
-    super::validate_live_mutation_dry_run_args(args.table, args.json, args.dry_run, args.no_header, "modify")?;
+    super::validate_live_mutation_dry_run_args(
+        args.table,
+        args.json,
+        args.dry_run,
+        args.no_header,
+        "modify",
+    )?;
     let updates = super::build_modify_updates(&args)?;
     let client = build_http_client(&args.common)?;
     let datasource_client = DatasourceResourceClient::new(&client);
     let existing = super::fetch_datasource_by_uid_if_exists(&client, &args.uid)?;
-    let (action, destination, payload, name, datasource_type, target_id) = if let Some(existing) = existing {
-        let payload = super::build_modify_payload(&existing, &updates)?;
-        (
-            "would-update",
-            "exists-uid",
-            Some(payload),
-            string_field(&existing, "name", ""),
-            string_field(&existing, "type", ""),
-            existing.get("id").and_then(Value::as_i64),
-        )
-    } else {
-        (
-            "would-fail-missing",
-            "missing",
-            None,
-            String::new(),
-            String::new(),
-            None,
-        )
-    };
+    let (action, destination, payload, name, datasource_type, target_id) =
+        if let Some(existing) = existing {
+            let payload = super::build_modify_payload(&existing, &updates)?;
+            (
+                "would-update",
+                "exists-uid",
+                Some(payload),
+                string_field(&existing, "name", ""),
+                string_field(&existing, "type", ""),
+                existing.get("id").and_then(Value::as_i64),
+            )
+        } else {
+            (
+                "would-fail-missing",
+                "missing",
+                None,
+                String::new(),
+                String::new(),
+                None,
+            )
+        };
     let row = vec![
         "modify".to_string(),
         args.uid.clone(),
@@ -101,7 +120,10 @@ pub(super) fn run_datasource_modify(args: super::DatasourceModifyArgs) -> Result
     ];
     if args.dry_run {
         if args.json {
-            print!("{}", render_json_value(&super::render_live_mutation_json(&[row]))?);
+            print!(
+                "{}",
+                render_json_value(&super::render_live_mutation_json(&[row]))?
+            );
         } else if args.table {
             for line in super::render_live_mutation_table(&[row], !args.no_header) {
                 println!("{line}");
@@ -123,7 +145,8 @@ pub(super) fn run_datasource_modify(args: super::DatasourceModifyArgs) -> Result
         )));
     }
     let payload = payload.ok_or_else(|| message("Datasource modify did not build a payload."))?;
-    let target_id = target_id.ok_or_else(|| message("Datasource modify requires a live datasource id."))?;
+    let target_id =
+        target_id.ok_or_else(|| message("Datasource modify requires a live datasource id."))?;
     datasource_client.update_datasource(
         &target_id.to_string(),
         payload
@@ -138,7 +161,13 @@ pub(super) fn run_datasource_modify(args: super::DatasourceModifyArgs) -> Result
 }
 
 pub(super) fn run_datasource_delete(args: super::DatasourceDeleteArgs) -> Result<()> {
-    super::validate_live_mutation_dry_run_args(args.table, args.json, args.dry_run, args.no_header, "delete")?;
+    super::validate_live_mutation_dry_run_args(
+        args.table,
+        args.json,
+        args.dry_run,
+        args.no_header,
+        "delete",
+    )?;
     let client = build_http_client(&args.common)?;
     let datasource_client = DatasourceResourceClient::new(&client);
     let live = datasource_client.list_datasources()?;
@@ -162,11 +191,17 @@ pub(super) fn run_datasource_delete(args: super::DatasourceDeleteArgs) -> Result
         delete_type.clone(),
         matching.destination.to_string(),
         matching.action.to_string(),
-        matching.target_id.map(|id| id.to_string()).unwrap_or_default(),
+        matching
+            .target_id
+            .map(|id| id.to_string())
+            .unwrap_or_default(),
     ];
     if args.dry_run {
         if args.json {
-            print!("{}", render_json_value(&super::render_live_mutation_json(&[row]))?);
+            print!(
+                "{}",
+                render_json_value(&super::render_live_mutation_json(&[row]))?
+            );
         } else if args.table {
             for line in super::render_live_mutation_table(&[row], !args.no_header) {
                 println!("{line}");

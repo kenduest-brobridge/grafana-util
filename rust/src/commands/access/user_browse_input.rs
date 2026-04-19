@@ -116,8 +116,8 @@ fn handle_search_key(state: &mut BrowserState, key: &KeyEvent) {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::user_browse_state::{row_kind, DisplayMode, SearchDirection};
+    use super::*;
     use crate::access::{CommonCliArgs, Scope};
     use serde_json::Map;
     use std::fs;
@@ -199,7 +199,10 @@ mod tests {
         .unwrap();
 
         assert_eq!(rows.len(), 1);
-        assert_eq!(crate::access::render::map_get_text(&rows[0], "login"), "alice");
+        assert_eq!(
+            crate::access::render::map_get_text(&rows[0], "login"),
+            "alice"
+        );
         assert_eq!(
             crate::access::render::map_get_text(&rows[0], "teams"),
             "ops,sre"

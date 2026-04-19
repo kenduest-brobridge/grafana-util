@@ -13,11 +13,11 @@ use clap::CommandFactory;
 
 pub(crate) use snapshot_access::build_snapshot_access_lane_summaries;
 #[cfg(test)]
+pub(crate) use snapshot_export::run_snapshot_export_with_handlers;
+#[cfg(test)]
 pub(crate) use snapshot_export::{
     materialize_snapshot_common_auth_with_prompt, run_snapshot_export_selected_with_handlers,
 };
-#[cfg(test)]
-pub(crate) use snapshot_export::run_snapshot_export_with_handlers;
 #[cfg(test)]
 pub(crate) use snapshot_metadata::build_snapshot_root_metadata;
 pub(crate) use snapshot_metadata::export_scope_kind_from_metadata_value;

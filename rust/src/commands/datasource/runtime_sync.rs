@@ -3,11 +3,14 @@
 use serde_json::Value;
 
 use crate::common::{message, string_field, Result};
-use crate::dashboard::{build_api_client, build_auth_context, build_http_client, build_http_client_for_org_from_api};
+use crate::dashboard::{
+    build_api_client, build_auth_context, build_http_client, build_http_client_for_org_from_api,
+};
 use crate::grafana_api::DatasourceResourceClient;
 
 pub(super) fn run_datasource_export(mut args: super::DatasourceExportArgs) -> Result<()> {
-    args.output_dir = Some(super::datasource_runtime_artifacts::resolve_datasource_export_output_dir(&args)?);
+    args.output_dir =
+        Some(super::datasource_runtime_artifacts::resolve_datasource_export_output_dir(&args)?);
     let output_dir = args
         .output_dir
         .as_ref()
@@ -159,7 +162,11 @@ pub(super) fn run_datasource_export(mut args: super::DatasourceExportArgs) -> Re
             &Value::Array(records.clone().into_iter().map(Value::Object).collect()),
             args.overwrite,
         )?;
-        super::write_json_file(&index_path, &super::build_export_index(&records), args.overwrite)?;
+        super::write_json_file(
+            &index_path,
+            &super::build_export_index(&records),
+            args.overwrite,
+        )?;
         super::write_json_file(
             &metadata_path,
             &super::build_datasource_export_metadata(
@@ -203,11 +210,13 @@ pub(super) fn run_datasource_export(mut args: super::DatasourceExportArgs) -> Re
 
 pub(super) fn run_datasource_import(mut args: super::DatasourceImportArgs) -> Result<()> {
     if args.local && args.input_dir.is_none() {
-        args.input_dir = Some(super::datasource_runtime_artifacts::resolve_datasource_artifact_input_dir(
-            args.common.profile.as_deref(),
-            args.run,
-            args.run_id.as_deref(),
-        )?);
+        args.input_dir = Some(
+            super::datasource_runtime_artifacts::resolve_datasource_artifact_input_dir(
+                args.common.profile.as_deref(),
+                args.run,
+                args.run_id.as_deref(),
+            )?,
+        );
     }
     super::validate_import_org_auth(&args.common, &args)?;
     if args.table && !args.dry_run {
@@ -251,11 +260,13 @@ pub(super) fn run_datasource_import(mut args: super::DatasourceImportArgs) -> Re
 
 pub(super) fn run_datasource_diff(mut args: super::DatasourceDiffArgs) -> Result<()> {
     if args.local && args.diff_dir.is_none() {
-        args.diff_dir = Some(super::datasource_runtime_artifacts::resolve_datasource_artifact_input_dir(
-            args.common.profile.as_deref(),
-            args.run,
-            args.run_id.as_deref(),
-        )?);
+        args.diff_dir = Some(
+            super::datasource_runtime_artifacts::resolve_datasource_artifact_input_dir(
+                args.common.profile.as_deref(),
+                args.run,
+                args.run_id.as_deref(),
+            )?,
+        );
     }
     let client = build_http_client(&args.common)?;
     let datasource_client = DatasourceResourceClient::new(&client);
@@ -281,11 +292,13 @@ pub(super) fn run_datasource_diff(mut args: super::DatasourceDiffArgs) -> Result
 
 pub(super) fn run_datasource_plan(mut args: super::DatasourcePlanArgs) -> Result<()> {
     if args.local && args.input_dir.is_none() {
-        args.input_dir = Some(super::datasource_runtime_artifacts::resolve_datasource_artifact_input_dir(
-            args.common.profile.as_deref(),
-            args.run,
-            args.run_id.as_deref(),
-        )?);
+        args.input_dir = Some(
+            super::datasource_runtime_artifacts::resolve_datasource_artifact_input_dir(
+                args.common.profile.as_deref(),
+                args.run,
+                args.run_id.as_deref(),
+            )?,
+        );
     }
     let plan_input = if args.use_export_org {
         build_routed_datasource_plan_input(&args)?
@@ -347,8 +360,10 @@ pub(super) fn build_routed_datasource_plan_input(
     let scopes = super::discover_export_org_import_scopes(&import_args)?;
     let mut orgs = Vec::new();
     for scope in scopes {
-        let target_plan = super::resolve_export_org_target_plan(admin_client, &import_args, &scope)?;
-        let (_metadata, records) = super::load_import_records(&target_plan.input_dir, args.input_format)?;
+        let target_plan =
+            super::resolve_export_org_target_plan(admin_client, &import_args, &scope)?;
+        let (_metadata, records) =
+            super::load_import_records(&target_plan.input_dir, args.input_format)?;
         let live = if let Some(target_org_id) = target_plan.target_org_id {
             let org_client = build_http_client_for_org_from_api(&admin_api, target_org_id)?;
             DatasourceResourceClient::new(&org_client).list_datasources()?

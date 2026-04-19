@@ -242,18 +242,18 @@ pub(crate) fn build_live_sync_domain_status(
 
     Some(
         StatusReading {
-        id: SYNC_DOMAIN_ID.to_string(),
-        scope: SYNC_SCOPE.to_string(),
-        mode: SYNC_MODE.to_string(),
-        status: status.to_string(),
-        reason_code: reason_code.to_string(),
-        primary_count: resources,
-        source_kinds,
-        signal_keys,
-        blockers: blockers.into_iter().map(Into::into).collect(),
-        warnings: warnings.into_iter().map(Into::into).collect(),
-        next_actions,
-        freshness: Default::default(),
+            id: SYNC_DOMAIN_ID.to_string(),
+            scope: SYNC_SCOPE.to_string(),
+            mode: SYNC_MODE.to_string(),
+            status: status.to_string(),
+            reason_code: reason_code.to_string(),
+            primary_count: resources,
+            source_kinds,
+            signal_keys,
+            blockers: blockers.into_iter().map(Into::into).collect(),
+            warnings: warnings.into_iter().map(Into::into).collect(),
+            next_actions,
+            freshness: Default::default(),
         }
         .into_project_domain_status(),
     )

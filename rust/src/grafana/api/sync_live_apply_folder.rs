@@ -63,7 +63,9 @@ where
             Method::POST,
             "/api/folders",
             &[],
-            Some(&Value::Object(build_folder_create_payload(identity, desired))),
+            Some(&Value::Object(build_folder_create_payload(
+                identity, desired,
+            ))),
         )?
         .unwrap_or(Value::Null)),
         REVIEW_ACTION_WOULD_UPDATE => Ok(request_json(

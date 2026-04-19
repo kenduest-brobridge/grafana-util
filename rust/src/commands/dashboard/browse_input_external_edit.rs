@@ -6,12 +6,10 @@ use std::fs;
 
 use crate::common::{message, Result};
 
-use super::browse_input_shared::{redraw_browser, scoped_org_client};
 use super::browse_external_edit_workflow::preview_external_edit_dry_run;
 pub(super) use super::browse_external_edit_workflow::run_selected_external_edit;
-use crate::dashboard::browse_actions::{
-    apply_external_dashboard_edit, refresh_browser_document,
-};
+use super::browse_input_shared::{redraw_browser, scoped_org_client};
+use crate::dashboard::browse_actions::{apply_external_dashboard_edit, refresh_browser_document};
 use crate::dashboard::browse_external_edit_dialog::{
     ExternalEditDialogAction, ExternalEditErrorAction,
 };

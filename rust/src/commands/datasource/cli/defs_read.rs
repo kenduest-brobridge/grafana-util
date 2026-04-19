@@ -3,9 +3,7 @@ use std::path::PathBuf;
 
 use crate::dashboard::{CommonCliArgs, SimpleOutputFormat};
 
-use super::{
-    parse_datasource_list_output_column, DatasourceImportInputFormat, ListOutputFormat,
-};
+use super::{parse_datasource_list_output_column, DatasourceImportInputFormat, ListOutputFormat};
 
 /// Artifact workspace run selector for commands that integrate with artifact workspace lanes.
 #[derive(Debug, Clone, Copy, ValueEnum)]

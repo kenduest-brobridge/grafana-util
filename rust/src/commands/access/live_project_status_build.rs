@@ -95,21 +95,21 @@ pub(super) fn build_access_live_domain_status_from_readings(
 
     Some(
         StatusReading {
-        id: ACCESS_DOMAIN_ID.to_string(),
-        scope: ACCESS_SCOPE.to_string(),
-        mode: ACCESS_MODE.to_string(),
-        status: status.to_string(),
-        reason_code: reason_code.to_string(),
-        primary_count: total_count,
-        source_kinds,
-        signal_keys: ACCESS_SIGNAL_KEYS
-            .iter()
-            .map(|item| (*item).to_string())
-            .collect(),
-        blockers: Vec::new(),
-        warnings: warnings.into_iter().map(Into::into).collect(),
-        next_actions: build_next_actions(readings, total_count),
-        freshness: Default::default(),
+            id: ACCESS_DOMAIN_ID.to_string(),
+            scope: ACCESS_SCOPE.to_string(),
+            mode: ACCESS_MODE.to_string(),
+            status: status.to_string(),
+            reason_code: reason_code.to_string(),
+            primary_count: total_count,
+            source_kinds,
+            signal_keys: ACCESS_SIGNAL_KEYS
+                .iter()
+                .map(|item| (*item).to_string())
+                .collect(),
+            blockers: Vec::new(),
+            warnings: warnings.into_iter().map(Into::into).collect(),
+            next_actions: build_next_actions(readings, total_count),
+            freshness: Default::default(),
         }
         .into_project_domain_status(),
     )

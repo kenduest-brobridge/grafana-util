@@ -30,13 +30,13 @@ pub(crate) use access_plan_render::print_access_plan_columns;
 use access_plan_render::{
     render_plan_json, render_plan_table, render_plan_text, validate_plan_columns,
 };
+#[cfg(test)]
+pub(crate) use access_plan_tui::build_access_plan_browser_items;
 use access_plan_tui::run_access_plan_interactive;
 pub(crate) use access_plan_types::{
     AccessPlanAction, AccessPlanChange, AccessPlanDocument, AccessPlanResourceReport,
     AccessPlanSummary,
 };
-#[cfg(test)]
-pub(crate) use access_plan_tui::build_access_plan_browser_items;
 use access_plan_user::build_user_access_plan_document;
 
 const ACCESS_PLAN_KIND: &str = "grafana-util-access-plan";

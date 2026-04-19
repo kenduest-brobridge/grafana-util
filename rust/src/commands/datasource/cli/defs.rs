@@ -6,16 +6,16 @@ use clap::{Args, CommandFactory, Parser, Subcommand};
 use crate::common::set_json_color_choice;
 use crate::common::CliColorChoice;
 
-#[path = "formats.rs"]
-mod datasource_formats;
-#[path = "help_texts.rs"]
-mod datasource_help_texts;
 #[path = "defs_mutation.rs"]
 mod datasource_defs_mutation;
 #[path = "defs_read.rs"]
 mod datasource_defs_read;
 #[path = "defs_sync.rs"]
 mod datasource_defs_sync;
+#[path = "formats.rs"]
+mod datasource_formats;
+#[path = "help_texts.rs"]
+mod datasource_help_texts;
 
 pub(crate) use self::datasource_formats::normalize_datasource_group_command;
 #[cfg(test)]
@@ -28,9 +28,7 @@ pub use self::datasource_formats::{
     DatasourceImportInputFormat, DatasourcePlanOutputFormat, DryRunOutputFormat, ListOutputFormat,
 };
 use self::datasource_help_texts::*;
-pub use datasource_defs_mutation::{
-    DatasourceAddArgs, DatasourceDeleteArgs, DatasourceModifyArgs,
-};
+pub use datasource_defs_mutation::{DatasourceAddArgs, DatasourceDeleteArgs, DatasourceModifyArgs};
 pub use datasource_defs_read::{
     ArtifactRunMode, DatasourceBrowseArgs, DatasourceListArgs, DatasourceTypesArgs,
 };

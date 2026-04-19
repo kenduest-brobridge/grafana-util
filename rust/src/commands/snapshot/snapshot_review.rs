@@ -37,7 +37,8 @@ pub fn build_snapshot_overview_args(args: &super::super::SnapshotReviewArgs) -> 
 }
 
 fn normalize_snapshot_datasource_dir(temp_root: &Path, datasource_dir: &Path) -> Result<PathBuf> {
-    let metadata_path = datasource_dir.join(super::super::SNAPSHOT_DATASOURCE_EXPORT_METADATA_FILENAME);
+    let metadata_path =
+        datasource_dir.join(super::super::SNAPSHOT_DATASOURCE_EXPORT_METADATA_FILENAME);
     if !metadata_path.is_file() {
         return Ok(datasource_dir.to_path_buf());
     }
@@ -74,7 +75,8 @@ fn normalize_snapshot_datasource_dir(temp_root: &Path, datasource_dir: &Path) ->
         Ok(())
     };
 
-    let root_datasources_path = datasource_dir.join(super::super::SNAPSHOT_DATASOURCE_EXPORT_FILENAME);
+    let root_datasources_path =
+        datasource_dir.join(super::super::SNAPSHOT_DATASOURCE_EXPORT_FILENAME);
     if root_datasources_path.is_file() {
         let rows: Vec<Value> = serde_json::from_str(&fs::read_to_string(&root_datasources_path)?)?;
         append_rows(rows)?;

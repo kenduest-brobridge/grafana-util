@@ -8,8 +8,8 @@ use crate::common::{message, string_field, Result};
 use super::delete_support::normalize_folder_path;
 use super::{DEFAULT_DASHBOARD_TITLE, DEFAULT_FOLDER_TITLE};
 
-pub(crate) use super::browse_load::load_dashboard_browse_document_for_args;
 pub(crate) use super::browse_live_detail::fetch_dashboard_view_lines_with_request;
+pub(crate) use super::browse_load::load_dashboard_browse_document_for_args;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct DashboardBrowseSummary {
