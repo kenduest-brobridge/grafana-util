@@ -17,6 +17,13 @@ Current AI change log only.
 - Older entries moved to [`ai-changes-archive-2026-04-19.md`](docs/internal/archive/ai-changes-archive-2026-04-19.md).
 - Older entries moved to [`ai-changes-archive-2026-04-20.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-changes-archive-2026-04-20.md).
 
+## 2026-04-20 - Split Rust command orchestration modules
+- Summary: split the remaining oversized Rust production files for access dispatch, dashboard export, and dashboard prompt transformation into focused helper modules while preserving the existing public entrypoints.
+- Tests: kept the refactor behavior-preserving with focused access, export, and prompt test filters plus formatter and maintainability checks.
+- Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `cargo test --manifest-path rust/Cargo.toml --quiet prompt --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet export_ --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet run_access_cli_with_request_routes_user_export --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet access_`; `python3 scripts/rust_maintainability_report.py`.
+- Impact: Rust access dispatch modules, dashboard export modules, dashboard prompt modules, and AI trace docs. No public CLI behavior or JSON contract change is intended.
+- Rollback/Risk: medium mechanical refactor across command orchestration boundaries. Rollback would re-inline the helper modules; behavior should remain unchanged because the focused command tests still cover the moved paths.
+
 ## 2026-04-20 - Split Rust status producer tests
 - Summary: moved dashboard project-status and datasource live project-status inline Rust tests into adjacent test modules so the production producers stay focused and below the oversized-file threshold.
 - Tests: preserved private-module coverage through `#[path]` test modules and kept the existing status behavior assertions unchanged.
@@ -83,11 +90,3 @@ Current AI change log only.
 - Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet alert_live_project_status`; `cargo test --manifest-path rust/Cargo.toml --quiet project_status`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `make quality-output-contracts`; `make schema-check`; `make quality-architecture`; `cargo clippy --manifest-path rust/Cargo.toml --all-targets -- -D warnings`; `cargo test --manifest-path rust/Cargo.toml --quiet`; `make quality-ai-workflow`.
 - Impact: Rust alert live status internals, maintainer contract guidance, mutation review planning docs, TODO backlog, and AI trace docs. README files, generated docs, public CLI behavior, and Python implementation were intentionally left unchanged.
 - Rollback/Risk: low behavior-preserving status-model refactor plus maintainer docs. Rollback would restore direct alert live project-status construction and remove the new review-envelope planning note.
-
-## 2026-04-18 - Split oversized Rust test surfaces
-- Summary: split large Rust regression files into behavior-focused modules while preserving public behavior and existing test names. Sync bundle execution now separates source, domain artifact, and preflight cases; dashboard export/import/topology and browse workflow tests now route through small facades; snapshot tests now separate fixture, export, review, and metadata cases; access org runtime tests now separate routing, diff, import/export, and local-list cases.
-- Tests: preserved existing coverage and added no public behavior changes.
-- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet bundle_exec --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet dashboard_export_import --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet routed_import --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet dashboard_browse --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet snapshot --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet access_runtime_org --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet access --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet`; `cargo clippy --manifest-path rust/Cargo.toml --all-targets -- -D warnings`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `make quality-architecture`; `make quality-ai-workflow`.
-- Impact: Rust sync, dashboard, snapshot, and access test module layout, TODO backlog, and AI trace docs. README files, generated user docs, public CLI behavior, JSON contracts, and Python implementation were intentionally left unchanged.
-- Rollback/Risk: low behavior-preserving test refactor. Rollback would restore large test hubs and remove the new sibling test modules.
-- Follow-up: continue with the remaining medium-sized test hubs only when they mix real behavior families, starting with datasource CLI mutation or payload tests.

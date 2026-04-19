@@ -6,7 +6,7 @@ use std::path::Path;
 use crate::common::Result;
 use crate::dashboard::{ROOT_INDEX_KIND, TOOL_SCHEMA_VERSION};
 
-use super::{
+use super::super::{
     build_export_metadata, DashboardIndexItem, ExportOrgSummary, FolderInventoryItem,
     EXPORT_METADATA_FILENAME,
 };
