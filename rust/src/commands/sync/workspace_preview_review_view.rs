@@ -5,69 +5,17 @@
 //! reuse the typed fields for future TUI surfaces while still emitting the
 //! legacy plan payload shape.
 
-use std::collections::{BTreeMap, BTreeSet};
-
 use crate::common::{message, Result};
 use crate::review_contract::{
-    is_review_blocked_action, REVIEW_ACTION_BLOCKED_AMBIGUOUS, REVIEW_ACTION_BLOCKED_MISSING_ORG,
+    build_review_mutation_envelope, review_action_group, review_action_rank,
+    review_operation_kind_rank, ReviewMutationAction, ReviewMutationEnvelope,
+    REVIEW_ACTION_BLOCKED_AMBIGUOUS, REVIEW_ACTION_BLOCKED_MISSING_ORG,
     REVIEW_ACTION_BLOCKED_READ_ONLY, REVIEW_ACTION_BLOCKED_UID_MISMATCH,
     REVIEW_ACTION_EXTRA_REMOTE, REVIEW_ACTION_SAME, REVIEW_ACTION_UNMANAGED,
     REVIEW_ACTION_WOULD_CREATE, REVIEW_ACTION_WOULD_DELETE, REVIEW_ACTION_WOULD_UPDATE,
     REVIEW_STATUS_BLOCKED, REVIEW_STATUS_READY, REVIEW_STATUS_SAME, REVIEW_STATUS_WARNING,
 };
 use serde_json::{Map, Value};
-
-fn action_rank(action: &str) -> usize {
-    match action {
-        REVIEW_ACTION_WOULD_CREATE => 0,
-        REVIEW_ACTION_WOULD_UPDATE => 1,
-        REVIEW_ACTION_WOULD_DELETE => 2,
-        REVIEW_ACTION_SAME => 3,
-        REVIEW_ACTION_EXTRA_REMOTE => 4,
-        REVIEW_ACTION_UNMANAGED => 5,
-        _ => 6,
-    }
-}
-
-fn create_update_domain_rank(domain: &str) -> usize {
-    match domain {
-        "folder" => 0,
-        "datasource" => 1,
-        "dashboard" => 2,
-        "alert" => 3,
-        "access" => 4,
-        _ => 5,
-    }
-}
-
-fn delete_domain_rank(domain: &str) -> usize {
-    match domain {
-        "alert" => 0,
-        "dashboard" => 1,
-        "datasource" => 2,
-        "folder" | "access" => 3,
-        _ => 4,
-    }
-}
-
-fn operation_kind_rank(domain: &str, action: &str) -> usize {
-    if action == REVIEW_ACTION_WOULD_DELETE {
-        delete_domain_rank(domain)
-    } else {
-        create_update_domain_rank(domain)
-    }
-}
-
-fn action_group(action: &str) -> &'static str {
-    match action {
-        REVIEW_ACTION_WOULD_DELETE => "delete",
-        REVIEW_ACTION_WOULD_CREATE | REVIEW_ACTION_WOULD_UPDATE => "create-update",
-        REVIEW_ACTION_SAME => "read-only",
-        REVIEW_ACTION_EXTRA_REMOTE => REVIEW_STATUS_WARNING,
-        REVIEW_ACTION_UNMANAGED => REVIEW_STATUS_BLOCKED,
-        _ => "review",
-    }
-}
 
 fn derive_domain(resource_kind: &str) -> String {
     match resource_kind {
@@ -151,52 +99,8 @@ fn derive_status(action: &str, existing: Option<&str>) -> String {
         })
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct WorkspaceReviewAction {
-    pub action_id: String,
-    pub action: String,
-    pub domain: String,
-    pub resource_kind: String,
-    pub identity: String,
-    pub status: String,
-    pub order_group: String,
-    pub kind_order: usize,
-    pub blocked_reason: Option<String>,
-    pub details: Option<String>,
-    pub review_hints: Vec<String>,
-    pub raw: Value,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct WorkspaceReviewDomain {
-    pub id: String,
-    pub checked: usize,
-    pub same: usize,
-    pub create: usize,
-    pub update: usize,
-    pub delete: usize,
-    pub warning: usize,
-    pub blocked: usize,
-    pub action_count: usize,
-    pub raw: Value,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct WorkspaceReviewSummary {
-    pub action_count: usize,
-    pub domain_count: usize,
-    pub same_count: usize,
-    pub blocked_count: usize,
-    pub warning_count: usize,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct WorkspaceReviewView {
-    pub actions: Vec<WorkspaceReviewAction>,
-    pub domains: Vec<WorkspaceReviewDomain>,
-    pub blocked_reasons: Vec<String>,
-    pub summary: WorkspaceReviewSummary,
-}
+pub(crate) type WorkspaceReviewAction = ReviewMutationAction;
+pub(crate) type WorkspaceReviewView = ReviewMutationEnvelope;
 
 fn normalize_action(action: &Value) -> Result<WorkspaceReviewAction> {
     let Some(object) = action.as_object() else {
@@ -242,13 +146,13 @@ fn normalize_action(action: &Value) -> Result<WorkspaceReviewAction> {
     if !normalized.contains_key("orderGroup") {
         normalized.insert(
             "orderGroup".to_string(),
-            Value::String(action_group(&action_name).to_string()),
+            Value::String(review_action_group(&action_name).to_string()),
         );
     }
     if !normalized.contains_key("kindOrder") {
         normalized.insert(
             "kindOrder".to_string(),
-            Value::Number(operation_kind_rank(&domain, &action_name).into()),
+            Value::Number(review_operation_kind_rank(&domain, &action_name).into()),
         );
     }
     if !normalized.contains_key("reviewHints") {
@@ -319,142 +223,12 @@ fn collect_actions(document: &Map<String, Value>) -> Result<Vec<WorkspaceReviewA
     actions.sort_by(|left, right| {
         left.kind_order
             .cmp(&right.kind_order)
-            .then_with(|| action_rank(&left.action).cmp(&action_rank(&right.action)))
+            .then_with(|| review_action_rank(&left.action).cmp(&review_action_rank(&right.action)))
             .then_with(|| left.domain.cmp(&right.domain))
             .then_with(|| left.identity.cmp(&right.identity))
             .then_with(|| left.action_id.cmp(&right.action_id))
     });
     Ok(actions)
-}
-
-fn collect_blocked_reasons(actions: &[WorkspaceReviewAction]) -> Vec<String> {
-    let mut reasons = BTreeSet::new();
-    for action in actions {
-        if action.status != REVIEW_STATUS_BLOCKED && !is_review_blocked_action(&action.action) {
-            continue;
-        }
-        if let Some(reason) = action
-            .blocked_reason
-            .as_deref()
-            .or_else(|| action.raw.get("reason").and_then(Value::as_str))
-        {
-            let reason = reason.trim();
-            if !reason.is_empty() {
-                reasons.insert(reason.to_string());
-            }
-        }
-    }
-    reasons.into_iter().take(5).collect()
-}
-
-fn domain_summary(actions: &[WorkspaceReviewAction]) -> Vec<WorkspaceReviewDomain> {
-    let mut grouped: BTreeMap<String, Vec<&WorkspaceReviewAction>> = BTreeMap::new();
-    for action in actions {
-        grouped
-            .entry(action.domain.clone())
-            .or_default()
-            .push(action);
-    }
-    let mut domains = grouped
-        .into_iter()
-        .map(|(domain, items)| {
-            let checked = items.len();
-            let same = items
-                .iter()
-                .filter(|item| item.action == REVIEW_ACTION_SAME)
-                .count();
-            let create = items
-                .iter()
-                .filter(|item| item.action == REVIEW_ACTION_WOULD_CREATE)
-                .count();
-            let update = items
-                .iter()
-                .filter(|item| item.action == REVIEW_ACTION_WOULD_UPDATE)
-                .count();
-            let delete = items
-                .iter()
-                .filter(|item| item.action == REVIEW_ACTION_WOULD_DELETE)
-                .count();
-            let warning = items
-                .iter()
-                .filter(|item| item.status == REVIEW_STATUS_WARNING)
-                .count();
-            let blocked = items
-                .iter()
-                .filter(|item| item.status == REVIEW_STATUS_BLOCKED)
-                .count();
-            let raw = Value::Object(Map::from_iter(vec![
-                ("id".to_string(), Value::String(domain.clone())),
-                (
-                    "checked".to_string(),
-                    Value::Number((checked as i64).into()),
-                ),
-                (
-                    REVIEW_ACTION_SAME.to_string(),
-                    Value::Number((same as i64).into()),
-                ),
-                ("create".to_string(), Value::Number((create as i64).into())),
-                ("update".to_string(), Value::Number((update as i64).into())),
-                ("delete".to_string(), Value::Number((delete as i64).into())),
-                (
-                    REVIEW_STATUS_WARNING.to_string(),
-                    Value::Number((warning as i64).into()),
-                ),
-                (
-                    REVIEW_STATUS_BLOCKED.to_string(),
-                    Value::Number((blocked as i64).into()),
-                ),
-                (
-                    "actionCount".to_string(),
-                    Value::Number((checked as i64).into()),
-                ),
-            ]));
-            WorkspaceReviewDomain {
-                id: domain,
-                checked,
-                same,
-                create,
-                update,
-                delete,
-                warning,
-                blocked,
-                action_count: checked,
-                raw,
-            }
-        })
-        .collect::<Vec<_>>();
-    for domain in ["dashboard", "datasource", "alert", "access"] {
-        if !domains.iter().any(|value| value.id == domain) {
-            domains.push(WorkspaceReviewDomain {
-                id: domain.to_string(),
-                checked: 0,
-                same: 0,
-                create: 0,
-                update: 0,
-                delete: 0,
-                warning: 0,
-                blocked: 0,
-                action_count: 0,
-                raw: Value::Object(Map::from_iter(vec![
-                    ("id".to_string(), Value::String(domain.to_string())),
-                    ("checked".to_string(), Value::Number(0.into())),
-                    (REVIEW_ACTION_SAME.to_string(), Value::Number(0.into())),
-                    ("create".to_string(), Value::Number(0.into())),
-                    ("update".to_string(), Value::Number(0.into())),
-                    ("delete".to_string(), Value::Number(0.into())),
-                    (REVIEW_STATUS_WARNING.to_string(), Value::Number(0.into())),
-                    (REVIEW_STATUS_BLOCKED.to_string(), Value::Number(0.into())),
-                    ("actionCount".to_string(), Value::Number(0.into())),
-                ])),
-            });
-        }
-    }
-    domains.sort_by(|left, right| {
-        let left_id = left.id.as_str();
-        let right_id = right.id.as_str();
-        create_update_domain_rank(left_id).cmp(&create_update_domain_rank(right_id))
-    });
-    domains
 }
 
 pub(crate) fn build_workspace_review_view(document: &Value) -> Result<WorkspaceReviewView> {
@@ -465,28 +239,8 @@ pub(crate) fn build_workspace_review_view(document: &Value) -> Result<WorkspaceR
         return Err(message("Sync plan document kind is not supported."));
     }
     let actions = collect_actions(object)?;
-    let domains = domain_summary(&actions);
-    let blocked_reasons = collect_blocked_reasons(&actions);
-    let summary = WorkspaceReviewSummary {
-        action_count: actions.len(),
-        domain_count: domains.len(),
-        same_count: actions
-            .iter()
-            .filter(|action| action.action == REVIEW_ACTION_SAME)
-            .count(),
-        blocked_count: actions
-            .iter()
-            .filter(|action| action.status == REVIEW_STATUS_BLOCKED)
-            .count(),
-        warning_count: actions
-            .iter()
-            .filter(|action| action.status == REVIEW_STATUS_WARNING)
-            .count(),
-    };
-    Ok(WorkspaceReviewView {
+    Ok(build_review_mutation_envelope(
         actions,
-        domains,
-        blocked_reasons,
-        summary,
-    })
+        &["dashboard", "datasource", "alert", "access"],
+    ))
 }

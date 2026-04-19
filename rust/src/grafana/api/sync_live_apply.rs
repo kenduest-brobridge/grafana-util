@@ -7,14 +7,15 @@ use crate::review_contract::{
 use crate::sync::live::SyncApplyOperation;
 
 use super::sync_live_apply_alert::apply_alert_operation_with_client;
+use super::sync_live_apply_dashboard::apply_dashboard_operation_with_client;
 use super::sync_live_apply_datasource::{
     resolve_live_datasource_id, resolve_live_datasource_target,
 };
 use super::sync_live_apply_error::{
-    datasource_sync_target_not_resolved, refuse_live_folder_delete,
-    unsupported_datasource_sync_action, unsupported_folder_sync_action,
+    datasource_sync_target_not_resolved, unsupported_datasource_sync_action,
     unsupported_sync_resource_kind,
 };
+use super::sync_live_apply_folder::apply_folder_operation_with_client;
 use super::sync_live_apply_phase::execute_live_apply_phase;
 use super::SyncLiveClient;
 
@@ -230,78 +231,6 @@ fn apply_live_operation_with_client(
         | "alert-template" => apply_alert_operation_with_client(client, operation),
         _ => Err(unsupported_sync_resource_kind(kind)),
     }
-}
-
-fn apply_folder_operation_with_client(
-    client: &SyncLiveClient<'_>,
-    operation: &SyncApplyOperation,
-    allow_folder_delete: bool,
-) -> Result<Value> {
-    let action = operation.action.as_str();
-    let identity = operation.identity.as_str();
-    let desired = &operation.desired;
-    match action {
-        REVIEW_ACTION_WOULD_CREATE => {
-            let title = desired
-                .get("title")
-                .and_then(Value::as_str)
-                .map(str::trim)
-                .filter(|value: &&str| !value.is_empty())
-                .unwrap_or(identity);
-            let parent_uid = desired
-                .get("parentUid")
-                .and_then(Value::as_str)
-                .map(str::trim)
-                .filter(|value: &&str| !value.is_empty());
-            Ok(Value::Object(
-                client
-                    .create_folder(title, identity, parent_uid)?
-                    .into_iter()
-                    .collect(),
-            ))
-        }
-        REVIEW_ACTION_WOULD_UPDATE => Ok(Value::Object(
-            client
-                .update_folder(identity, desired)?
-                .into_iter()
-                .collect(),
-        )),
-        REVIEW_ACTION_WOULD_DELETE => {
-            if !allow_folder_delete {
-                return Err(refuse_live_folder_delete(identity));
-            }
-            Ok(client.delete_folder(identity)?)
-        }
-        _ => Err(unsupported_folder_sync_action(action)),
-    }
-}
-
-fn apply_dashboard_operation_with_client(
-    client: &SyncLiveClient<'_>,
-    operation: &SyncApplyOperation,
-) -> Result<Value> {
-    let action = operation.action.as_str();
-    let identity = operation.identity.as_str();
-    if action == REVIEW_ACTION_WOULD_DELETE {
-        return client.delete_dashboard(identity);
-    }
-    let mut body = operation.desired.clone();
-    body.insert("uid".to_string(), Value::String(identity.to_string()));
-    let title = body
-        .get("title")
-        .and_then(Value::as_str)
-        .map(str::trim)
-        .filter(|value: &&str| !value.is_empty())
-        .unwrap_or(identity);
-    body.insert("title".to_string(), Value::String(title.to_string()));
-    body.remove("id");
-    let folder_uid = body
-        .get("folderUid")
-        .or_else(|| body.get("folderUID"))
-        .and_then(Value::as_str)
-        .map(str::trim)
-        .filter(|value: &&str| !value.is_empty());
-    client.upsert_dashboard(&body, action == REVIEW_ACTION_WOULD_UPDATE, folder_uid)
 }
 
 fn apply_datasource_operation_with_client(

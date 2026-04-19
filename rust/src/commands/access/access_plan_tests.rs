@@ -98,6 +98,24 @@ fn parse_access_plan_supports_all_resource() {
 }
 
 #[test]
+fn parse_access_plan_supports_interactive_review() {
+    let args = parse_cli_from([
+        "grafana-util",
+        "plan",
+        "--input-dir",
+        "./access-users",
+        "--interactive",
+    ]);
+    match args.command {
+        crate::access::AccessCommand::Plan(plan) => {
+            assert!(plan.interactive);
+            assert!(matches!(plan.output_format, PlanOutputFormat::Text));
+        }
+        _ => panic!("expected access plan"),
+    }
+}
+
+#[test]
 fn user_plan_builds_summary_and_renderers() {
     let temp_dir = tempdir().unwrap();
     write_user_bundle(temp_dir.path());
@@ -117,6 +135,7 @@ fn user_plan_builds_summary_and_renderers() {
         list_columns: false,
         no_header: false,
         show_same: false,
+        interactive: false,
         output_format: PlanOutputFormat::Text,
     };
     let document = build_access_plan_document(
@@ -174,6 +193,7 @@ fn all_plan_aggregates_present_bundles_and_reports_missing_resources() {
         list_columns: false,
         no_header: false,
         show_same: false,
+        interactive: false,
         output_format: PlanOutputFormat::Text,
     };
     let document = build_access_plan_document(
@@ -229,6 +249,7 @@ fn all_plan_errors_when_no_bundle_dirs_are_present() {
         list_columns: false,
         no_header: false,
         show_same: false,
+        interactive: false,
         output_format: PlanOutputFormat::Text,
     };
     let error =
@@ -238,6 +259,239 @@ fn all_plan_errors_when_no_bundle_dirs_are_present() {
     assert!(error
         .to_string()
         .contains("access plan --resource all did not find any access bundle directories"));
+}
+
+#[test]
+fn access_plan_review_envelope_projects_access_actions() {
+    let document = AccessPlanDocument {
+        kind: ACCESS_PLAN_KIND.to_string(),
+        schema_version: ACCESS_PLAN_SCHEMA_VERSION,
+        tool_version: "test".to_string(),
+        summary: AccessPlanSummary {
+            resource_count: 1,
+            checked: 2,
+            same: 0,
+            create: 0,
+            update: 1,
+            extra_remote: 0,
+            delete: 0,
+            blocked: 1,
+            warning: 0,
+            prune: false,
+        },
+        resources: vec![AccessPlanResourceReport {
+            resource_kind: "user".to_string(),
+            source_path: "./access-users".to_string(),
+            bundle_present: true,
+            source_count: 2,
+            live_count: 2,
+            checked: 2,
+            same: 0,
+            create: 0,
+            update: 1,
+            extra_remote: 0,
+            delete: 0,
+            blocked: 1,
+            warning: 0,
+            scope: Some("org".to_string()),
+            notes: Vec::new(),
+        }],
+        actions: vec![
+            AccessPlanAction {
+                action_id: "access:user:alice".to_string(),
+                domain: "access".to_string(),
+                resource_kind: "user".to_string(),
+                identity: "alice".to_string(),
+                scope: Some("org".to_string()),
+                action: "would-update".to_string(),
+                status: "ready".to_string(),
+                changed_fields: vec!["orgRole".to_string()],
+                changes: Vec::new(),
+                target: None,
+                blocked_reason: None,
+                review_hints: vec!["review org role change".to_string()],
+                source_path: "./access-users/users.json".to_string(),
+            },
+            AccessPlanAction {
+                action_id: "access:user:bob".to_string(),
+                domain: "access".to_string(),
+                resource_kind: "user".to_string(),
+                identity: "bob".to_string(),
+                scope: Some("org".to_string()),
+                action: "blocked".to_string(),
+                status: "blocked".to_string(),
+                changed_fields: vec!["email".to_string()],
+                changes: Vec::new(),
+                target: None,
+                blocked_reason: Some("externally synced user".to_string()),
+                review_hints: vec!["review identity source".to_string()],
+                source_path: "./access-users/users.json".to_string(),
+            },
+        ],
+    };
+
+    let review = document.build_review_envelope();
+
+    assert_eq!(review.actions.len(), 2);
+    assert_eq!(review.domains.len(), 1);
+    assert_eq!(review.domains[0].id, "access");
+    assert_eq!(review.summary.action_count, 2);
+    assert_eq!(review.summary.blocked_count, 1);
+    assert_eq!(review.blocked_reasons, vec!["externally synced user"]);
+    assert_eq!(review.actions[0].order_group, "create-update");
+    assert_eq!(review.actions[0].kind_order, 4);
+    assert_eq!(review.actions[0].details.as_deref(), Some("fields=orgRole"));
+}
+
+#[test]
+fn access_plan_review_projection_exposes_ui_facing_fields() {
+    let document = AccessPlanDocument {
+        kind: ACCESS_PLAN_KIND.to_string(),
+        schema_version: ACCESS_PLAN_SCHEMA_VERSION,
+        tool_version: "test".to_string(),
+        summary: AccessPlanSummary {
+            resource_count: 1,
+            checked: 1,
+            same: 0,
+            create: 0,
+            update: 1,
+            extra_remote: 0,
+            delete: 0,
+            blocked: 0,
+            warning: 0,
+            prune: false,
+        },
+        resources: vec![AccessPlanResourceReport {
+            resource_kind: "user".to_string(),
+            source_path: "./access-users".to_string(),
+            bundle_present: true,
+            source_count: 1,
+            live_count: 1,
+            checked: 1,
+            same: 0,
+            create: 0,
+            update: 1,
+            extra_remote: 0,
+            delete: 0,
+            blocked: 0,
+            warning: 0,
+            scope: Some("org".to_string()),
+            notes: Vec::new(),
+        }],
+        actions: vec![AccessPlanAction {
+            action_id: "access:user:alice".to_string(),
+            domain: "access".to_string(),
+            resource_kind: "user".to_string(),
+            identity: "alice".to_string(),
+            scope: Some("org".to_string()),
+            action: "would-update".to_string(),
+            status: "ready".to_string(),
+            changed_fields: vec!["orgRole".to_string(), "email".to_string()],
+            changes: Vec::new(),
+            target: None,
+            blocked_reason: None,
+            review_hints: vec!["review org role change".to_string()],
+            source_path: "./access-users/users.json".to_string(),
+        }],
+    };
+
+    let projection = document.build_review_projection();
+
+    assert_eq!(projection.domains, vec!["access"]);
+    assert_eq!(projection.actions.len(), 1);
+    assert_eq!(projection.actions[0].action_id, "access:user:alice");
+    assert_eq!(projection.actions[0].order_group, "create-update");
+    assert_eq!(projection.actions[0].kind_order, 4);
+    assert_eq!(
+        projection.actions[0].details.as_deref(),
+        Some("fields=orgRole,email")
+    );
+    assert_eq!(
+        projection.actions[0].review_hints,
+        vec!["review org role change".to_string()]
+    );
+    assert_eq!(
+        projection.actions[0].raw["sourcePath"],
+        Value::String("./access-users/users.json".to_string())
+    );
+}
+
+#[test]
+fn access_plan_interactive_browser_items_follow_review_projection() {
+    let document = AccessPlanDocument {
+        kind: ACCESS_PLAN_KIND.to_string(),
+        schema_version: ACCESS_PLAN_SCHEMA_VERSION,
+        tool_version: "test".to_string(),
+        summary: AccessPlanSummary {
+            resource_count: 1,
+            checked: 2,
+            same: 0,
+            create: 0,
+            update: 1,
+            extra_remote: 0,
+            delete: 0,
+            blocked: 1,
+            warning: 0,
+            prune: false,
+        },
+        resources: vec![AccessPlanResourceReport {
+            resource_kind: "user".to_string(),
+            source_path: "./access-users".to_string(),
+            bundle_present: true,
+            source_count: 2,
+            live_count: 2,
+            checked: 2,
+            same: 0,
+            create: 0,
+            update: 1,
+            extra_remote: 0,
+            delete: 0,
+            blocked: 1,
+            warning: 0,
+            scope: Some("org".to_string()),
+            notes: vec!["review only".to_string()],
+        }],
+        actions: vec![AccessPlanAction {
+            action_id: "access:user:alice".to_string(),
+            domain: "access".to_string(),
+            resource_kind: "user".to_string(),
+            identity: "alice".to_string(),
+            scope: Some("org".to_string()),
+            action: "would-update".to_string(),
+            status: "blocked".to_string(),
+            changed_fields: vec!["orgRole".to_string(), "email".to_string()],
+            changes: Vec::new(),
+            target: None,
+            blocked_reason: Some("externally synced user".to_string()),
+            review_hints: vec!["review identity source".to_string()],
+            source_path: "./access-users/users.json".to_string(),
+        }],
+    };
+
+    let items = build_access_plan_browser_items(&document);
+
+    assert_eq!(items.len(), 2);
+    assert_eq!(items[0].kind, "resource");
+    assert!(items[0].details.iter().any(|line| line == "Note: review only"));
+    assert_eq!(items[1].kind, "user");
+    assert_eq!(items[1].title, "alice");
+    assert!(items[1].meta.contains("blocked"));
+    assert!(items[1]
+        .details
+        .iter()
+        .any(|line| line == "Details: fields=orgRole,email"));
+    assert!(items[1]
+        .details
+        .iter()
+        .any(|line| line == "Blocked reason: externally synced user"));
+    assert!(items[1]
+        .details
+        .iter()
+        .any(|line| line == "Hint: review identity source"));
+    assert!(items[1]
+        .details
+        .iter()
+        .any(|line| line == "Source path: ./access-users/users.json"));
 }
 
 #[test]
@@ -282,6 +536,7 @@ fn org_plan_builds_summary_and_renderers() {
         list_columns: false,
         no_header: false,
         show_same: false,
+        interactive: false,
         output_format: PlanOutputFormat::Text,
     };
     let document = build_access_plan_document(
@@ -366,6 +621,7 @@ fn org_plan_prune_marks_remote_orgs_for_delete() {
         list_columns: false,
         no_header: false,
         show_same: false,
+        interactive: false,
         output_format: PlanOutputFormat::Text,
     };
     let document = build_access_plan_document(

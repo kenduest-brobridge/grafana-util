@@ -11,8 +11,12 @@ mod sync_live_apply;
 mod sync_live_apply_alert;
 #[path = "sync_live_apply_datasource.rs"]
 mod sync_live_apply_datasource;
+#[path = "sync_live_apply_dashboard.rs"]
+mod sync_live_apply_dashboard;
 #[path = "sync_live_apply_error.rs"]
 mod sync_live_apply_error;
+#[path = "sync_live_apply_folder.rs"]
+mod sync_live_apply_folder;
 #[path = "sync_live_apply_phase.rs"]
 mod sync_live_apply_phase;
 #[path = "sync_live_apply_result.rs"]

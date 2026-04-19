@@ -49,6 +49,7 @@ fn make_args(dir: &Path, prune: bool) -> AccessPlanArgs {
         list_columns: false,
         no_header: false,
         show_same: false,
+        interactive: false,
         output_format: PlanOutputFormat::Json,
     }
 }

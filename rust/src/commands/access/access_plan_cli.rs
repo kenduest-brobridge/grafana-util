@@ -105,9 +105,15 @@ pub struct AccessPlanArgs {
     pub show_same: bool,
     #[arg(
         long,
+        default_value_t = false,
+        help = "Open a read-only interactive terminal review over the access plan."
+    )]
+    pub interactive: bool,
+    #[arg(
+        long,
         value_enum,
         default_value_t = PlanOutputFormat::Text,
-        help = "Output format for access plan review. Use text, table, or json."
+        help = "Output format for access plan review. Use text, table, or json when --interactive is not set."
     )]
     pub output_format: PlanOutputFormat,
 }

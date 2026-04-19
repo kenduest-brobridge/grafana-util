@@ -408,6 +408,7 @@ mod tests {
             list_columns: false,
             no_header: false,
             show_same: false,
+            interactive: false,
             output_format: PlanOutputFormat::Text,
         }
     }
