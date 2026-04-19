@@ -60,7 +60,7 @@ ACCESS_PLAN_DEFAULT_COLUMNS = (
 ACCESS_ROOT_HELP_EXAMPLES = (
     "Examples:\n\n"
     '  grafana-util access user list --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --json\n'
-    "  grafana-util access user list --input-dir ./access-users --with-teams --output-format yaml\n"
+    "  grafana-util access user list --input-dir ./access-users --with-teams --output-format json\n"
     "  grafana-util access plan --profile prod --input-dir ./access-users --resource user --output-format table\n"
     "  grafana-util access team import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./access-teams --dry-run --table --yes\n"
     '  grafana-util access service-account token add --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --name deploy-bot --token-name nightly'
@@ -214,7 +214,7 @@ ACCESS_ROOT_HELP_EXAMPLES = """Examples:
     grafana-util access user list --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --json
 
   List exported users from a local bundle:
-    grafana-util access user list --input-dir ./access-users --with-teams --output-format yaml
+    grafana-util access user list --input-dir ./access-users --with-teams --output-format json
 
   Plan user access changes from a local bundle:
     grafana-util access plan --profile prod --input-dir ./access-users --resource user --output-format table
