@@ -17,6 +17,13 @@ Current AI change log only.
 - Older entries moved to [`ai-changes-archive-2026-04-19.md`](docs/internal/archive/ai-changes-archive-2026-04-19.md).
 - Older entries moved to [`ai-changes-archive-2026-04-20.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-changes-archive-2026-04-20.md).
 
+## 2026-04-20 - Align sync live availability keys
+- Summary: moved sync live availability map keys into a shared namespaced module and reused them from both the live read path and availability merge allow-list.
+- Tests: preserved Grafana API live availability behavior and sync/status status aggregation behavior while removing repeated raw availability key strings.
+- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet availability --lib`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `cargo test --manifest-path rust/Cargo.toml --quiet sync --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet status --lib`; `python3 scripts/rust_maintainability_report.py`; `cargo test --manifest-path rust/Cargo.toml --quiet`; `make quality-ai-workflow`; `git diff --check`.
+- Impact: `rust/src/grafana/api/sync_live.rs`, `rust/src/grafana/api/sync_live_read.rs`, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are intentionally unchanged.
+- Rollback/Risk: low mechanical refactor around availability document keys. Rollback would restore raw strings in read and merge paths; behavior should remain unchanged because the same key literals are centralized.
+
 ## 2026-04-20 - Align live sync status helpers
 - Summary: reused the shared sync project-status JSON summary helper in the live sync status producer and grouped live sync summary keys and signal source strings under namespaced constants.
 - Tests: moved live sync status assertions into a dedicated Rust test module and preserved none, blocker, partial, additive source, no-resource, and generic bundle fallback behavior.
@@ -79,11 +86,3 @@ Current AI change log only.
 - Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `cargo test --manifest-path rust/Cargo.toml --quiet project_status`; `python3 scripts/rust_maintainability_report.py`.
 - Impact: `rust/src/commands/dashboard/project_status.rs`, `rust/src/commands/dashboard/project_status_tests.rs`, `rust/src/commands/datasource/project_status/live.rs`, and `rust/src/commands/datasource/project_status/live_tests.rs`.
 - Rollback/Risk: low mechanical split. Rollback would inline the tests again; behavior should not change because production code was not altered.
-
-## 2026-04-20 - Complete Python artifact and plan parity
-- Summary: aligned Python artifact workspace run selectors with Rust `latest`/`timestamp` semantics, added datasource `plan` plus local artifact input support for datasource list/import/diff/plan, added access plan/local workflow coverage, and expanded snapshot export/review artifact workspace handling.
-- Tests: added focused parser/runtime tests for datasource plan/local artifact lanes, access local plan flows, and snapshot artifact export/review roots.
-- Test Run: `cd python && PYTHONPATH=. python -m unittest -v tests.test_python_datasource_cli tests.test_python_snapshot_cli tests.test_python_profile_config`; `cd python && PYTHONPATH=. python -m unittest -v tests.test_python_access_cli`; `cd python && PYTHONPATH=. python -m unittest -v tests.test_python_unified_cli`.
-- Impact: `python/grafana_utils/profile_config.py`, `python/grafana_utils/datasource/parser.py`, `python/grafana_utils/datasource/workflows.py`, `python/grafana_utils/datasource_cli.py`, `python/grafana_utils/access/parser.py`, `python/grafana_utils/access/workflows.py`, `python/grafana_utils/snapshot_cli.py`, focused Python tests, unified CLI preview, and AI trace docs.
-- Rollback/Risk: medium Python CLI behavior expansion. Rollback would remove the new local artifact consumers and review-only plan surfaces; live mutation flows remain gated by existing import/add/modify/delete commands.
-- Follow-up: continue with dashboard/status/resource parity depth after this focused artifact and plan slice.

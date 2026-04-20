@@ -35,6 +35,20 @@ pub(crate) use sync_live_read::{
     fetch_live_availability_with_request, fetch_live_resource_specs_with_request,
 };
 
+mod availability_key {
+    pub(super) const DATASOURCE_UIDS: &str = "datasourceUids";
+    pub(super) const DATASOURCE_NAMES: &str = "datasourceNames";
+    pub(super) const PLUGIN_IDS: &str = "pluginIds";
+    pub(super) const CONTACT_POINTS: &str = "contactPoints";
+
+    pub(super) const MERGE_ARRAY_KEYS: &[&str] = &[
+        DATASOURCE_UIDS,
+        DATASOURCE_NAMES,
+        PLUGIN_IDS,
+        CONTACT_POINTS,
+    ];
+}
+
 pub(crate) fn merge_availability(base: Option<Value>, extra: &Value) -> Result<Value> {
     let mut merged = match base {
         Some(Value::Object(object)) => object,
@@ -47,10 +61,7 @@ pub(crate) fn merge_availability(base: Option<Value>, extra: &Value) -> Result<V
     };
     let extra_object = require_json_object(extra, "Live availability document")?;
     for (key, value) in extra_object {
-        if matches!(
-            key.as_str(),
-            "datasourceUids" | "datasourceNames" | "pluginIds" | "contactPoints"
-        ) {
+        if availability_key::MERGE_ARRAY_KEYS.contains(&key.as_str()) {
             let existing = merged
                 .remove(key)
                 .and_then(|item| item.as_array().cloned())

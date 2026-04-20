@@ -17,6 +17,13 @@ Current AI-maintained status only.
 - Older entries moved to [`ai-status-archive-2026-04-19.md`](docs/internal/archive/ai-status-archive-2026-04-19.md).
 - Older entries moved to [`ai-status-archive-2026-04-20.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-04-20.md).
 
+## 2026-04-20 - Align sync live availability keys
+- State: Done
+- Scope: Rust Grafana sync live availability key constants, availability merge/read helpers, focused availability tests, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
+- Baseline: `grafana/api/sync_live_read.rs` and `grafana/api/sync_live.rs` repeat availability map keys such as `datasourceUids`, `pluginIds`, and `contactPoints` as raw strings.
+- Current Update: Moved sync live availability keys into a shared namespaced module and reused them from both read and merge paths.
+- Result: Focused availability tests, broader sync/status tests, formatter check, maintainability report, full Rust tests, and AI workflow checks pass.
+
 ## 2026-04-20 - Align live sync status helpers
 - State: Done
 - Scope: Rust live sync project-status shared JSON helper reuse, namespaced summary/signal constants, focused live sync status tests, sync/status validation, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
@@ -51,10 +58,3 @@ Current AI-maintained status only.
 - Baseline: `lib.rs` still exposed old sync compatibility aliases, `resource/mod.rs` held CLI definitions, catalog logic, runtime reads, renderers, and tests in one file, and dashboard/access workflow modules still contained large mixed-responsibility import/org validation flows.
 - Current Update: Removed obsolete sync compatibility re-exports, switched root preflight to canonical sync module paths, split resource CLI/catalog/runtime/rendering, split dashboard import validation auth/org-scope/dependency logic, and split access org live/sync/diff workflows behind facade modules.
 - Result: Focused worker tests, full Rust tests, formatter check, maintainability report, and AI workflow checks pass.
-
-## 2026-04-20 - Continue Rust architecture cleanup
-- State: Done
-- Scope: Rust dashboard test organization, dashboard facade re-export boundary, snapshot artifact-workspace coverage, focused Rust tests, and AI trace docs. Public CLI behavior, command docs, generated docs, Python implementation, and output contracts are out of scope.
-- Baseline: Dashboard artifact workspace tests lived inside a broader parser/help workflow test file, `dashboard/mod.rs` mixed module registration with a long public/crate-private re-export block, and snapshot export had no direct latest-run pointer coverage for artifact-workspace timestamp runs.
-- Current Update: Split dashboard artifact workflow tests into a dedicated test module, moved dashboard facade re-exports into `facade_exports.rs`, and added a narrow snapshot artifact export latest-run coverage test.
-- Result: Focused dashboard artifact/parser tests, dashboard scope tests, snapshot scope tests, full Rust tests, formatter check, maintainability report, and AI workflow checks pass.

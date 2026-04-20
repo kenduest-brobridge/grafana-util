@@ -83,3 +83,11 @@
 - Impact: `python/grafana_utils/dashboard_authoring.py`, `python/grafana_utils/dashboard_cli.py`, `python/grafana_utils/dashboard_topology.py`, `python/grafana_utils/project_status_live.py`, `python/grafana_utils/access/parser.py`, `python/grafana_utils/access/workflows.py`, `python/grafana_utils/clients/access_client.py`, `python/grafana_utils/clients/alert_client.py`, `python/grafana_utils/profile_config.py`, focused Python tests, and AI trace docs.
 - Rollback/Risk: medium Python CLI behavior expansion. Dashboard plan is intentionally review-only and does not mutate Grafana; access browse local artifact mode reads existing export bundles from profile artifact lanes; status live now surfaces failures that were previously hidden.
 - Follow-up: none for this parity slice.
+
+## 2026-04-20 - Complete Python artifact and plan parity
+- Summary: aligned Python artifact workspace run selectors with Rust `latest`/`timestamp` semantics, added datasource `plan` plus local artifact input support for datasource list/import/diff/plan, added access plan/local workflow coverage, and expanded snapshot export/review artifact workspace handling.
+- Tests: added focused parser/runtime tests for datasource plan/local artifact lanes, access local plan flows, and snapshot artifact export/review roots.
+- Test Run: `cd python && PYTHONPATH=. python -m unittest -v tests.test_python_datasource_cli tests.test_python_snapshot_cli tests.test_python_profile_config`; `cd python && PYTHONPATH=. python -m unittest -v tests.test_python_access_cli`; `cd python && PYTHONPATH=. python -m unittest -v tests.test_python_unified_cli`.
+- Impact: `python/grafana_utils/profile_config.py`, `python/grafana_utils/datasource/parser.py`, `python/grafana_utils/datasource/workflows.py`, `python/grafana_utils/datasource_cli.py`, `python/grafana_utils/access/parser.py`, `python/grafana_utils/access/workflows.py`, `python/grafana_utils/snapshot_cli.py`, focused Python tests, unified CLI preview, and AI trace docs.
+- Rollback/Risk: medium Python CLI behavior expansion. Rollback would remove the new local artifact consumers and review-only plan surfaces; live mutation flows remain gated by existing import/add/modify/delete commands.
+- Follow-up: continue with dashboard/status/resource parity depth after this focused artifact and plan slice.

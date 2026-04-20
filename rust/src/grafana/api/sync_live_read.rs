@@ -8,7 +8,38 @@ use crate::sync::{
     normalize_alert_resource_identity_and_title, require_json_object,
 };
 
-use super::SyncLiveClient;
+use super::{availability_key, SyncLiveClient};
+
+fn empty_availability_document() -> Map<String, Value> {
+    Map::from_iter(vec![
+        (
+            availability_key::DATASOURCE_UIDS.to_string(),
+            Value::Array(Vec::new()),
+        ),
+        (
+            availability_key::DATASOURCE_NAMES.to_string(),
+            Value::Array(Vec::new()),
+        ),
+        (
+            availability_key::PLUGIN_IDS.to_string(),
+            Value::Array(Vec::new()),
+        ),
+        (
+            availability_key::CONTACT_POINTS.to_string(),
+            Value::Array(Vec::new()),
+        ),
+    ])
+}
+
+fn availability_array_mut<'a>(
+    availability: &'a mut Map<String, Value>,
+    key: &'static str,
+) -> &'a mut Vec<Value> {
+    availability
+        .get_mut(key)
+        .and_then(Value::as_array_mut)
+        .unwrap_or_else(|| panic!("{key} should be array"))
+}
 
 fn build_live_alert_resource_spec(sync_kind: &str, body: Map<String, Value>) -> Result<Value> {
     let (identity, title) = normalize_alert_resource_identity_and_title(sync_kind, &body)?;
@@ -268,12 +299,7 @@ impl<'a> SyncLiveClient<'a> {
     }
 
     pub(crate) fn fetch_live_availability(&self) -> Result<Value> {
-        let mut availability = Map::from_iter(vec![
-            ("datasourceUids".to_string(), Value::Array(Vec::new())),
-            ("datasourceNames".to_string(), Value::Array(Vec::new())),
-            ("pluginIds".to_string(), Value::Array(Vec::new())),
-            ("contactPoints".to_string(), Value::Array(Vec::new())),
-        ]);
+        let mut availability = empty_availability_document();
 
         let mut uids = Vec::new();
         let mut names = Vec::new();
@@ -296,17 +322,11 @@ impl<'a> SyncLiveClient<'a> {
             }
         }
         append_unique_strings(
-            availability
-                .get_mut("datasourceUids")
-                .and_then(Value::as_array_mut)
-                .expect("datasourceUids should be array"),
+            availability_array_mut(&mut availability, availability_key::DATASOURCE_UIDS),
             &uids,
         );
         append_unique_strings(
-            availability
-                .get_mut("datasourceNames")
-                .and_then(Value::as_array_mut)
-                .expect("datasourceNames should be array"),
+            availability_array_mut(&mut availability, availability_key::DATASOURCE_NAMES),
             &names,
         );
 
@@ -319,10 +339,7 @@ impl<'a> SyncLiveClient<'a> {
             .map(str::to_string)
             .collect::<Vec<_>>();
         append_unique_strings(
-            availability
-                .get_mut("pluginIds")
-                .and_then(Value::as_array_mut)
-                .expect("pluginIds should be array"),
+            availability_array_mut(&mut availability, availability_key::PLUGIN_IDS),
             &ids,
         );
 
@@ -346,10 +363,7 @@ impl<'a> SyncLiveClient<'a> {
             }
         }
         append_unique_strings(
-            availability
-                .get_mut("contactPoints")
-                .and_then(Value::as_array_mut)
-                .expect("contactPoints should be array"),
+            availability_array_mut(&mut availability, availability_key::CONTACT_POINTS),
             &names,
         );
 
@@ -672,12 +686,7 @@ pub(crate) fn fetch_live_availability_with_request<F>(mut request_json: F) -> Re
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
-    let mut availability = Map::from_iter(vec![
-        ("datasourceUids".to_string(), Value::Array(Vec::new())),
-        ("datasourceNames".to_string(), Value::Array(Vec::new())),
-        ("pluginIds".to_string(), Value::Array(Vec::new())),
-        ("contactPoints".to_string(), Value::Array(Vec::new())),
-    ]);
+    let mut availability = empty_availability_document();
 
     match request_json(Method::GET, "/api/datasources", &[], None)? {
         Some(Value::Array(datasources)) => {
@@ -703,17 +712,11 @@ where
                 }
             }
             append_unique_strings(
-                availability
-                    .get_mut("datasourceUids")
-                    .and_then(Value::as_array_mut)
-                    .expect("datasourceUids should be array"),
+                availability_array_mut(&mut availability, availability_key::DATASOURCE_UIDS),
                 &uids,
             );
             append_unique_strings(
-                availability
-                    .get_mut("datasourceNames")
-                    .and_then(Value::as_array_mut)
-                    .expect("datasourceNames should be array"),
+                availability_array_mut(&mut availability, availability_key::DATASOURCE_NAMES),
                 &names,
             );
         }
@@ -731,10 +734,7 @@ where
                 .map(str::to_string)
                 .collect::<Vec<_>>();
             append_unique_strings(
-                availability
-                    .get_mut("pluginIds")
-                    .and_then(Value::as_array_mut)
-                    .expect("pluginIds should be array"),
+                availability_array_mut(&mut availability, availability_key::PLUGIN_IDS),
                 &ids,
             );
         }
@@ -770,10 +770,7 @@ where
                 }
             }
             append_unique_strings(
-                availability
-                    .get_mut("contactPoints")
-                    .and_then(Value::as_array_mut)
-                    .expect("contactPoints should be array"),
+                availability_array_mut(&mut availability, availability_key::CONTACT_POINTS),
                 &names,
             );
         }
