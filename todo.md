@@ -32,7 +32,7 @@ Scope rules:
 Run the next development passes in this order unless a CI failure or user report
 changes priority.
 
-- [ ] Finish the remaining project status producer audit and only normalize the last direct producers that still need the shared internal status reading model. Keep live Grafana evidence such as health and version where available.
+- [x] Finish the remaining project status producer audit and only normalize the last direct producers that still need the shared internal status reading model. Keep live Grafana evidence such as health and version where available.
 - [ ] Add the first concrete contract promotion checker report after the contract ownership lanes are documented. Start informational only.
 - [ ] Keep the mutation review envelope adapter work later and only introduce a shared adapter once two or more domains prove the same review shape.
 - [ ] Keep dashboard v2 as a future adapter boundary. Continue rejecting v2-shaped input in the classic prompt lane and keep prompt export parity guarded with fixtures and tests.
@@ -96,6 +96,8 @@ as a focused commit group with narrow validation.
 Completed cleanup now closed:
 
 - Push baseline on `dev` completed and is already validated.
+- Remaining project status producers audited; the last dashboard live read
+  failure fallback now routes through `StatusReading`.
 - Status producers routed through `StatusReading` for access and dashboard.
 - Access user browse mutation dispatch was split into a dedicated mutation
   module.

@@ -137,3 +137,10 @@
 - Baseline: Overview contract tests still mixed parser/basic-render smoke coverage with larger domain fixtures, alert args still mixed runtime and authoring command-family structs, project-status live tests owned local HTTP test helpers, and sync preflight repeated availability/body JSON keys inline.
 - Current Update: Split overview parser/basic-render contract assertions and alert runtime args into focused adjacent modules, extracted project-status live HTTP test support, and grouped sync preflight summary/availability/body JSON keys under namespaced modules.
 - Result: Focused overview, alert, project-status live, preflight, and sync tests pass; full validation is complete for this maintenance batch.
+
+## 2026-04-20 - Clean up sync staged schema keys
+- State: Done
+- Scope: Rust sync staged document renderers, workspace preview review view, sync project-status JSON helpers, focused sync/status tests, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
+- Baseline: sync staged rendering and review helpers still read tool-owned fields such as `kind`, `summary`, `resourceCount`, and review metadata as repeated raw strings.
+- Current Update: Grouped sync staged document, summary, review, and project-status section names behind local namespaced constants while leaving ordinary Grafana raw keys unchanged.
+- Result: Focused render, workspace preview, sync project-status, sync, status, formatter, maintainability, AI workflow, and full Rust tests pass.

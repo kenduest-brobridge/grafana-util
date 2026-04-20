@@ -17,6 +17,13 @@ Current AI-maintained status only.
 - Older entries moved to [`ai-status-archive-2026-04-19.md`](docs/internal/archive/ai-status-archive-2026-04-19.md).
 - Older entries moved to [`ai-status-archive-2026-04-20.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-04-20.md).
 
+## 2026-04-20 - Finish project status producer audit
+- State: Done
+- Scope: Rust project-status producer audit across sync, datasource, alert, dashboard, access, and live status fallback producers. Public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
+- Baseline: Most domain producers already routed through `StatusReading`, but the remaining audit still needed to confirm whether any direct producer construction remained.
+- Current Update: Audited the producer lanes in workers and normalized the remaining dashboard live read-failure fallback in test support through `StatusReading` while preserving live evidence and public status fields.
+- Result: Focused dashboard/access/status/project_status tests, formatter, architecture, AI workflow, and full Rust tests pass.
+
 ## 2026-04-20 - Move dashboard import into directory boundary
 - State: Done
 - Scope: Rust dashboard import module layout, focused import/routed/plan/browse validation, and AI trace docs. Plan reconciliation, inspect/governance moves, public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
@@ -51,10 +58,3 @@ Current AI-maintained status only.
 - Baseline: `grafana/api/sync_live_read.rs` still owned folder, dashboard, datasource, alert, and availability read loops in one large adapter module.
 - Current Update: Moved dashboard/folder, datasource, alert, and availability live-read assembly into dedicated child modules while keeping the parent as the public facade.
 - Result: Focused sync live, status, formatter, maintainability, AI workflow, and full Rust tests pass.
-
-## 2026-04-20 - Clean up sync staged schema keys
-- State: Done
-- Scope: Rust sync staged document renderers, workspace preview review view, sync project-status JSON helpers, focused sync/status tests, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
-- Baseline: sync staged rendering and review helpers still read tool-owned fields such as `kind`, `summary`, `resourceCount`, and review metadata as repeated raw strings.
-- Current Update: Grouped sync staged document, summary, review, and project-status section names behind local namespaced constants while leaving ordinary Grafana raw keys unchanged.
-- Result: Focused render, workspace preview, sync project-status, sync, status, formatter, maintainability, AI workflow, and full Rust tests pass.

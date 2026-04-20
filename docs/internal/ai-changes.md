@@ -17,6 +17,13 @@ Current AI change log only.
 - Older entries moved to [`ai-changes-archive-2026-04-19.md`](docs/internal/archive/ai-changes-archive-2026-04-19.md).
 - Older entries moved to [`ai-changes-archive-2026-04-20.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-changes-archive-2026-04-20.md).
 
+## 2026-04-20 - Finish project status producer audit
+- Summary: audited remaining project-status producers across sync, datasource, alert, dashboard, access, and live status fallback paths, then normalized the last dashboard live read-failure fallback through `StatusReading`.
+- Tests: preserved live dashboard read failure status fields, blocker count derivation, and existing staged/live domain status evidence including health, version, discovery, and freshness paths.
+- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet dashboard --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet access --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet status --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet project_status --lib`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `make quality-architecture`; `make quality-ai-workflow`; `cargo test --manifest-path rust/Cargo.toml --quiet`; `git diff --check`.
+- Impact: `rust/src/grafana/api/project_status_live.rs`, `todo.md`, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are intentionally unchanged.
+- Rollback/Risk: low test-support normalization. Rollback would restore the direct fallback `ProjectDomainStatus` literal; the shared model derives the same blocker and warning counts from the same data.
+
 ## 2026-04-20 - Move dashboard import into directory boundary
 - Summary: moved dashboard import implementation files under `commands/dashboard/import/` while keeping `commands/dashboard/mod.rs` as the facade and leaving plan reconciliation under `commands/dashboard/plan/`.
 - Tests: preserved import dry-run/apply lookup boundaries, routed import reporting, dashboard plan relationships, and browse interactive import coverage through existing regression suites.
@@ -79,10 +86,3 @@ Current AI change log only.
 - Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet project_status_cli --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet status --lib`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `python3 scripts/rust_maintainability_report.py`; `cargo test --manifest-path rust/Cargo.toml --quiet`; `make quality-ai-workflow`; `git diff --check`.
 - Impact: `rust/src/commands/status/tests.rs`, `rust/src/commands/status/parser_tests.rs`, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are intentionally unchanged.
 - Rollback/Risk: low mechanical test split. Rollback would move parser tests back into the original status test file; behavior is unchanged.
-
-## 2026-04-20 - Split project status live API tests
-- Summary: moved Grafana project-status live API tests into a dedicated adjacent Rust test module, leaving production read/freshness helpers in `project_status_live.rs`.
-- Tests: preserved org, dashboard, datasource, version-history, alert-surface, and freshness coverage while reducing production/test mixing.
-- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet grafana_api::project_status_live::tests --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet project_status_live_org_id_scopes_live_reads --lib -- --test-threads=1`; `cargo test --manifest-path rust/Cargo.toml --quiet project_status_live_all_orgs_fans_out_across_visible_orgs --lib -- --test-threads=1`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `cargo test --manifest-path rust/Cargo.toml --quiet sync --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet status --lib`; `python3 scripts/rust_maintainability_report.py`; `cargo test --manifest-path rust/Cargo.toml --quiet`; `make quality-ai-workflow`; `git diff --check`.
-- Impact: `rust/src/grafana/api/project_status_live.rs`, `rust/src/grafana/api/project_status_live_tests.rs`, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are intentionally unchanged.
-- Rollback/Risk: low mechanical test split. Rollback would inline the tests again; production behavior is unchanged.

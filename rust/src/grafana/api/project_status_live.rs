@@ -22,6 +22,8 @@ use crate::project_status_freshness::{
     build_live_project_status_freshness_from_samples,
     build_live_project_status_freshness_from_source_count,
 };
+#[cfg(test)]
+use crate::project_status_model::{StatusReading, StatusRecordCount};
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct ProjectStatusAlertSurfaceDocuments {
@@ -213,18 +215,16 @@ where
             }
             stamp_live_domain_freshness(status, &freshness_samples)
         }
-        Err(_) => ProjectDomainStatus {
+        Err(_) => StatusReading {
             id: "dashboard".to_string(),
             scope: "live".to_string(),
             mode: "live-dashboard-read".to_string(),
             status: PROJECT_STATUS_PARTIAL.to_string(),
             reason_code: "live-read-failed".to_string(),
             primary_count: 0,
-            blocker_count: 1,
-            warning_count: 0,
             source_kinds: vec!["live-dashboard-search".to_string()],
             signal_keys: vec!["live.dashboardCount".to_string()],
-            blockers: vec![crate::project_status::status_finding(
+            blockers: vec![StatusRecordCount::new(
                 "live-read-failed",
                 1,
                 "live.dashboardCount",
@@ -234,7 +234,8 @@ where
                 "restore dashboard search access, then re-run live status".to_string()
             ],
             freshness: Default::default(),
-        },
+        }
+        .into_project_domain_status(),
     }
 }
 
