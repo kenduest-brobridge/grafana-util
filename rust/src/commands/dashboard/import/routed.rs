@@ -9,13 +9,13 @@ use std::path::Path;
 
 use crate::common::{message, Result};
 
-use super::import_lookup::ImportLookupCache;
-use super::import_render::{
+use super::lookup::ImportLookupCache;
+use super::render::{
     build_import_dry_run_json_value, build_routed_import_dry_run_json_document,
     build_routed_import_org_row, describe_dashboard_import_mode,
     format_routed_import_scope_summary_fields, render_routed_import_org_table, ImportDryRunReport,
 };
-use super::import_validation::{
+use super::validation::{
     discover_export_org_import_scopes, resolve_target_org_plan_for_export_scope_with_request,
 };
 

@@ -3,13 +3,13 @@ use serde_json::{Map, Value};
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::common::{message, string_field, value_as_object, Result};
-use crate::grafana_api::DashboardResourceClient;
-
-use super::super::live::{
+use crate::dashboard::list;
+use crate::dashboard::live::{
     create_folder_entry_with_request, fetch_dashboard_if_exists_with_request,
     fetch_folder_if_exists_with_request,
 };
-use super::super::DEFAULT_PAGE_SIZE;
+use crate::dashboard::DEFAULT_PAGE_SIZE;
+use crate::grafana_api::DashboardResourceClient;
 
 #[derive(Default)]
 pub(crate) struct ImportLookupCache {
@@ -52,11 +52,11 @@ where
     }
 
     fn fetch_current_org(&mut self) -> Result<Map<String, Value>> {
-        super::super::list::fetch_current_org_with_request(&mut *self.request_json)
+        list::fetch_current_org_with_request(&mut *self.request_json)
     }
 
     fn list_orgs(&mut self) -> Result<Vec<Map<String, Value>>> {
-        super::super::list::list_orgs_with_request(&mut *self.request_json)
+        list::list_orgs_with_request(&mut *self.request_json)
     }
 
     fn create_folder_entry(

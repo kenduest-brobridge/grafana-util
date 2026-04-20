@@ -2,10 +2,14 @@
 //! Loads local export artifacts, computes target orgs, and applies idempotent upsert behavior
 //! through the shared dashboard HTTP/auth context.
 
-#[path = "import_apply.rs"]
-mod import_apply;
-#[path = "import_dry_run.rs"]
-mod import_dry_run;
+mod apply;
+pub(crate) mod compare;
+mod dry_run;
+pub(crate) mod lookup;
+pub(crate) mod render;
+pub(crate) mod routed;
+pub(crate) mod target;
+pub(crate) mod validation;
 
 #[cfg(feature = "tui")]
 use crate::common::message;
@@ -18,27 +22,7 @@ use reqwest::Method;
 use serde_json::Value;
 
 #[allow(unused_imports)]
-pub(crate) use super::import_compare::diff_dashboards_with_request;
-#[cfg(test)]
-pub(crate) use super::import_render::format_routed_import_target_org_label;
-#[allow(unused_imports)]
-pub(crate) use super::import_render::{
-    describe_dashboard_import_mode, format_import_progress_line, format_import_verbose_line,
-    format_routed_import_scope_summary_fields, render_folder_inventory_dry_run_table,
-    render_import_dry_run_json, render_import_dry_run_table, render_routed_import_org_table,
-    ImportDryRunReport,
-};
-#[allow(unused_imports)]
-pub(crate) use super::import_routed::{
-    build_routed_import_dry_run_json_with_request, import_dashboards_by_export_org_with_request,
-};
-#[allow(unused_imports)]
-pub(crate) use super::import_target::{
-    build_dashboard_target_review, build_dashboard_target_review_reason,
-    dashboard_target_review_is_blocked, dashboard_target_review_is_warning,
-    dashboard_target_review_status_label, DashboardTargetReview,
-};
-pub(crate) use super::import_validation::build_import_auth_context;
+use super::format_folder_inventory_status_line;
 #[allow(unused_imports)]
 use super::{
     build_http_client_for_org, build_import_payload, discover_dashboard_files,
@@ -47,16 +31,33 @@ use super::{
     FolderInventoryStatus, FolderInventoryStatusKind, ImportArgs, LoadedDashboardSource,
     DEFAULT_UNKNOWN_UID, FOLDER_INVENTORY_FILENAME, PROVISIONING_EXPORT_SUBDIR, RAW_EXPORT_SUBDIR,
 };
+pub use apply::{diff_dashboards_with_client, import_dashboards_with_client};
 #[allow(unused_imports)]
-use super::{
-    format_folder_inventory_status_line, import_compare, import_lookup, import_render,
-    import_routed, import_validation,
+pub(crate) use apply::{import_dashboards_with_org_clients, import_dashboards_with_request};
+#[allow(unused_imports)]
+pub(crate) use compare::diff_dashboards_with_request;
+#[allow(unused_imports)]
+pub(crate) use dry_run::collect_import_dry_run_report_with_request;
+#[cfg(test)]
+pub(crate) use render::format_routed_import_target_org_label;
+#[allow(unused_imports)]
+pub(crate) use render::{
+    describe_dashboard_import_mode, format_import_progress_line, format_import_verbose_line,
+    format_routed_import_scope_summary_fields, render_folder_inventory_dry_run_table,
+    render_import_dry_run_json, render_import_dry_run_table, render_routed_import_org_table,
+    ImportDryRunReport,
 };
-pub use import_apply::{diff_dashboards_with_client, import_dashboards_with_client};
 #[allow(unused_imports)]
-pub(crate) use import_apply::{import_dashboards_with_org_clients, import_dashboards_with_request};
+pub(crate) use routed::{
+    build_routed_import_dry_run_json_with_request, import_dashboards_by_export_org_with_request,
+};
 #[allow(unused_imports)]
-pub(crate) use import_dry_run::collect_import_dry_run_report_with_request;
+pub(crate) use target::{
+    build_dashboard_target_review, build_dashboard_target_review_reason,
+    dashboard_target_review_is_blocked, dashboard_target_review_is_warning,
+    dashboard_target_review_status_label, DashboardTargetReview,
+};
+pub(crate) use validation::build_import_auth_context;
 
 pub(crate) struct LoadedImportSource {
     inner: LoadedDashboardSource,
@@ -99,7 +100,7 @@ pub(crate) fn dashboard_files_for_import(input_dir: &Path) -> Result<Vec<PathBuf
 }
 
 #[cfg(test)]
-#[path = "import_loaded_source_rust_tests.rs"]
+#[path = "../import_loaded_source_rust_tests.rs"]
 mod import_loaded_source_rust_tests;
 
 fn selected_dashboard_files(
@@ -109,7 +110,7 @@ fn selected_dashboard_files(
         &[(String, String)],
         Option<&Value>,
     ) -> Result<Option<Value>>,
-    #[cfg(feature = "tui")] lookup_cache: &mut super::import_lookup::ImportLookupCache,
+    #[cfg(feature = "tui")] lookup_cache: &mut lookup::ImportLookupCache,
     args: &super::ImportArgs,
     resolved_import: &LoadedImportSource,
     dashboard_root: &Path,

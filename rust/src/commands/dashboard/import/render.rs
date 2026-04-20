@@ -243,7 +243,7 @@ pub(crate) fn format_routed_import_target_org_label(target_org_id: Option<i64>) 
 }
 
 pub(crate) fn build_routed_import_org_row(
-    plan: &super::import_validation::ExportOrgTargetPlan,
+    plan: &super::validation::ExportOrgTargetPlan,
     dashboard_count: usize,
 ) -> [String; 5] {
     [

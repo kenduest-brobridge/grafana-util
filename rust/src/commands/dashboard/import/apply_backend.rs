@@ -10,14 +10,14 @@ use crate::dashboard::{
 use crate::grafana_api::DashboardResourceClient;
 use crate::http::JsonHttpClient;
 
-use super::super::super::import_lookup::{
+use super::super::lookup::{
     determine_dashboard_import_action_with_client, determine_dashboard_import_action_with_request,
     determine_import_folder_uid_override_with_client,
     determine_import_folder_uid_override_with_request, ensure_folder_inventory_entry_cached,
     ensure_folder_inventory_entry_with_client, resolve_existing_dashboard_folder_path_with_client,
     resolve_existing_dashboard_folder_path_with_request, ImportLookupCache,
 };
-use super::super::super::import_validation::{
+use super::super::validation::{
     validate_dashboard_import_dependencies_with_request, validate_matching_export_org_with_request,
 };
 
@@ -171,11 +171,7 @@ where
         cache: &mut ImportLookupCache,
         uid: &str,
     ) -> Result<Option<Value>> {
-        super::super::super::import_lookup::fetch_dashboard_if_exists_cached(
-            &mut *self.request_json,
-            cache,
-            uid,
-        )
+        super::super::lookup::fetch_dashboard_if_exists_cached(&mut *self.request_json, cache, uid)
     }
 
     fn ensure_folder_inventory_entry(
@@ -218,7 +214,7 @@ impl LiveImportBackend for ClientImportBackend<'_> {
         input_dir: &Path,
         metadata: Option<&ExportMetadata>,
     ) -> Result<()> {
-        super::super::super::import_validation::validate_matching_export_org_with_client(
+        super::super::validation::validate_matching_export_org_with_client(
             &self.dashboard,
             args,
             input_dir,
@@ -233,7 +229,7 @@ impl LiveImportBackend for ClientImportBackend<'_> {
         strict_schema: bool,
         target_schema_version: Option<i64>,
     ) -> Result<()> {
-        super::super::super::import_validation::validate_dashboard_import_dependencies_with_client(
+        super::super::validation::validate_dashboard_import_dependencies_with_client(
             &self.dashboard,
             input_dir,
             strict_schema,
@@ -286,7 +282,7 @@ impl LiveImportBackend for ClientImportBackend<'_> {
         cache: &mut ImportLookupCache,
         uid: &str,
     ) -> Result<Option<Value>> {
-        super::super::super::import_lookup::fetch_dashboard_if_exists_cached_with_client(
+        super::super::lookup::fetch_dashboard_if_exists_cached_with_client(
             &self.dashboard,
             cache,
             uid,

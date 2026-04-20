@@ -5,15 +5,17 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::common::{message, Result};
+use crate::dashboard::list;
+use crate::dashboard::source_loader::resolve_dashboard_workspace_variant_dir;
+use crate::dashboard::{
+    load_datasource_inventory, load_export_metadata, load_folder_inventory,
+    DashboardImportInputFormat, DashboardSourceKind, ExportMetadata, ImportArgs, VariantIndexEntry,
+    RAW_EXPORT_SUBDIR,
+};
 use crate::grafana_api::DashboardResourceClient;
 
-use super::super::import_lookup::{
+use super::super::lookup::{
     list_orgs_cached, resolve_import_target_org_id_with_request, ImportLookupCache,
-};
-use super::super::source_loader::resolve_dashboard_workspace_variant_dir;
-use super::super::{
-    load_datasource_inventory, load_export_metadata, load_folder_inventory, ExportMetadata,
-    RAW_EXPORT_SUBDIR,
 };
 
 fn load_export_org_ids(
@@ -27,7 +29,7 @@ fn load_export_org_ids(
     let index_path = input_dir.join(&index_file);
     if index_path.is_file() {
         let raw = fs::read_to_string(&index_path)?;
-        let entries: Vec<super::super::VariantIndexEntry> = serde_json::from_str(&raw)?;
+        let entries: Vec<VariantIndexEntry> = serde_json::from_str(&raw)?;
         for entry in entries {
             let org_id = entry.org_id.trim();
             if !org_id.is_empty() {
@@ -62,7 +64,7 @@ fn load_export_org_names(
     let index_path = input_dir.join(&index_file);
     if index_path.is_file() {
         let raw = fs::read_to_string(&index_path)?;
-        let entries: Vec<super::super::VariantIndexEntry> = serde_json::from_str(&raw)?;
+        let entries: Vec<VariantIndexEntry> = serde_json::from_str(&raw)?;
         for entry in entries {
             let org_name = entry.org.trim();
             if !org_name.is_empty() {
@@ -114,10 +116,8 @@ fn parse_export_org_scope(import_root: &Path, raw_dir: &Path) -> Result<ExportOr
     parse_export_org_scope_for_variant(import_root, raw_dir, RAW_EXPORT_SUBDIR)
 }
 
-fn use_export_org_variant_dir(
-    input_format: super::super::DashboardImportInputFormat,
-) -> &'static str {
-    super::super::DashboardSourceKind::from_import_input_format(input_format)
+fn use_export_org_variant_dir(input_format: DashboardImportInputFormat) -> &'static str {
+    DashboardSourceKind::from_import_input_format(input_format)
         .expected_variant()
         .expect("dashboard import input format must map to an export variant")
 }
@@ -207,7 +207,7 @@ fn parse_export_org_scope_for_variant(
 }
 
 pub(crate) fn discover_export_org_import_scopes(
-    args: &super::super::ImportArgs,
+    args: &ImportArgs,
 ) -> Result<Vec<ExportOrgImportScope>> {
     if !args.use_export_org {
         return Ok(Vec::new());
@@ -284,7 +284,7 @@ pub(crate) fn discover_export_org_import_scopes(
 pub(crate) fn validate_matching_export_org_with_request<F>(
     request_json: &mut F,
     cache: &mut ImportLookupCache,
-    args: &super::super::ImportArgs,
+    args: &ImportArgs,
     input_dir: &Path,
     metadata: Option<&ExportMetadata>,
     target_org_id_override: Option<i64>,
@@ -325,12 +325,12 @@ where
 
 fn current_org_id_with_client(client: &DashboardResourceClient<'_>) -> Result<String> {
     let org = client.fetch_current_org()?;
-    super::super::list::org_id_value(&org).map(|value| value.to_string())
+    list::org_id_value(&org).map(|value| value.to_string())
 }
 
 pub(crate) fn validate_matching_export_org_with_client(
     client: &DashboardResourceClient<'_>,
-    args: &super::super::ImportArgs,
+    args: &ImportArgs,
     input_dir: &Path,
     metadata: Option<&ExportMetadata>,
     target_org_id_override: Option<i64>,

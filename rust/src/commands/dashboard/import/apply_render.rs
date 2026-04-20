@@ -1,11 +1,11 @@
 use crate::common::Result;
 use crate::dashboard::ImportArgs;
 
-use super::super::super::import_render::{
+use super::super::dry_run::folder_inventory_status_output_lines;
+use super::super::render::{
     render_import_dry_run_json, render_import_dry_run_table, target_review_counts,
     ImportDryRunReport,
 };
-use super::super::import_dry_run::folder_inventory_status_output_lines;
 
 pub(super) fn render_dry_run_report(
     report: &ImportDryRunReport,

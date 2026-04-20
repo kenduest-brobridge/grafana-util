@@ -46,18 +46,12 @@ mod help;
 mod history;
 mod impact_tui;
 mod import;
-mod import_compare;
 mod import_interactive;
 mod import_interactive_context;
 mod import_interactive_loader;
 mod import_interactive_render;
 mod import_interactive_review;
 mod import_interactive_state;
-mod import_lookup;
-mod import_render;
-mod import_routed;
-mod import_target;
-mod import_validation;
 mod inspect;
 mod inspect_analyzer_flux;
 mod inspect_analyzer_loki;
@@ -109,6 +103,10 @@ mod vars;
 
 pub(crate) use facade_exports::crate_exports::*;
 pub use facade_exports::pub_exports::*;
+pub(crate) use import::{
+    compare as import_compare, lookup as import_lookup, render as import_render,
+    target as import_target, validation as import_validation,
+};
 
 #[cfg(not(feature = "tui"))]
 pub(crate) fn tui_not_built<T>(action: &str) -> Result<T> {

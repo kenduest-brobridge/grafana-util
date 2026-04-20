@@ -13,7 +13,7 @@ use crate::dashboard::{
 use crate::grafana_api::DashboardResourceClient;
 use crate::http::JsonHttpClient;
 
-use super::super::import_lookup::{
+use super::lookup::{
     apply_folder_path_guard_to_action, build_folder_path_match_result,
     collect_folder_inventory_statuses_cached, collect_folder_inventory_statuses_with_client,
     determine_dashboard_import_action_with_client, determine_dashboard_import_action_with_request,
@@ -24,11 +24,11 @@ use super::super::import_lookup::{
     resolve_existing_dashboard_folder_path_with_client,
     resolve_existing_dashboard_folder_path_with_request, ImportLookupCache,
 };
-use super::super::import_render::{
+use super::render::{
     build_folder_inventory_dry_run_record, build_import_dry_run_record,
     describe_dashboard_import_mode, render_folder_inventory_dry_run_table, ImportDryRunReport,
 };
-use super::super::import_target::{
+use super::target::{
     build_dashboard_target_review, build_dashboard_target_review_reason,
     dashboard_target_review_is_blocked,
 };
@@ -46,7 +46,7 @@ where
         resolved_import.metadata_dir(),
         Some(super::import_metadata_variant(args)),
     )?;
-    super::super::import_validation::validate_matching_export_org_with_request(
+    super::validation::validate_matching_export_org_with_request(
         &mut request_json,
         &mut lookup_cache,
         args,
@@ -125,14 +125,12 @@ where
         let dashboard = extract_dashboard_object(document_object)?;
         let uid = string_field(dashboard, "uid", "");
         let source_folder_path = if args.require_matching_folder_path {
-            Some(
-                super::super::import_lookup::resolve_source_dashboard_folder_path(
-                    &document,
-                    dashboard_file,
-                    resolved_import.dashboard_dir(),
-                    &folders_by_uid,
-                )?,
-            )
+            Some(super::lookup::resolve_source_dashboard_folder_path(
+                &document,
+                dashboard_file,
+                resolved_import.dashboard_dir(),
+                &folders_by_uid,
+            )?)
         } else {
             None
         };
@@ -184,7 +182,7 @@ where
         let existing_dashboard = if action == "would-create" {
             None
         } else {
-            super::super::import_lookup::fetch_dashboard_if_exists_cached(
+            super::lookup::fetch_dashboard_if_exists_cached(
                 &mut request_json,
                 &mut lookup_cache,
                 &uid,
@@ -271,7 +269,7 @@ pub(crate) fn collect_import_dry_run_report_with_client(
         resolved_import.metadata_dir(),
         Some(super::import_metadata_variant(args)),
     )?;
-    super::super::import_validation::validate_matching_export_org_with_client(
+    super::validation::validate_matching_export_org_with_client(
         &dashboard_client,
         args,
         resolved_import.metadata_dir(),
@@ -351,14 +349,12 @@ pub(crate) fn collect_import_dry_run_report_with_client(
         let dashboard = extract_dashboard_object(document_object)?;
         let uid = string_field(dashboard, "uid", "");
         let source_folder_path = if args.require_matching_folder_path {
-            Some(
-                super::super::import_lookup::resolve_source_dashboard_folder_path(
-                    &document,
-                    dashboard_file,
-                    resolved_import.dashboard_dir(),
-                    &folders_by_uid,
-                )?,
-            )
+            Some(super::lookup::resolve_source_dashboard_folder_path(
+                &document,
+                dashboard_file,
+                resolved_import.dashboard_dir(),
+                &folders_by_uid,
+            )?)
         } else {
             None
         };
@@ -410,7 +406,7 @@ pub(crate) fn collect_import_dry_run_report_with_client(
         let existing_dashboard = if action == "would-create" {
             None
         } else {
-            super::super::import_lookup::fetch_dashboard_if_exists_cached_with_client(
+            super::lookup::fetch_dashboard_if_exists_cached_with_client(
                 &dashboard_client,
                 &mut lookup_cache,
                 &uid,

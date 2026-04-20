@@ -17,6 +17,13 @@ Current AI-maintained status only.
 - Older entries moved to [`ai-status-archive-2026-04-19.md`](docs/internal/archive/ai-status-archive-2026-04-19.md).
 - Older entries moved to [`ai-status-archive-2026-04-20.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-04-20.md).
 
+## 2026-04-20 - Move dashboard import into directory boundary
+- State: Done
+- Scope: Rust dashboard import module layout, focused import/routed/plan/browse validation, and AI trace docs. Plan reconciliation, inspect/governance moves, public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
+- Baseline: dashboard import implementation lived as many flat `commands/dashboard/import_*.rs` files, while plan-owned reconciliation already lived under `commands/dashboard/plan/`.
+- Current Update: Moved the dashboard import implementation under `commands/dashboard/import/`, kept `commands/dashboard/mod.rs` as the public facade, and left plan reconciliation in the plan-owned boundary.
+- Result: Focused import/routed/plan/browse tests, formatter, maintainability, AI workflow, and full Rust tests pass.
+
 ## 2026-04-20 - Clean up alert runtime schema keys
 - State: Done
 - Scope: Rust alert runtime plan, delete-preview, and import dry-run schema-key cleanup, focused sync/alert/import validation, and AI trace docs. Alert diff shared document internals, public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
@@ -51,10 +58,3 @@ Current AI-maintained status only.
 - Baseline: sync staged rendering and review helpers still read tool-owned fields such as `kind`, `summary`, `resourceCount`, and review metadata as repeated raw strings.
 - Current Update: Grouped sync staged document, summary, review, and project-status section names behind local namespaced constants while leaving ordinary Grafana raw keys unchanged.
 - Result: Focused render, workspace preview, sync project-status, sync, status, formatter, maintainability, AI workflow, and full Rust tests pass.
-
-## 2026-04-20 - Continue Rust split and schema key cleanup
-- State: Done
-- Scope: Rust status overview contract test split, alert CLI args family split, project-status live test support extraction, sync preflight schema-key cleanup, focused Rust tests, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
-- Baseline: Overview contract tests still mixed parser/basic-render smoke coverage with larger domain fixtures, alert args still mixed runtime and authoring command-family structs, project-status live tests owned local HTTP test helpers, and sync preflight repeated availability/body JSON keys inline.
-- Current Update: Split overview parser/basic-render contract assertions and alert runtime args into focused adjacent modules, extracted project-status live HTTP test support, and grouped sync preflight summary/availability/body JSON keys under namespaced modules.
-- Result: Focused overview, alert, project-status live, preflight, and sync tests pass; full validation is complete for this maintenance batch.

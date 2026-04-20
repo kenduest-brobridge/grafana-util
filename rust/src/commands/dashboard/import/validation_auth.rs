@@ -1,9 +1,7 @@
 use crate::common::{message, Result};
+use crate::dashboard::{build_auth_context, DashboardAuthContext, ImportArgs};
 
-fn validate_import_org_auth(
-    context: &super::super::DashboardAuthContext,
-    args: &super::super::ImportArgs,
-) -> Result<()> {
+fn validate_import_org_auth(context: &DashboardAuthContext, args: &ImportArgs) -> Result<()> {
     if args.org_id.is_some() && context.auth_mode != "basic" {
         return Err(message(
             "Dashboard import with --org-id requires Basic auth (--basic-user / --basic-password).",
@@ -18,10 +16,8 @@ fn validate_import_org_auth(
 }
 
 /// Purpose: implementation note.
-pub(crate) fn build_import_auth_context(
-    args: &super::super::ImportArgs,
-) -> Result<super::super::DashboardAuthContext> {
-    let mut context = super::super::build_auth_context(&args.common)?;
+pub(crate) fn build_import_auth_context(args: &ImportArgs) -> Result<DashboardAuthContext> {
+    let mut context = build_auth_context(&args.common)?;
     validate_import_org_auth(&context, args)?;
     if let Some(org_id) = args.org_id {
         context

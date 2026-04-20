@@ -9,25 +9,25 @@ use crate::dashboard::import_interactive;
 use crate::dashboard::{build_http_client_for_org, DiffArgs, ImportArgs};
 use crate::http::{JsonHttpClient, JsonHttpClientConfig};
 
-use super::super::import_compare::diff_dashboards_with_request;
-use super::super::import_lookup::ImportLookupCache;
-use super::import_dry_run::{
+use super::compare::diff_dashboards_with_request;
+use super::dry_run::{
     collect_import_dry_run_report_with_client, collect_import_dry_run_report_with_request,
 };
+use super::lookup::ImportLookupCache;
 
-#[path = "import_apply_backend.rs"]
-mod import_apply_backend;
-#[path = "import_apply_live.rs"]
-mod import_apply_live;
-#[path = "import_apply_prepare.rs"]
-mod import_apply_prepare;
-#[path = "import_apply_render.rs"]
-mod import_apply_render;
+#[path = "apply_backend.rs"]
+mod apply_backend;
+#[path = "apply_live.rs"]
+mod apply_live;
+#[path = "apply_prepare.rs"]
+mod apply_prepare;
+#[path = "apply_render.rs"]
+mod apply_render;
 
-use import_apply_backend::{ClientImportBackend, LiveImportBackend, RequestImportBackend};
-use import_apply_live::run_live_import;
-use import_apply_prepare::{prepare_import_run, validate_import_args, PreparedImportRun};
-use import_apply_render::render_dry_run_report;
+use apply_backend::{ClientImportBackend, LiveImportBackend, RequestImportBackend};
+use apply_live::run_live_import;
+use apply_prepare::{prepare_import_run, validate_import_args, PreparedImportRun};
+use apply_render::render_dry_run_report;
 
 /// Purpose: implementation note.
 pub fn diff_dashboards_with_client(client: &JsonHttpClient, args: &DiffArgs) -> Result<usize> {
@@ -183,7 +183,7 @@ pub(crate) fn import_dashboards_with_org_clients(args: &ImportArgs) -> Result<us
             args,
         );
     }
-    super::super::import_routed::import_dashboards_by_export_org_with_request(
+    super::routed::import_dashboards_by_export_org_with_request(
         |method, path, params, payload| client.request_json(method, path, params, payload),
         |target_org_id, scoped_args| {
             let scoped_client = build_http_client_for_org(&args.common, target_org_id)?;

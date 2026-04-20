@@ -1,10 +1,10 @@
 //! Import validation facade for dashboard import authentication, org routing, and preflight checks.
 
-#[path = "import_validation_auth.rs"]
+#[path = "validation_auth.rs"]
 mod auth;
-#[path = "import_validation_dependencies.rs"]
+#[path = "validation_dependencies.rs"]
 mod dependencies;
-#[path = "import_validation_org_scope.rs"]
+#[path = "validation_org_scope.rs"]
 mod org_scope;
 
 pub(crate) use auth::build_import_auth_context;

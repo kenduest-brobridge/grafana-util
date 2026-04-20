@@ -3,14 +3,14 @@ use serde_json::{Map, Value};
 use std::collections::BTreeMap;
 use std::path::Path;
 
+use super::import_lookup_cache::{fetch_folder_if_exists_cached, ImportLookupCache};
 use crate::common::{message, object_field, string_field, validation, value_as_object, Result};
-use crate::grafana_api::DashboardResourceClient;
-
-use super::super::{
+use crate::dashboard::live;
+use crate::dashboard::{
     build_folder_path, FolderInventoryItem, FolderInventoryStatus, FolderInventoryStatusKind,
     DEFAULT_FOLDER_TITLE, DEFAULT_FOLDER_UID,
 };
-use super::import_lookup_cache::{fetch_folder_if_exists_cached, ImportLookupCache};
+use crate::grafana_api::DashboardResourceClient;
 
 pub(crate) fn normalize_folder_path(path: Option<&str>) -> String {
     let value = path.unwrap_or("").trim();
@@ -552,7 +552,7 @@ where
         if fetch_folder_if_exists_cached(&mut *request_json, cache, &folder.uid)?.is_some() {
             continue;
         }
-        super::super::live::create_folder_entry_with_request(
+        live::create_folder_entry_with_request(
             &mut *request_json,
             &folder.title,
             &folder.uid,

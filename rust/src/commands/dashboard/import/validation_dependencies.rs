@@ -4,12 +4,14 @@ use std::collections::BTreeSet;
 use std::path::Path;
 
 use crate::common::{message, string_field, value_as_object, Result};
+use crate::dashboard::list::collect_dashboard_source_metadata;
+use crate::dashboard::{
+    build_datasource_catalog, collect_datasource_refs, discover_dashboard_files,
+    extract_dashboard_object, is_builtin_datasource_ref, load_json_file, prompt,
+    DEFAULT_DASHBOARD_TITLE, FOLDER_INVENTORY_FILENAME,
+};
 use crate::grafana_api::DashboardResourceClient;
 use crate::sync::preflight::build_sync_preflight_document;
-
-use super::super::list::collect_dashboard_source_metadata;
-use super::super::{build_datasource_catalog, collect_datasource_refs, DEFAULT_DASHBOARD_TITLE};
-use super::super::{discover_dashboard_files, FOLDER_INVENTORY_FILENAME};
 
 mod dependency_schema {
     pub(super) mod availability {
@@ -55,15 +57,15 @@ fn dashboard_import_dependency_availability_requirements(input_dir: &Path) -> Re
     let mut needs_datasource_availability = false;
     let mut needs_plugin_availability = false;
     for dashboard_file in dashboard_files {
-        let document = super::super::load_json_file(&dashboard_file)?;
+        let document = load_json_file(&dashboard_file)?;
         let document_object =
             value_as_object(&document, "Dashboard payload must be a JSON object.")?;
-        let dashboard = super::super::extract_dashboard_object(document_object)?;
+        let dashboard = extract_dashboard_object(document_object)?;
         let mut refs = Vec::new();
         collect_datasource_refs(&Value::Object(dashboard.clone()), &mut refs);
         if refs
             .iter()
-            .any(|reference| !super::super::is_builtin_datasource_ref(reference))
+            .any(|reference| !is_builtin_datasource_ref(reference))
         {
             needs_datasource_availability = true;
         }
@@ -187,7 +189,7 @@ fn build_dashboard_import_availability_with_client(
 
 fn build_dashboard_import_dependency_specs(
     input_dir: &Path,
-    datasource_catalog: &super::super::prompt::DatasourceCatalog,
+    datasource_catalog: &prompt::DatasourceCatalog,
     strict_schema: bool,
     target_schema_version: Option<i64>,
 ) -> Result<Vec<Value>> {
@@ -197,8 +199,8 @@ fn build_dashboard_import_dependency_specs(
     });
     let mut desired_specs = Vec::new();
     for dashboard_file in dashboard_files {
-        let document = super::super::load_json_file(&dashboard_file)?;
-        super::super::validate::validate_dashboard_import_document(
+        let document = load_json_file(&dashboard_file)?;
+        crate::dashboard::validate::validate_dashboard_import_document(
             &document,
             &dashboard_file,
             strict_schema,
@@ -206,7 +208,7 @@ fn build_dashboard_import_dependency_specs(
         )?;
         let document_object =
             value_as_object(&document, "Dashboard payload must be a JSON object.")?;
-        let dashboard = super::super::extract_dashboard_object(document_object)?;
+        let dashboard = extract_dashboard_object(document_object)?;
         let uid = string_field(dashboard, "uid", "");
         let title = string_field(dashboard, "title", DEFAULT_DASHBOARD_TITLE);
         let (datasource_names, datasource_uids) =

@@ -130,3 +130,10 @@
 - Baseline: `commands/alert/cli/args.rs` mixes shared/common args, runtime export/import/plan/delete args, authoring scaffold/add/clone/route args, and parse helpers in one large file.
 - Current Update: Moved alert authoring command-family args into a dedicated adjacent module while keeping `args.rs` as the facade for existing normalization and dispatch imports.
 - Result: Focused alert tests, formatter check, maintainability report, full Rust tests, and AI workflow checks pass.
+
+## 2026-04-20 - Continue Rust split and schema key cleanup
+- State: Done
+- Scope: Rust status overview contract test split, alert CLI args family split, project-status live test support extraction, sync preflight schema-key cleanup, focused Rust tests, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
+- Baseline: Overview contract tests still mixed parser/basic-render smoke coverage with larger domain fixtures, alert args still mixed runtime and authoring command-family structs, project-status live tests owned local HTTP test helpers, and sync preflight repeated availability/body JSON keys inline.
+- Current Update: Split overview parser/basic-render contract assertions and alert runtime args into focused adjacent modules, extracted project-status live HTTP test support, and grouped sync preflight summary/availability/body JSON keys under namespaced modules.
+- Result: Focused overview, alert, project-status live, preflight, and sync tests pass; full validation is complete for this maintenance batch.

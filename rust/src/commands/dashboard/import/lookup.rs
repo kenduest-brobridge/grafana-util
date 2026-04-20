@@ -1,10 +1,10 @@
 //! Import orchestration for Dashboard resources, including input normalization and apply contract handling.
 
-#[path = "import_lookup_cache.rs"]
+#[path = "lookup_cache.rs"]
 mod import_lookup_cache;
-#[path = "import_lookup_folder.rs"]
+#[path = "lookup_folder.rs"]
 mod import_lookup_folder;
-#[path = "import_lookup_org.rs"]
+#[path = "lookup_org.rs"]
 mod import_lookup_org;
 
 #[allow(unused_imports)]

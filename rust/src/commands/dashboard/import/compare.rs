@@ -8,8 +8,11 @@ use crate::common::{
     build_shared_diff_document, message, object_field, render_json_value, string_field,
     value_as_object, Result, SharedDiffSummary,
 };
-
-use super::{build_import_payload, build_preserved_web_import_document, DEFAULT_FOLDER_UID};
+use crate::dashboard::{
+    build_import_payload, build_preserved_web_import_document,
+    fetch_dashboard_if_exists_with_request, load_export_metadata, load_json_file,
+    DashboardSourceKind, DiffArgs, DEFAULT_FOLDER_UID,
+};
 
 pub(crate) fn build_compare_document(
     dashboard: &Map<String, Value>,
@@ -101,23 +104,20 @@ fn build_compare_diff_text(
     )
 }
 
-pub(crate) fn diff_dashboards_with_request<F>(
-    mut request_json: F,
-    args: &super::DiffArgs,
-) -> Result<usize>
+pub(crate) fn diff_dashboards_with_request<F>(mut request_json: F, args: &DiffArgs) -> Result<usize>
 where
     F: FnMut(reqwest::Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
-    let resolved = super::import::resolve_diff_source(args)?;
-    let expected_variant = super::DashboardSourceKind::from_import_input_format(args.input_format)
+    let resolved = super::resolve_diff_source(args)?;
+    let expected_variant = DashboardSourceKind::from_import_input_format(args.input_format)
         .expected_variant()
         .ok_or_else(|| message("Dashboard diff local mode requires an export-backed source."))?;
-    let _ = super::load_export_metadata(resolved.metadata_dir(), Some(expected_variant))?;
-    let dashboard_files = super::import::dashboard_files_for_import(resolved.dashboard_dir())?;
+    let _ = load_export_metadata(resolved.metadata_dir(), Some(expected_variant))?;
+    let dashboard_files = super::dashboard_files_for_import(resolved.dashboard_dir())?;
     let mut differences = 0;
     let mut rows = Vec::new();
     for dashboard_file in &dashboard_files {
-        let document = super::load_json_file(dashboard_file)?;
+        let document = load_json_file(dashboard_file)?;
         let payload = build_import_payload(&document, None, false, "")?;
         let payload_object =
             value_as_object(&payload, "Dashboard import payload must be a JSON object.")?;
@@ -128,8 +128,7 @@ where
         let uid = string_field(dashboard, "uid", "");
         let local_compare =
             build_local_compare_document(&document, args.import_folder_uid.as_deref())?;
-        let Some(remote_payload) =
-            super::fetch_dashboard_if_exists_with_request(&mut request_json, &uid)?
+        let Some(remote_payload) = fetch_dashboard_if_exists_with_request(&mut request_json, &uid)?
         else {
             if matches!(args.output_format, crate::common::DiffOutputFormat::Text) {
                 println!(

@@ -6,16 +6,16 @@ use crate::dashboard::{
     DEFAULT_UNKNOWN_UID,
 };
 
-use super::super::super::import_lookup::{
+use super::super::lookup::{
     apply_folder_path_guard_to_action, build_folder_path_match_result, ImportLookupCache,
 };
-use super::super::super::import_render::{format_import_progress_line, format_import_verbose_line};
-use super::super::super::import_target::{
+use super::super::render::{format_import_progress_line, format_import_verbose_line};
+use super::super::target::{
     build_dashboard_target_review, build_dashboard_target_review_reason,
     dashboard_target_review_is_blocked, dashboard_target_review_is_warning,
 };
-use super::import_apply_backend::LiveImportBackend;
-use super::import_apply_prepare::PreparedImportRun;
+use super::apply_backend::LiveImportBackend;
+use super::apply_prepare::PreparedImportRun;
 
 pub(super) fn run_live_import<B: LiveImportBackend>(
     backend: &mut B,
@@ -28,7 +28,7 @@ pub(super) fn run_live_import<B: LiveImportBackend>(
     let mut imported_count = 0usize;
     let mut skipped_missing_count = 0usize;
     let mut skipped_folder_mismatch_count = 0usize;
-    let mode = super::super::super::import_render::describe_dashboard_import_mode(
+    let mode = super::super::render::describe_dashboard_import_mode(
         args.replace_existing,
         args.update_existing_only,
     );
@@ -50,14 +50,12 @@ pub(super) fn run_live_import<B: LiveImportBackend>(
         let dashboard = extract_dashboard_object(document_object)?;
         let uid = crate::common::string_field(dashboard, "uid", "");
         let source_folder_path = if args.require_matching_folder_path {
-            Some(
-                super::super::super::import_lookup::resolve_source_dashboard_folder_path(
-                    &document,
-                    dashboard_file,
-                    prepared.resolved_import.dashboard_dir(),
-                    &prepared.folders_by_uid,
-                )?,
-            )
+            Some(super::super::lookup::resolve_source_dashboard_folder_path(
+                &document,
+                dashboard_file,
+                prepared.resolved_import.dashboard_dir(),
+                &prepared.folders_by_uid,
+            )?)
         } else {
             None
         };
