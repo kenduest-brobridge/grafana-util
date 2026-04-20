@@ -17,6 +17,13 @@ Current AI-maintained status only.
 - Older entries moved to [`ai-status-archive-2026-04-19.md`](docs/internal/archive/ai-status-archive-2026-04-19.md).
 - Older entries moved to [`ai-status-archive-2026-04-20.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-04-20.md).
 
+## 2026-04-20 - Add contract promotion report
+- State: Done
+- Scope: Contract promotion report behavior, unit coverage, maintainer docs, TODO tracking, and AI trace docs. Public CLI behavior, generated docs, schema artifacts, Rust implementation, and Python package behavior are out of scope.
+- Baseline: Contract ownership lanes were documented, but the promotion report still needed concrete matrix behavior for actual route shapes, runtime-only rows, informational findings, and test coverage.
+- Current Update: Expanded the report to read manifest route sections and quick lookups, normalize command evidence, show runtime-only rows and categorized informational findings, and documented how maintainers read the evidence matrix.
+- Result: Contract promotion report, report unit tests, output-contract checks, schema check, AI workflow, and diff checks pass.
+
 ## 2026-04-20 - Finish project status producer audit
 - State: Done
 - Scope: Rust project-status producer audit across sync, datasource, alert, dashboard, access, and live status fallback producers. Public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
@@ -51,10 +58,3 @@ Current AI-maintained status only.
 - Baseline: dashboard authoring implementation and root authoring regression tests lived as flat files in `commands/dashboard/`.
 - Current Update: Moved dashboard authoring implementation and direct authoring regression tests under `commands/dashboard/authoring/` while keeping `commands/dashboard/mod.rs` as the public facade.
 - Result: Focused authoring/dashboard tests, formatter, maintainability, AI workflow, and full Rust tests pass.
-
-## 2026-04-20 - Split sync live read facets
-- State: Done
-- Scope: Rust Grafana sync live read dashboard/folder, datasource, alert, and availability facet extraction, focused sync/status tests, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
-- Baseline: `grafana/api/sync_live_read.rs` still owned folder, dashboard, datasource, alert, and availability read loops in one large adapter module.
-- Current Update: Moved dashboard/folder, datasource, alert, and availability live-read assembly into dedicated child modules while keeping the parent as the public facade.
-- Result: Focused sync live, status, formatter, maintainability, AI workflow, and full Rust tests pass.

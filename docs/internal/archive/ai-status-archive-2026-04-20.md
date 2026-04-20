@@ -144,3 +144,10 @@
 - Baseline: sync staged rendering and review helpers still read tool-owned fields such as `kind`, `summary`, `resourceCount`, and review metadata as repeated raw strings.
 - Current Update: Grouped sync staged document, summary, review, and project-status section names behind local namespaced constants while leaving ordinary Grafana raw keys unchanged.
 - Result: Focused render, workspace preview, sync project-status, sync, status, formatter, maintainability, AI workflow, and full Rust tests pass.
+
+## 2026-04-20 - Split sync live read facets
+- State: Done
+- Scope: Rust Grafana sync live read dashboard/folder, datasource, alert, and availability facet extraction, focused sync/status tests, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
+- Baseline: `grafana/api/sync_live_read.rs` still owned folder, dashboard, datasource, alert, and availability read loops in one large adapter module.
+- Current Update: Moved dashboard/folder, datasource, alert, and availability live-read assembly into dedicated child modules while keeping the parent as the public facade.
+- Result: Focused sync live, status, formatter, maintainability, AI workflow, and full Rust tests pass.

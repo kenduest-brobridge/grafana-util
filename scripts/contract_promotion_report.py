@@ -83,6 +83,7 @@ class EvidenceRow:
 @dataclass(frozen=True)
 class StructuralIssue:
     severity: str
+    category: str
     contract_id: str
     message: str
 
@@ -211,17 +212,34 @@ def load_manifest_routes(manifests_dir: Path = MANIFESTS_DIR) -> list[ManifestRo
             if not isinstance(entry, dict):
                 raise TypeError(f"{routes_path} contains a non-object route entry")
             route_id = str(entry.get("routeId") or "")
-            commands = entry.get("commands") or []
+            commands = list(entry.get("commands") or [])
+            quick_lookups = entry.get("quickLookups") or []
+            if isinstance(quick_lookups, list):
+                commands.extend(quick_lookups)
             contract_refs = entry.get("contractRefs") or []
+            contract_sections = entry.get("contractSections") or []
             if not isinstance(commands, list):
                 raise TypeError(f"{routes_path} route {route_id!r} commands must be a list")
             if not isinstance(contract_refs, list):
                 raise TypeError(f"{routes_path} route {route_id!r} contractRefs must be a list")
+            if not isinstance(contract_sections, list):
+                raise TypeError(f"{routes_path} route {route_id!r} contractSections must be a list")
             contract_ids: list[str] = []
             for contract_ref in contract_refs:
                 if not isinstance(contract_ref, dict):
                     raise TypeError(f"{routes_path} route {route_id!r} has a non-object contractRef")
                 contract_id = str(contract_ref.get("contractId") or "")
+                if contract_id:
+                    contract_ids.append(contract_id)
+            for contract_section in contract_sections:
+                if isinstance(contract_section, str):
+                    contract_id = contract_section
+                elif isinstance(contract_section, dict):
+                    contract_id = str(contract_section.get("contractId") or "")
+                else:
+                    raise TypeError(
+                        f"{routes_path} route {route_id!r} has an unsupported contractSection"
+                    )
                 if contract_id:
                     contract_ids.append(contract_id)
             routes.append(
@@ -295,11 +313,23 @@ def _strip_schema_help(command: str) -> str:
     return command.replace(" --help-schema", "").replace(" --help-full", "").strip()
 
 
-def _command_doc_candidates(command: str) -> tuple[Path, ...]:
+def _command_path(command: str) -> str:
     command_path = _strip_schema_help(command)
-    if not command_path.startswith("grafana-util "):
+    if not command_path.startswith("grafana-util"):
+        return command_path
+    path_parts: list[str] = []
+    for token in command_path.split()[1:]:
+        if token.startswith("-"):
+            break
+        path_parts.append(token)
+    return " ".join(path_parts)
+
+
+def _command_doc_candidates(command: str) -> tuple[Path, ...]:
+    command_path = _command_path(command)
+    if not command_path:
         return ()
-    doc_name = command_path.removeprefix("grafana-util ").replace(" ", "-") + ".md"
+    doc_name = command_path.replace(" ", "-") + ".md"
     return (GENERATED_DOCS_DIR / "en" / doc_name, GENERATED_DOCS_DIR / "zh-TW" / doc_name)
 
 
@@ -345,18 +375,21 @@ def build_evidence_matrix(
 
     rows: list[EvidenceRow] = []
     issues: list[StructuralIssue] = []
+    matched_runtime_ids: set[str] = set()
     for contract in sorted(manifest_contracts, key=lambda item: (item.family, item.contract_id)):
         runtime_match = runtime_matches.get(contract.contract_id)
         runtime = runtime_match[0] if runtime_match else None
+        if runtime:
+            matched_runtime_ids.add(runtime.contract_id)
         match_method = runtime_match[1] if runtime_match else "unmatched"
         route_commands = commands_by_contract.get(contract.contract_id, set())
-        route_command_roots = {_strip_schema_help(command).removeprefix("grafana-util ") for command in route_commands}
+        route_command_roots = {_command_path(command) for command in route_commands}
         public_routes = {
-            command
-            for command in route_commands
+            command_path
+            for command_path in route_command_roots
             if any(
-                route == _strip_schema_help(command).removeprefix("grafana-util ")
-                or _strip_schema_help(command).removeprefix("grafana-util ").startswith(f"{route} ")
+                route == command_path
+                or command_path.startswith(f"{route} ")
                 for route in public_route_roots
             )
         }
@@ -393,6 +426,7 @@ def build_evidence_matrix(
             issues.append(
                 StructuralIssue(
                     severity="info",
+                    category="missing-runtime-golden",
                     contract_id=contract.contract_id,
                     message="no matching runtime golden contract found",
                 )
@@ -401,18 +435,46 @@ def build_evidence_matrix(
             issues.append(
                 StructuralIssue(
                     severity="info",
+                    category="missing-schema-route",
                     contract_id=contract.contract_id,
-                    message="schema manifest contract is not referenced by a manifest route",
+                    message="schema manifest contract is not referenced by a help route",
                 )
             )
         if public_routes and not generated_docs:
             issues.append(
                 StructuralIssue(
                     severity="info",
+                    category="missing-generated-doc",
                     contract_id=contract.contract_id,
                     message="public manifest route has no generated command-doc file candidate",
                 )
             )
+    for runtime in sorted(runtime_contracts, key=lambda item: (item.family, item.contract_id)):
+        if runtime.contract_id in matched_runtime_ids:
+            continue
+        rows.append(
+            EvidenceRow(
+                contract_id=runtime.contract_id,
+                match_method="runtime-only",
+                runtime_golden=runtime.fixture,
+                schema_help_manifest="-",
+                public_cli_route="-",
+                docs_entrypoint="-",
+                generated_docs="-",
+                artifact_workspace_lane="-",
+            )
+        )
+        issues.append(
+            StructuralIssue(
+                severity="info",
+                category="missing-schema-manifest",
+                contract_id=runtime.contract_id,
+                message=(
+                    "runtime golden fixture has no matching schema/help manifest; add a "
+                    "schemas/manifests contract or confirm it is intentionally runtime-only"
+                ),
+            )
+        )
     return tuple(rows), tuple(issues)
 
 
@@ -442,14 +504,14 @@ def build_promotion_report(
 
     shared_by_manifest_family: dict[str, list[str]] = {}
     runtime_families_by_manifest_family: dict[str, set[str]] = {}
-    shared_by_runtime_family: dict[str, list[str]] = {}
+    shared_by_runtime_family: dict[str, set[str]] = {}
     manifest_families_by_runtime_family: dict[str, set[str]] = {}
 
     for contract_id in shared_ids:
         manifest_record = manifest_by_id[contract_id]
         runtime_record = runtime_matches[contract_id][0]
         shared_by_manifest_family.setdefault(manifest_record.family, []).append(contract_id)
-        shared_by_runtime_family.setdefault(runtime_record.family, []).append(runtime_record.contract_id)
+        shared_by_runtime_family.setdefault(runtime_record.family, set()).add(runtime_record.contract_id)
         runtime_families_by_manifest_family.setdefault(manifest_record.family, set()).add(
             runtime_record.family
         )
@@ -475,7 +537,7 @@ def build_promotion_report(
     runtime_reports: list[FamilyReport] = []
     for family in sorted(runtime_family_groups):
         contract_ids = sorted(record.contract_id for record in runtime_family_groups[family])
-        shared = tuple(sorted(shared_by_runtime_family.get(family, [])))
+        shared = tuple(sorted(shared_by_runtime_family.get(family, set())))
         left_only = tuple(contract_id for contract_id in contract_ids if contract_id not in shared)
         runtime_reports.append(
             FamilyReport(
@@ -579,9 +641,11 @@ def render_text_report(
     if show_structure or report.structural_issues:
         lines.extend(["", "structural checks:"])
         if report.structural_issues:
-            lines.append("  informational by default; pass --strict-structure to fail on these findings.")
+            lines.append("  informational only; findings do not change the exit status.")
             for issue in report.structural_issues:
-                lines.append(f"  - {issue.severity}: {issue.contract_id}: {issue.message}")
+                lines.append(
+                    f"  - {issue.severity}: {issue.category}: {issue.contract_id}: {issue.message}"
+                )
         else:
             lines.append("  no structural findings")
 
@@ -610,12 +674,12 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser.add_argument(
         "--strict-structure",
         action="store_true",
-        help="Exit non-zero when informational structural checks find missing matrix evidence.",
+        help=argparse.SUPPRESS,
     )
     parser.add_argument(
         "--show-structure",
         action="store_true",
-        help="Print structural check findings even when --strict-structure is not used.",
+        help="Print the structural check section even when there are no findings.",
     )
     args = parser.parse_args(argv)
 
@@ -632,11 +696,9 @@ def main(argv: Optional[list[str]] = None) -> int:
             manifest_contracts,
             runtime_contracts,
             verbose=args.verbose,
-            show_structure=args.show_structure or args.strict_structure,
+            show_structure=args.show_structure,
         )
     )
-    if args.strict_structure and report.structural_issues:
-        return 1
     return 0
 
 

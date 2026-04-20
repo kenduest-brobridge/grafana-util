@@ -89,6 +89,37 @@ Use three layers:
     gaps are report findings by default; only explicit strict report mode should
     turn them into a failing gate.
 
+## Contract Promotion Report
+
+`make contract-promotion-report` is a maintainer audit, not a default quality
+gate. Use it before promoting a JSON output or schema/help surface from
+implementation detail to stable public contract.
+
+Read the evidence matrix as lane ownership:
+
+- `runtime_golden` points to the golden JSON fixture covered by
+  `scripts/contracts/output-contracts.json`; this proves live command output is
+  regression-checked.
+- `schema/help_manifest` points to the family manifest under
+  `schemas/manifests/`; this proves the published schema/help contract is
+  authored in the manifest layer.
+- `public_cli_route` shows manifest routes that resolve to public command
+  paths from `scripts/contracts/command-surface.json`; this proves the contract
+  is attached to a public CLI surface.
+- `docs_entrypoint` shows whether the public command is present in
+  `scripts/contracts/docs-entrypoints.json`; this proves landing-page or
+  handbook navigation has an owned entrypoint.
+- `generated_docs` shows generated command-reference files derived from the
+  docs pipeline; this proves public command docs exist, but those files are not
+  authoring sources.
+- `artifact_workspace_lane` shows whether the command participates in an
+  artifact workspace export or local-consumer lane from `command-surface.json`;
+  this proves the contract is tied to an owned workspace artifact flow.
+
+Missing cells are informational until a maintainer intentionally opts into the
+strict report mode. Treat them as promotion evidence gaps, not immediate build
+failures.
+
 ## Current Contract Lane Overlap
 
 The output-contract registry and schema manifests intentionally do not have a

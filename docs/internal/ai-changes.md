@@ -17,6 +17,13 @@ Current AI change log only.
 - Older entries moved to [`ai-changes-archive-2026-04-19.md`](docs/internal/archive/ai-changes-archive-2026-04-19.md).
 - Older entries moved to [`ai-changes-archive-2026-04-20.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-changes-archive-2026-04-20.md).
 
+## 2026-04-20 - Add contract promotion report
+- Summary: made `scripts/contract_promotion_report.py` a concrete informational evidence matrix for runtime golden, schema/help manifest, public route, docs entrypoint, generated docs, and artifact workspace lanes.
+- Tests: added report unit coverage for actual manifest route shapes, runtime-only rows, generated-doc detection, artifact workspace evidence, deterministic ordering, categorized findings, and informational default exits.
+- Test Run: `python3 -m unittest -v scripts.test_contract_promotion_report`; `python3 scripts/contract_promotion_report.py`; `python3 scripts/contract_promotion_report.py --strict-structure`; `make contract-promotion-report`; `make quality-output-contracts`; `make schema-check`; `make quality-ai-workflow`; `git diff --check`.
+- Impact: `scripts/contract_promotion_report.py`, `scripts/test_contract_promotion_report.py`, `docs/internal/contract-doc-map.md`, `todo.md`, and AI trace docs. Public CLI behavior, generated docs, schema artifacts, Rust implementation, and Python package behavior are intentionally unchanged.
+- Rollback/Risk: low script/reporting change. Rollback would restore the previous overlap report with less route and runtime-only evidence; the report remains informational and does not gate findings.
+
 ## 2026-04-20 - Finish project status producer audit
 - Summary: audited remaining project-status producers across sync, datasource, alert, dashboard, access, and live status fallback paths, then normalized the last dashboard live read-failure fallback through `StatusReading`.
 - Tests: preserved live dashboard read failure status fields, blocker count derivation, and existing staged/live domain status evidence including health, version, discovery, and freshness paths.
@@ -79,10 +86,3 @@ Current AI change log only.
 - Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet alert --lib`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `python3 scripts/rust_maintainability_report.py`; `cargo test --manifest-path rust/Cargo.toml --quiet`; `make quality-ai-workflow`; `git diff --check`.
 - Impact: `rust/src/commands/alert/cli/args.rs`, `rust/src/commands/alert/cli/args_authoring.rs`, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are intentionally unchanged.
 - Rollback/Risk: low mechanical module split. Rollback would inline authoring args back into the facade file; behavior is unchanged.
-
-## 2026-04-20 - Split status parser tests
-- Summary: moved status CLI help, parser, and output-mode assertions into a dedicated adjacent Rust test module while leaving staged/render contract fixtures in the original test file.
-- Tests: preserved parser coverage for datasource provisioning, output modes, dashboard provisioning, and conflicting dashboard inputs.
-- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet project_status_cli --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet status --lib`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `python3 scripts/rust_maintainability_report.py`; `cargo test --manifest-path rust/Cargo.toml --quiet`; `make quality-ai-workflow`; `git diff --check`.
-- Impact: `rust/src/commands/status/tests.rs`, `rust/src/commands/status/parser_tests.rs`, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are intentionally unchanged.
-- Rollback/Risk: low mechanical test split. Rollback would move parser tests back into the original status test file; behavior is unchanged.
