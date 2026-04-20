@@ -17,6 +17,13 @@ Current AI change log only.
 - Older entries moved to [`ai-changes-archive-2026-04-19.md`](docs/internal/archive/ai-changes-archive-2026-04-19.md).
 - Older entries moved to [`ai-changes-archive-2026-04-20.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-changes-archive-2026-04-20.md).
 
+## 2026-04-20 - Split alert authoring CLI args
+- Summary: moved alert authoring scaffold/add/clone/route argument structs into a dedicated adjacent module while keeping `args.rs` as the alert CLI facade.
+- Tests: preserved alert parser and command coverage with no public CLI shape changes.
+- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet alert --lib`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `python3 scripts/rust_maintainability_report.py`; `cargo test --manifest-path rust/Cargo.toml --quiet`; `make quality-ai-workflow`; `git diff --check`.
+- Impact: `rust/src/commands/alert/cli/args.rs`, `rust/src/commands/alert/cli/args_authoring.rs`, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are intentionally unchanged.
+- Rollback/Risk: low mechanical module split. Rollback would inline authoring args back into the facade file; behavior is unchanged.
+
 ## 2026-04-20 - Split status parser tests
 - Summary: moved status CLI help, parser, and output-mode assertions into a dedicated adjacent Rust test module while leaving staged/render contract fixtures in the original test file.
 - Tests: preserved parser coverage for datasource provisioning, output modes, dashboard provisioning, and conflicting dashboard inputs.
@@ -79,10 +86,3 @@ Current AI change log only.
 - Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `cargo test --manifest-path rust/Cargo.toml --quiet dashboard_artifact_workflow --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet dashboard_cli_parser_help_workflow --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet snapshot_export_run_timestamp_uses_artifact_snapshot_root_and_records_latest_run --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet dashboard --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet snapshot --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet`; `python3 scripts/rust_maintainability_report.py`; `make quality-ai-workflow`.
 - Impact: `rust/src/commands/dashboard/mod.rs`, `rust/src/commands/dashboard/facade_exports.rs`, dashboard artifact/parser workflow tests, `rust/src/commands/snapshot/support.rs`, snapshot export tests, and AI trace docs. Public CLI paths and output contracts are intentionally unchanged.
 - Rollback/Risk: low mechanical architecture cleanup plus test coverage. Rollback would move facade re-exports and artifact tests back into their previous files and remove the snapshot artifact test.
-
-## 2026-04-20 - Split dashboard artifact command routing
-- Summary: moved dashboard artifact workspace run resolution and local input materialization out of the command runner into a focused Rust helper module while preserving existing dashboard CLI behavior.
-- Tests: verified the refactor with focused dashboard parser, artifact, and dashboard command scopes plus formatter and maintainability checks.
-- Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all`; `cargo test --manifest-path rust/Cargo.toml --quiet dashboard_cli_parser_help_workflow --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet dashboard_cli_parser_help_list_export --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet run_dashboard_cli --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet artifact --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet dashboard --lib`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `cargo test --manifest-path rust/Cargo.toml --quiet`; `python3 scripts/rust_maintainability_report.py`; `make quality-ai-workflow`.
-- Impact: `rust/src/commands/dashboard/command_runner.rs`, `rust/src/commands/dashboard/command_artifacts.rs`, dashboard module registration, and AI trace docs. Public CLI paths, flags, and output contracts are intentionally unchanged.
-- Rollback/Risk: low mechanical extraction. Rollback would re-inline the artifact helpers into the command runner; risk is import/visibility drift, covered by focused Rust tests.

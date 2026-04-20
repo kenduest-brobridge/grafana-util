@@ -17,6 +17,13 @@ Current AI-maintained status only.
 - Older entries moved to [`ai-status-archive-2026-04-19.md`](docs/internal/archive/ai-status-archive-2026-04-19.md).
 - Older entries moved to [`ai-status-archive-2026-04-20.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-04-20.md).
 
+## 2026-04-20 - Split alert authoring CLI args
+- State: Done
+- Scope: Rust alert CLI argument module boundaries, authoring command family args, focused alert parser tests, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
+- Baseline: `commands/alert/cli/args.rs` mixes shared/common args, runtime export/import/plan/delete args, authoring scaffold/add/clone/route args, and parse helpers in one large file.
+- Current Update: Moved alert authoring command-family args into a dedicated adjacent module while keeping `args.rs` as the facade for existing normalization and dispatch imports.
+- Result: Focused alert tests, formatter check, maintainability report, full Rust tests, and AI workflow checks pass.
+
 ## 2026-04-20 - Split status parser tests
 - State: Done
 - Scope: Rust status command parser/help test organization, focused parser/status tests, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
@@ -51,10 +58,3 @@ Current AI-maintained status only.
 - Baseline: `project_status_promotion.rs` still keeps staged promotion schema/source strings flat or inline and owns its test module inside the production producer.
 - Current Update: Grouped staged promotion JSON keys and signal sources under namespaced constants and moved staged promotion status tests into a dedicated module.
 - Result: Focused promotion tests, broader sync/status tests, formatter check, maintainability report, full Rust tests, and AI workflow checks pass.
-
-## 2026-04-20 - Align live promotion status helpers
-- State: Done
-- Scope: Rust live promotion project-status helper reuse, live promotion status tests, focused sync/status tests, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
-- Baseline: `live_project_status_promotion.rs` still owned local JSON summary/section helpers and inline tests after staged promotion was moved to shared project-status helpers.
-- Current Update: Aligned the live promotion producer with shared sync project-status JSON helpers, grouped live promotion schema keys under namespaced constants, and moved its tests behind a dedicated module.
-- Result: Focused live/staged promotion tests, broader sync/status tests, full Rust tests, formatter check, maintainability report, and AI workflow checks pass.
