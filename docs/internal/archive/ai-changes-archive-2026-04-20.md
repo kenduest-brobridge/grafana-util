@@ -68,3 +68,10 @@
 - Test Run: `make man`; `make html`; `make man-check`; `make html-check`; `make quality-docs-surface`; `make quality-ai-workflow`.
 - Impact: `docs/user-guide/{en,zh-TW}/getting-started.md`, artifact-related command docs under `docs/commands/{en,zh-TW}/`, `scripts/contracts/command-surface.json`, and AI trace docs.
 - Rollback/Risk: low docs/contract clarification. Rollback would remove operator guidance for the already implemented artifact workspace behavior.
+
+## 2026-04-19 - Broaden artifact workspace local consumers
+- Summary: expanded artifact workspace local input routing so dashboard import/diff and access user/team/org/service-account import/diff can consume profile artifact runs through `--local`, `--run`, or `--run-id` without repeating input directories.
+- Tests: parser/runtime behavior changed; Rust tests not run.
+- Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all`; `make man`; `make html`; `make man-check`; `make html-check`; `make quality-docs-surface`; `make quality-ai-workflow`.
+- Impact: Rust dashboard/access CLI argument surfaces, dashboard/access dispatch path materialization, command docs, command-surface contract, and AI trace docs. Python implementation and README files are intentionally out of scope.
+- Rollback/Risk: medium CLI behavior expansion around required local input paths. Rollback would remove the new local input flags and restore explicit `--input-dir`/`--diff-dir` only behavior.

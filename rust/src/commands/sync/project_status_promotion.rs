@@ -26,36 +26,99 @@ const PROMOTION_REASON_PARTIAL_NO_DATA: &str = "partial-no-data";
 const PROMOTION_REASON_BLOCKED_BY_BLOCKERS: &str = "blocked-by-blockers";
 
 const PROMOTION_SOURCE_KINDS: &[&str] = &["promotion-preflight"];
+
+mod summary_key {
+    pub(super) const RESOURCE_COUNT: &str = "resourceCount";
+    pub(super) const MISSING_MAPPING_COUNT: &str = "missingMappingCount";
+    pub(super) const BUNDLE_BLOCKING_COUNT: &str = "bundleBlockingCount";
+    pub(super) const BLOCKING_COUNT: &str = "blockingCount";
+}
+
+mod section {
+    pub(super) const HANDOFF: &str = "handoffSummary";
+    pub(super) const CONTINUATION: &str = "continuationSummary";
+    pub(super) const CHECK_SUMMARY: &str = "checkSummary";
+}
+
+mod handoff_key {
+    pub(super) const READY_FOR_REVIEW: &str = "readyForReview";
+    pub(super) const BLOCKING_COUNT: &str = "blockingCount";
+    pub(super) const REVIEW_INSTRUCTION: &str = "reviewInstruction";
+}
+
+mod continuation_key {
+    pub(super) const READY_FOR_CONTINUATION: &str = "readyForContinuation";
+    pub(super) const RESOLVED_COUNT: &str = "resolvedCount";
+    pub(super) const BLOCKING_COUNT: &str = "blockingCount";
+    pub(super) const INSTRUCTION: &str = "continuationInstruction";
+}
+
+mod check_summary_key {
+    pub(super) const FOLDER_REMAP_COUNT: &str = "folderRemapCount";
+    pub(super) const DATASOURCE_UID_REMAP_COUNT: &str = "datasourceUidRemapCount";
+    pub(super) const DATASOURCE_NAME_REMAP_COUNT: &str = "datasourceNameRemapCount";
+}
+
+mod signal {
+    pub(super) const SUMMARY_RESOURCE_COUNT: &str = "summary.resourceCount";
+    pub(super) const SUMMARY_MISSING_MAPPING_COUNT: &str = "summary.missingMappingCount";
+    pub(super) const SUMMARY_BUNDLE_BLOCKING_COUNT: &str = "summary.bundleBlockingCount";
+    pub(super) const SUMMARY_BLOCKING_COUNT: &str = "summary.blockingCount";
+    pub(super) const HANDOFF_REVIEW_REQUIRED: &str = "handoffSummary.reviewRequired";
+    pub(super) const HANDOFF_READY_FOR_REVIEW: &str = "handoffSummary.readyForReview";
+    pub(super) const HANDOFF_NEXT_STAGE: &str = "handoffSummary.nextStage";
+    pub(super) const HANDOFF_BLOCKING_COUNT: &str = "handoffSummary.blockingCount";
+    pub(super) const HANDOFF_REVIEW_INSTRUCTION: &str = "handoffSummary.reviewInstruction";
+    pub(super) const CONTINUATION_STAGED_ONLY: &str = "continuationSummary.stagedOnly";
+    pub(super) const CONTINUATION_LIVE_MUTATION_ALLOWED: &str =
+        "continuationSummary.liveMutationAllowed";
+    pub(super) const CONTINUATION_READY_FOR_CONTINUATION: &str =
+        "continuationSummary.readyForContinuation";
+    pub(super) const CONTINUATION_NEXT_STAGE: &str = "continuationSummary.nextStage";
+    pub(super) const CONTINUATION_BLOCKING_COUNT: &str = "continuationSummary.blockingCount";
+    pub(super) const CONTINUATION_RESOLVED_COUNT: &str = "continuationSummary.resolvedCount";
+    pub(super) const CONTINUATION_INSTRUCTION: &str = "continuationSummary.continuationInstruction";
+    pub(super) const CHECK_FOLDER_REMAP_COUNT: &str = "checkSummary.folderRemapCount";
+    pub(super) const CHECK_DATASOURCE_UID_REMAP_COUNT: &str =
+        "checkSummary.datasourceUidRemapCount";
+    pub(super) const CHECK_DATASOURCE_NAME_REMAP_COUNT: &str =
+        "checkSummary.datasourceNameRemapCount";
+    pub(super) const CHECK_RESOLVED_COUNT: &str = "checkSummary.resolvedCount";
+    pub(super) const CHECK_DIRECT_COUNT: &str = "checkSummary.directCount";
+    pub(super) const CHECK_MAPPED_COUNT: &str = "checkSummary.mappedCount";
+    pub(super) const CHECK_MISSING_TARGET_COUNT: &str = "checkSummary.missingTargetCount";
+}
+
 const PROMOTION_SIGNAL_KEYS: &[&str] = &[
-    "summary.resourceCount",
-    "summary.missingMappingCount",
-    "summary.bundleBlockingCount",
-    "summary.blockingCount",
+    signal::SUMMARY_RESOURCE_COUNT,
+    signal::SUMMARY_MISSING_MAPPING_COUNT,
+    signal::SUMMARY_BUNDLE_BLOCKING_COUNT,
+    signal::SUMMARY_BLOCKING_COUNT,
 ];
 const PROMOTION_HANDOFF_SIGNAL_KEYS: &[&str] = &[
-    "handoffSummary.reviewRequired",
-    "handoffSummary.readyForReview",
-    "handoffSummary.nextStage",
-    "handoffSummary.blockingCount",
-    "handoffSummary.reviewInstruction",
+    signal::HANDOFF_REVIEW_REQUIRED,
+    signal::HANDOFF_READY_FOR_REVIEW,
+    signal::HANDOFF_NEXT_STAGE,
+    signal::HANDOFF_BLOCKING_COUNT,
+    signal::HANDOFF_REVIEW_INSTRUCTION,
 ];
 const PROMOTION_CONTINUATION_SIGNAL_KEYS: &[&str] = &[
-    "continuationSummary.stagedOnly",
-    "continuationSummary.liveMutationAllowed",
-    "continuationSummary.readyForContinuation",
-    "continuationSummary.nextStage",
-    "continuationSummary.blockingCount",
-    "continuationSummary.resolvedCount",
-    "continuationSummary.continuationInstruction",
+    signal::CONTINUATION_STAGED_ONLY,
+    signal::CONTINUATION_LIVE_MUTATION_ALLOWED,
+    signal::CONTINUATION_READY_FOR_CONTINUATION,
+    signal::CONTINUATION_NEXT_STAGE,
+    signal::CONTINUATION_BLOCKING_COUNT,
+    signal::CONTINUATION_RESOLVED_COUNT,
+    signal::CONTINUATION_INSTRUCTION,
 ];
 const PROMOTION_CHECK_SUMMARY_SIGNAL_KEYS: &[&str] = &[
-    "checkSummary.folderRemapCount",
-    "checkSummary.datasourceUidRemapCount",
-    "checkSummary.datasourceNameRemapCount",
-    "checkSummary.resolvedCount",
-    "checkSummary.directCount",
-    "checkSummary.mappedCount",
-    "checkSummary.missingTargetCount",
+    signal::CHECK_FOLDER_REMAP_COUNT,
+    signal::CHECK_DATASOURCE_UID_REMAP_COUNT,
+    signal::CHECK_DATASOURCE_NAME_REMAP_COUNT,
+    signal::CHECK_RESOLVED_COUNT,
+    signal::CHECK_DIRECT_COUNT,
+    signal::CHECK_MAPPED_COUNT,
+    signal::CHECK_MISSING_TARGET_COUNT,
 ];
 
 const PROMOTION_BLOCKER_MISSING_MAPPINGS: &str = "missing-mappings";
@@ -84,40 +147,69 @@ const PROMOTION_REVIEW_DATASOURCE_REMAPS_ACTIONS: &[&str] =
     &["review datasource remaps before promotion review"];
 
 fn handoff_warning_source(document: Option<&Value>) -> &'static str {
-    if section_bool(document, "handoffSummary", "readyForReview")
-        && section_text(document, "handoffSummary", "reviewInstruction").is_none()
+    if section_bool(document, section::HANDOFF, handoff_key::READY_FOR_REVIEW)
+        && section_text(document, section::HANDOFF, handoff_key::REVIEW_INSTRUCTION).is_none()
     {
-        "handoffSummary.nextStage"
-    } else if section_bool(document, "handoffSummary", "readyForReview") {
-        "handoffSummary.readyForReview"
-    } else if section_text(document, "handoffSummary", "reviewInstruction").is_some() {
-        "handoffSummary.reviewInstruction"
+        signal::HANDOFF_NEXT_STAGE
+    } else if section_bool(document, section::HANDOFF, handoff_key::READY_FOR_REVIEW) {
+        signal::HANDOFF_READY_FOR_REVIEW
+    } else if section_text(document, section::HANDOFF, handoff_key::REVIEW_INSTRUCTION).is_some() {
+        signal::HANDOFF_REVIEW_INSTRUCTION
     } else {
-        "handoffSummary.reviewRequired"
+        signal::HANDOFF_REVIEW_REQUIRED
     }
 }
 
 fn continuation_warning_source(document: Option<&Value>) -> &'static str {
-    if section_bool(document, "continuationSummary", "readyForContinuation")
-        && section_number(document, "continuationSummary", "resolvedCount") > 0
+    if section_bool(
+        document,
+        section::CONTINUATION,
+        continuation_key::READY_FOR_CONTINUATION,
+    ) && section_number(
+        document,
+        section::CONTINUATION,
+        continuation_key::RESOLVED_COUNT,
+    ) > 0
     {
-        "continuationSummary.resolvedCount"
-    } else if section_bool(document, "continuationSummary", "readyForContinuation")
-        && section_text(document, "continuationSummary", "continuationInstruction").is_none()
+        signal::CONTINUATION_RESOLVED_COUNT
+    } else if section_bool(
+        document,
+        section::CONTINUATION,
+        continuation_key::READY_FOR_CONTINUATION,
+    ) && section_text(
+        document,
+        section::CONTINUATION,
+        continuation_key::INSTRUCTION,
+    )
+    .is_none()
     {
-        "continuationSummary.nextStage"
-    } else if section_bool(document, "continuationSummary", "readyForContinuation") {
-        "continuationSummary.readyForContinuation"
-    } else if section_text(document, "continuationSummary", "continuationInstruction").is_some() {
-        "continuationSummary.continuationInstruction"
+        signal::CONTINUATION_NEXT_STAGE
+    } else if section_bool(
+        document,
+        section::CONTINUATION,
+        continuation_key::READY_FOR_CONTINUATION,
+    ) {
+        signal::CONTINUATION_READY_FOR_CONTINUATION
+    } else if section_text(
+        document,
+        section::CONTINUATION,
+        continuation_key::INSTRUCTION,
+    )
+    .is_some()
+    {
+        signal::CONTINUATION_INSTRUCTION
     } else {
-        "continuationSummary.liveMutationAllowed"
+        signal::CONTINUATION_LIVE_MUTATION_ALLOWED
     }
 }
 
 fn continuation_warning_count(document: Option<&Value>) -> usize {
-    let resolved = section_number(document, "continuationSummary", "resolvedCount");
-    if continuation_warning_source(document) == "continuationSummary.resolvedCount" {
+    let resolved = section_number(
+        document,
+        section::CONTINUATION,
+        continuation_key::RESOLVED_COUNT,
+    );
+    if continuation_warning_source(document) == signal::CONTINUATION_RESOLVED_COUNT {
         resolved.max(1)
     } else {
         1
@@ -128,22 +220,29 @@ pub(crate) fn build_promotion_domain_status(
     promotion_preflight_document: Option<&Value>,
 ) -> Option<ProjectDomainStatus> {
     let document = promotion_preflight_document?;
-    let resources = summary_number(document, "resourceCount");
-    let missing_mappings = summary_number(document, "missingMappingCount");
-    let bundle_blocking = summary_number(document, "bundleBlockingCount");
-    let summary_blocking = summary_number(document, "blockingCount");
-    let handoff_blocking = section_number(Some(document), "handoffSummary", "blockingCount");
-    let continuation_blocking =
-        section_number(Some(document), "continuationSummary", "blockingCount");
+    let resources = summary_number(document, summary_key::RESOURCE_COUNT);
+    let missing_mappings = summary_number(document, summary_key::MISSING_MAPPING_COUNT);
+    let bundle_blocking = summary_number(document, summary_key::BUNDLE_BLOCKING_COUNT);
+    let summary_blocking = summary_number(document, summary_key::BLOCKING_COUNT);
+    let handoff_blocking = section_number(
+        Some(document),
+        section::HANDOFF,
+        handoff_key::BLOCKING_COUNT,
+    );
+    let continuation_blocking = section_number(
+        Some(document),
+        section::CONTINUATION,
+        continuation_key::BLOCKING_COUNT,
+    );
     let blocking = summary_blocking
         .max(handoff_blocking)
         .max(continuation_blocking);
     let blocking_source = if summary_blocking > 0 {
-        "summary.blockingCount"
+        signal::SUMMARY_BLOCKING_COUNT
     } else if handoff_blocking > 0 {
-        "handoffSummary.blockingCount"
+        signal::HANDOFF_BLOCKING_COUNT
     } else {
-        "continuationSummary.blockingCount"
+        signal::CONTINUATION_BLOCKING_COUNT
     };
 
     let mut blockers = Vec::new();
@@ -151,14 +250,14 @@ pub(crate) fn build_promotion_domain_status(
         blockers.push(status_finding(
             PROMOTION_BLOCKER_MISSING_MAPPINGS,
             missing_mappings,
-            "summary.missingMappingCount",
+            signal::SUMMARY_MISSING_MAPPING_COUNT,
         ));
     }
     if bundle_blocking > 0 {
         blockers.push(status_finding(
             PROMOTION_BLOCKER_BUNDLE_BLOCKING,
             bundle_blocking,
-            "summary.bundleBlockingCount",
+            signal::SUMMARY_BUNDLE_BLOCKING_COUNT,
         ));
     }
     if blockers.is_empty() && blocking > 0 {
@@ -173,21 +272,21 @@ pub(crate) fn build_promotion_domain_status(
         .iter()
         .map(|item| (*item).to_string())
         .collect::<Vec<_>>();
-    if section_object(Some(document), "handoffSummary").is_some() {
+    if section_object(Some(document), section::HANDOFF).is_some() {
         signal_keys.extend(
             PROMOTION_HANDOFF_SIGNAL_KEYS
                 .iter()
                 .map(|item| (*item).to_string()),
         );
     }
-    if section_object(Some(document), "continuationSummary").is_some() {
+    if section_object(Some(document), section::CONTINUATION).is_some() {
         signal_keys.extend(
             PROMOTION_CONTINUATION_SIGNAL_KEYS
                 .iter()
                 .map(|item| (*item).to_string()),
         );
     }
-    if section_object(Some(document), "checkSummary").is_some() {
+    if section_object(Some(document), section::CHECK_SUMMARY).is_some() {
         signal_keys.extend(
             PROMOTION_CHECK_SUMMARY_SIGNAL_KEYS
                 .iter()
@@ -205,30 +304,40 @@ pub(crate) fn build_promotion_domain_status(
         (PROJECT_STATUS_READY, PROMOTION_REASON_READY)
     };
     let mut warnings = Vec::new();
-    let folder_remaps = section_number(Some(document), "checkSummary", "folderRemapCount");
-    let datasource_uid_remaps =
-        section_number(Some(document), "checkSummary", "datasourceUidRemapCount");
-    let datasource_name_remaps =
-        section_number(Some(document), "checkSummary", "datasourceNameRemapCount");
+    let folder_remaps = section_number(
+        Some(document),
+        section::CHECK_SUMMARY,
+        check_summary_key::FOLDER_REMAP_COUNT,
+    );
+    let datasource_uid_remaps = section_number(
+        Some(document),
+        section::CHECK_SUMMARY,
+        check_summary_key::DATASOURCE_UID_REMAP_COUNT,
+    );
+    let datasource_name_remaps = section_number(
+        Some(document),
+        section::CHECK_SUMMARY,
+        check_summary_key::DATASOURCE_NAME_REMAP_COUNT,
+    );
     if folder_remaps > 0 {
         warnings.push(status_finding(
             PROMOTION_WARNING_FOLDER_REMAPS,
             folder_remaps,
-            "checkSummary.folderRemapCount",
+            signal::CHECK_FOLDER_REMAP_COUNT,
         ));
     }
     if datasource_uid_remaps > 0 {
         warnings.push(status_finding(
             PROMOTION_WARNING_DATASOURCE_UID_REMAPS,
             datasource_uid_remaps,
-            "checkSummary.datasourceUidRemapCount",
+            signal::CHECK_DATASOURCE_UID_REMAP_COUNT,
         ));
     }
     if datasource_name_remaps > 0 {
         warnings.push(status_finding(
             PROMOTION_WARNING_DATASOURCE_NAME_REMAPS,
             datasource_name_remaps,
-            "checkSummary.datasourceNameRemapCount",
+            signal::CHECK_DATASOURCE_NAME_REMAP_COUNT,
         ));
     }
     let next_actions = if has_blockers {
@@ -243,17 +352,25 @@ pub(crate) fn build_promotion_domain_status(
             .collect::<Vec<_>>()
     } else {
         let mut actions = Vec::new();
-        if section_object(Some(document), "handoffSummary").is_some() {
+        if section_object(Some(document), section::HANDOFF).is_some() {
             warnings.push(status_finding(
                 PROMOTION_WARNING_REVIEW_HANDOFF,
                 1,
                 handoff_warning_source(Some(document)),
             ));
-            let action = if section_bool(Some(document), "handoffSummary", "readyForReview") {
+            let action = if section_bool(
+                Some(document),
+                section::HANDOFF,
+                handoff_key::READY_FOR_REVIEW,
+            ) {
                 PROMOTION_REVIEW_READY_ACTIONS[0].to_string()
             } else {
-                section_text(Some(document), "handoffSummary", "reviewInstruction")
-                    .unwrap_or_else(|| PROMOTION_REVIEW_HANDOFF_ACTIONS[0].to_string())
+                section_text(
+                    Some(document),
+                    section::HANDOFF,
+                    handoff_key::REVIEW_INSTRUCTION,
+                )
+                .unwrap_or_else(|| PROMOTION_REVIEW_HANDOFF_ACTIONS[0].to_string())
             };
             push_unique(&mut actions, &action);
         }
@@ -263,7 +380,7 @@ pub(crate) fn build_promotion_domain_status(
         if datasource_uid_remaps > 0 || datasource_name_remaps > 0 {
             push_unique(&mut actions, PROMOTION_REVIEW_DATASOURCE_REMAPS_ACTIONS[0]);
         }
-        if section_object(Some(document), "continuationSummary").is_some() {
+        if section_object(Some(document), section::CONTINUATION).is_some() {
             warnings.push(status_finding(
                 PROMOTION_WARNING_APPLY_CONTINUATION,
                 continuation_warning_count(Some(document)),
@@ -271,15 +388,15 @@ pub(crate) fn build_promotion_domain_status(
             ));
             let action = if section_bool(
                 Some(document),
-                "continuationSummary",
-                "readyForContinuation",
+                section::CONTINUATION,
+                continuation_key::READY_FOR_CONTINUATION,
             ) {
                 PROMOTION_APPLY_READY_ACTIONS[0].to_string()
             } else {
                 section_text(
                     Some(document),
-                    "continuationSummary",
-                    "continuationInstruction",
+                    section::CONTINUATION,
+                    continuation_key::INSTRUCTION,
                 )
                 .unwrap_or_else(|| PROMOTION_APPLY_CONTINUATION_ACTIONS[0].to_string())
             };
@@ -308,446 +425,4 @@ pub(crate) fn build_promotion_domain_status(
         }
         .into_project_domain_status(),
     )
-}
-
-#[cfg(test)]
-mod tests {
-    use super::build_promotion_domain_status;
-    use serde_json::json;
-
-    #[test]
-    fn build_promotion_domain_status_reports_blockers_and_explicit_signals() {
-        let document = json!({
-            "kind": "grafana-utils-sync-promotion-preflight",
-            "summary": {
-                "resourceCount": 3,
-                "missingMappingCount": 2,
-                "bundleBlockingCount": 5,
-                "blockingCount": 7,
-            }
-        });
-
-        let status = build_promotion_domain_status(Some(&document)).unwrap();
-
-        assert_eq!(status.id, "promotion");
-        assert_eq!(status.scope, "staged");
-        assert_eq!(status.mode, "artifact-summary");
-        assert_eq!(status.status, "blocked");
-        assert_eq!(status.reason_code, "blocked-by-blockers");
-        assert_eq!(status.primary_count, 3);
-        assert_eq!(status.blocker_count, 7);
-        assert_eq!(status.source_kinds, vec!["promotion-preflight".to_string()]);
-        assert_eq!(
-            status.signal_keys,
-            vec![
-                "summary.resourceCount".to_string(),
-                "summary.missingMappingCount".to_string(),
-                "summary.bundleBlockingCount".to_string(),
-                "summary.blockingCount".to_string(),
-            ]
-        );
-        assert_eq!(status.blockers.len(), 2);
-        assert_eq!(status.blockers[0].kind, "missing-mappings");
-        assert_eq!(status.blockers[0].count, 2);
-        assert_eq!(status.blockers[0].source, "summary.missingMappingCount");
-        assert_eq!(status.blockers[1].kind, "bundle-blocking");
-        assert_eq!(status.blockers[1].count, 5);
-        assert_eq!(status.blockers[1].source, "summary.bundleBlockingCount");
-        assert!(status.next_actions.contains(&"resolve promotion blockers in the fixed order: missing-mapping, bundle-blocking, blocking".to_string()));
-    }
-
-    #[test]
-    fn build_promotion_domain_status_reports_partial_when_no_resources() {
-        let document = json!({
-            "kind": "grafana-utils-sync-promotion-preflight",
-            "summary": {
-                "resourceCount": 0,
-                "missingMappingCount": 0,
-                "bundleBlockingCount": 0,
-                "blockingCount": 0,
-            }
-        });
-
-        let status = build_promotion_domain_status(Some(&document)).unwrap();
-
-        assert_eq!(status.status, "partial");
-        assert_eq!(status.reason_code, "partial-no-data");
-        assert_eq!(status.primary_count, 0);
-        assert_eq!(status.blocker_count, 0);
-        assert_eq!(
-            status.next_actions,
-            vec!["stage at least one promotable resource before promotion".to_string()]
-        );
-    }
-
-    #[test]
-    fn build_promotion_domain_status_reports_review_and_apply_evidence_when_ready() {
-        let document = json!({
-            "kind": "grafana-utils-sync-promotion-preflight",
-            "summary": {
-                "resourceCount": 3,
-                "missingMappingCount": 0,
-                "bundleBlockingCount": 0,
-                "blockingCount": 0,
-            },
-            "handoffSummary": {
-                "reviewRequired": true,
-                "readyForReview": true,
-                "nextStage": "review",
-                "blockingCount": 0,
-                "reviewInstruction": "promotion handoff is ready to move into review",
-            },
-            "continuationSummary": {
-                "stagedOnly": true,
-                "liveMutationAllowed": false,
-                "readyForContinuation": true,
-                "nextStage": "staged-apply-continuation",
-                "blockingCount": 0,
-                "continuationInstruction": "reviewed remaps can continue into a staged apply continuation without enabling live mutation",
-            }
-        });
-
-        let status = build_promotion_domain_status(Some(&document)).unwrap();
-
-        assert_eq!(status.id, "promotion");
-        assert_eq!(status.scope, "staged");
-        assert_eq!(status.mode, "artifact-summary");
-        assert_eq!(status.status, "ready");
-        assert_eq!(status.reason_code, "ready");
-        assert_eq!(status.primary_count, 3);
-        assert_eq!(status.blocker_count, 0);
-        assert_eq!(status.warning_count, 2);
-        assert_eq!(status.source_kinds, vec!["promotion-preflight".to_string()]);
-        assert_eq!(
-            status.signal_keys,
-            vec![
-                "summary.resourceCount".to_string(),
-                "summary.missingMappingCount".to_string(),
-                "summary.bundleBlockingCount".to_string(),
-                "summary.blockingCount".to_string(),
-                "handoffSummary.reviewRequired".to_string(),
-                "handoffSummary.readyForReview".to_string(),
-                "handoffSummary.nextStage".to_string(),
-                "handoffSummary.blockingCount".to_string(),
-                "handoffSummary.reviewInstruction".to_string(),
-                "continuationSummary.stagedOnly".to_string(),
-                "continuationSummary.liveMutationAllowed".to_string(),
-                "continuationSummary.readyForContinuation".to_string(),
-                "continuationSummary.nextStage".to_string(),
-                "continuationSummary.blockingCount".to_string(),
-                "continuationSummary.resolvedCount".to_string(),
-                "continuationSummary.continuationInstruction".to_string(),
-            ]
-        );
-        assert_eq!(status.blockers.len(), 0);
-        assert_eq!(status.warnings.len(), 2);
-        assert_eq!(status.warnings[0].kind, "review-handoff");
-        assert_eq!(status.warnings[0].count, 1);
-        assert_eq!(status.warnings[0].source, "handoffSummary.readyForReview");
-        assert_eq!(status.warnings[1].kind, "apply-continuation");
-        assert_eq!(status.warnings[1].count, 1);
-        assert_eq!(
-            status.warnings[1].source,
-            "continuationSummary.readyForContinuation"
-        );
-        assert_eq!(
-            status.next_actions,
-            vec![
-                "promotion handoff is review-ready".to_string(),
-                "promotion is apply-ready in the staged continuation".to_string(),
-            ]
-        );
-    }
-
-    #[test]
-    fn build_promotion_domain_status_prefers_resolved_apply_evidence_when_continuation_reports_it()
-    {
-        let document = json!({
-            "kind": "grafana-utils-sync-promotion-preflight",
-            "summary": {
-                "resourceCount": 3,
-                "missingMappingCount": 0,
-                "bundleBlockingCount": 0,
-                "blockingCount": 0,
-            },
-            "handoffSummary": {
-                "reviewRequired": true,
-                "readyForReview": true,
-                "nextStage": "review",
-                "blockingCount": 0,
-                "reviewInstruction": "promotion handoff is ready to move into review",
-            },
-            "continuationSummary": {
-                "stagedOnly": true,
-                "liveMutationAllowed": false,
-                "readyForContinuation": true,
-                "nextStage": "staged-apply-continuation",
-                "resolvedCount": 4,
-                "blockingCount": 0,
-                "continuationInstruction": "reviewed remaps can continue into a staged apply continuation without enabling live mutation",
-            }
-        });
-
-        let status = build_promotion_domain_status(Some(&document)).unwrap();
-
-        assert_eq!(status.status, "ready");
-        assert_eq!(status.reason_code, "ready");
-        assert_eq!(status.warning_count, 5);
-        assert_eq!(status.warnings[1].kind, "apply-continuation");
-        assert_eq!(status.warnings[1].count, 4);
-        assert_eq!(
-            status.warnings[1].source,
-            "continuationSummary.resolvedCount"
-        );
-        assert_eq!(
-            status.signal_keys,
-            vec![
-                "summary.resourceCount".to_string(),
-                "summary.missingMappingCount".to_string(),
-                "summary.bundleBlockingCount".to_string(),
-                "summary.blockingCount".to_string(),
-                "handoffSummary.reviewRequired".to_string(),
-                "handoffSummary.readyForReview".to_string(),
-                "handoffSummary.nextStage".to_string(),
-                "handoffSummary.blockingCount".to_string(),
-                "handoffSummary.reviewInstruction".to_string(),
-                "continuationSummary.stagedOnly".to_string(),
-                "continuationSummary.liveMutationAllowed".to_string(),
-                "continuationSummary.readyForContinuation".to_string(),
-                "continuationSummary.nextStage".to_string(),
-                "continuationSummary.blockingCount".to_string(),
-                "continuationSummary.resolvedCount".to_string(),
-                "continuationSummary.continuationInstruction".to_string(),
-            ]
-        );
-        assert_eq!(
-            status.next_actions,
-            vec![
-                "promotion handoff is review-ready".to_string(),
-                "promotion is apply-ready in the staged continuation".to_string(),
-            ]
-        );
-    }
-
-    #[test]
-    fn build_promotion_domain_status_uses_next_stage_evidence_when_instructions_are_missing() {
-        let document = json!({
-            "kind": "grafana-utils-sync-promotion-preflight",
-            "summary": {
-                "resourceCount": 3,
-                "missingMappingCount": 0,
-                "bundleBlockingCount": 0,
-                "blockingCount": 0,
-            },
-            "handoffSummary": {
-                "reviewRequired": true,
-                "readyForReview": true,
-                "nextStage": "review",
-                "blockingCount": 0,
-            },
-            "continuationSummary": {
-                "stagedOnly": true,
-                "liveMutationAllowed": false,
-                "readyForContinuation": true,
-                "nextStage": "staged-apply-continuation",
-                "blockingCount": 0,
-            }
-        });
-
-        let status = build_promotion_domain_status(Some(&document)).unwrap();
-
-        assert_eq!(status.status, "ready");
-        assert_eq!(status.reason_code, "ready");
-        assert_eq!(status.warning_count, 2);
-        assert_eq!(status.warnings[0].source, "handoffSummary.nextStage");
-        assert_eq!(status.warnings[1].source, "continuationSummary.nextStage");
-        assert_eq!(
-            status.next_actions,
-            vec![
-                "promotion handoff is review-ready".to_string(),
-                "promotion is apply-ready in the staged continuation".to_string(),
-            ]
-        );
-    }
-
-    #[test]
-    fn build_promotion_domain_status_reports_instruction_sources_when_not_ready() {
-        let document = json!({
-            "kind": "grafana-utils-sync-promotion-preflight",
-            "summary": {
-                "resourceCount": 3,
-                "missingMappingCount": 0,
-                "bundleBlockingCount": 0,
-                "blockingCount": 0,
-            },
-            "handoffSummary": {
-                "reviewRequired": true,
-                "readyForReview": false,
-                "nextStage": "review",
-                "blockingCount": 0,
-                "reviewInstruction": "promotion handoff is blocked until the staged review step is ready",
-            },
-            "continuationSummary": {
-                "stagedOnly": true,
-                "liveMutationAllowed": false,
-                "readyForContinuation": false,
-                "nextStage": "staged-apply-continuation",
-                "blockingCount": 0,
-                "continuationInstruction": "keep the promotion staged until the apply continuation is ready",
-            }
-        });
-
-        let status = build_promotion_domain_status(Some(&document)).unwrap();
-
-        assert_eq!(status.status, "ready");
-        assert_eq!(status.reason_code, "ready");
-        assert_eq!(status.warning_count, 2);
-        assert_eq!(
-            status.warnings[0].source,
-            "handoffSummary.reviewInstruction"
-        );
-        assert_eq!(
-            status.warnings[1].source,
-            "continuationSummary.continuationInstruction"
-        );
-        assert_eq!(
-            status.next_actions,
-            vec![
-                "promotion handoff is blocked until the staged review step is ready".to_string(),
-                "keep the promotion staged until the apply continuation is ready".to_string(),
-            ]
-        );
-    }
-
-    #[test]
-    fn build_promotion_domain_status_uses_nested_blocking_evidence_when_summary_is_clear() {
-        let document = json!({
-            "kind": "grafana-utils-sync-promotion-preflight",
-            "summary": {
-                "resourceCount": 3,
-                "missingMappingCount": 0,
-                "bundleBlockingCount": 0,
-                "blockingCount": 0,
-            },
-            "handoffSummary": {
-                "reviewRequired": true,
-                "readyForReview": false,
-                "nextStage": "review",
-                "blockingCount": 0,
-                "reviewInstruction": "promotion handoff is blocked until the staged review step is ready",
-            },
-            "continuationSummary": {
-                "stagedOnly": true,
-                "liveMutationAllowed": false,
-                "readyForContinuation": false,
-                "nextStage": "staged-apply-continuation",
-                "blockingCount": 2,
-                "continuationInstruction": "keep the promotion staged until the apply continuation is ready",
-            }
-        });
-
-        let status = build_promotion_domain_status(Some(&document)).unwrap();
-
-        assert_eq!(status.status, "blocked");
-        assert_eq!(status.reason_code, "blocked-by-blockers");
-        assert_eq!(status.blocker_count, 2);
-        assert_eq!(status.blockers.len(), 1);
-        assert_eq!(status.blockers[0].kind, "blocking");
-        assert_eq!(status.blockers[0].count, 2);
-        assert_eq!(
-            status.blockers[0].source,
-            "continuationSummary.blockingCount"
-        );
-        assert_eq!(status.warning_count, 0);
-        assert!(status.warnings.is_empty());
-        assert_eq!(
-            status.next_actions,
-            vec!["resolve promotion blockers in the fixed order: missing-mapping, bundle-blocking, blocking".to_string()]
-        );
-    }
-
-    #[test]
-    fn build_promotion_domain_status_surfaces_remap_complexity_signals_from_check_summary() {
-        let document = json!({
-            "kind": "grafana-utils-sync-promotion-preflight",
-            "summary": {
-                "resourceCount": 4,
-                "missingMappingCount": 0,
-                "bundleBlockingCount": 0,
-                "blockingCount": 0,
-            },
-            "checkSummary": {
-                "folderRemapCount": 1,
-                "datasourceUidRemapCount": 2,
-                "datasourceNameRemapCount": 3,
-            },
-            "handoffSummary": {
-                "reviewRequired": true,
-                "readyForReview": true,
-                "nextStage": "review",
-                "blockingCount": 0,
-                "reviewInstruction": "promotion handoff is ready to move into review",
-            },
-            "continuationSummary": {
-                "stagedOnly": true,
-                "liveMutationAllowed": false,
-                "readyForContinuation": true,
-                "nextStage": "staged-apply-continuation",
-                "blockingCount": 0,
-                "continuationInstruction": "reviewed remaps can continue into a staged apply continuation without enabling live mutation",
-            }
-        });
-
-        let status = build_promotion_domain_status(Some(&document)).unwrap();
-
-        assert_eq!(status.status, "ready");
-        assert_eq!(status.reason_code, "ready");
-        assert_eq!(status.blocker_count, 0);
-        assert_eq!(status.warning_count, 8);
-        assert!(status
-            .signal_keys
-            .contains(&"checkSummary.folderRemapCount".to_string()));
-        assert!(status
-            .signal_keys
-            .contains(&"checkSummary.datasourceUidRemapCount".to_string()));
-        assert!(status
-            .signal_keys
-            .contains(&"checkSummary.datasourceNameRemapCount".to_string()));
-        assert!(status
-            .signal_keys
-            .contains(&"checkSummary.resolvedCount".to_string()));
-        assert!(status
-            .signal_keys
-            .contains(&"checkSummary.directCount".to_string()));
-        assert!(status
-            .signal_keys
-            .contains(&"checkSummary.mappedCount".to_string()));
-        assert!(status
-            .signal_keys
-            .contains(&"checkSummary.missingTargetCount".to_string()));
-        assert!(status.warnings.iter().any(|warning| {
-            warning.kind == "folder-remaps"
-                && warning.count == 1
-                && warning.source == "checkSummary.folderRemapCount"
-        }));
-        assert!(status.warnings.iter().any(|warning| {
-            warning.kind == "datasource-uid-remaps"
-                && warning.count == 2
-                && warning.source == "checkSummary.datasourceUidRemapCount"
-        }));
-        assert!(status.warnings.iter().any(|warning| {
-            warning.kind == "datasource-name-remaps"
-                && warning.count == 3
-                && warning.source == "checkSummary.datasourceNameRemapCount"
-        }));
-        assert_eq!(
-            status.next_actions,
-            vec![
-                "promotion handoff is review-ready".to_string(),
-                "review folder remaps before promotion review".to_string(),
-                "review datasource remaps before promotion review".to_string(),
-                "promotion is apply-ready in the staged continuation".to_string(),
-            ]
-        );
-    }
 }

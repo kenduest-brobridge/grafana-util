@@ -46,3 +46,10 @@
 - Baseline: Python lacked Rust-public `dashboard history diff`, `dashboard plan`, and access browse entrypoints; topology interactive mode returned an unsupported error; status live silently swallowed several live read failures and called a missing dashboard client method.
 - Current Update: Added Python command wiring and runtime documents for dashboard plan/history diff, a deterministic topology interactive text browser, scoped live status all-org aggregation with blocked read-failure domains, access browse list/local-bundle flows, profile artifact lane resolution for access browse `--local/--run/--run-id`, dashboard plan `--use-export-org` routed review, and focused tests.
 - Result: Focused Python syntax/unit tests, full Python discovery, docs-surface, and AI workflow checks pass.
+
+## 2026-04-20 - Complete Python artifact and plan parity
+- State: Done
+- Scope: Python artifact workspace resolver, datasource local/plan flows, access local/plan flows, snapshot local review, focused Python tests, and AI trace docs. Existing Rust worktree changes are out of scope and must not be modified.
+- Baseline: Python artifact run selectors still accepted legacy `previous`, datasource lacked Rust-public `plan`, access lacked root `plan` and local import/diff/list coverage, and snapshot review could not resolve artifact workspace runs.
+- Current Update: Normalized Python artifact selectors to `latest`/`timestamp`/`run-id`, added datasource plan/local coverage, access plan/local coverage, and snapshot artifact review/export coverage.
+- Result: Python parity surfaces now match the Rust artifact-workspace direction for focused datasource, access, and snapshot flows.

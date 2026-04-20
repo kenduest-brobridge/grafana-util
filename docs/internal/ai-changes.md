@@ -17,6 +17,13 @@ Current AI change log only.
 - Older entries moved to [`ai-changes-archive-2026-04-19.md`](docs/internal/archive/ai-changes-archive-2026-04-19.md).
 - Older entries moved to [`ai-changes-archive-2026-04-20.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-changes-archive-2026-04-20.md).
 
+## 2026-04-20 - Align staged promotion status helpers
+- Summary: grouped staged promotion status JSON field names and signal source strings under namespaced constants, keeping the producer document-driven while removing flat schema string clutter.
+- Tests: moved staged promotion status assertions into a dedicated Rust test module and preserved blocker, partial, handoff, continuation, nested blocking, and remap-complexity behavior.
+- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet project_status_promotion --lib`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `cargo test --manifest-path rust/Cargo.toml --quiet sync --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet status --lib`; `python3 scripts/rust_maintainability_report.py`; `cargo test --manifest-path rust/Cargo.toml --quiet`; `make quality-ai-workflow`; `git diff --check`.
+- Impact: `rust/src/commands/sync/project_status_promotion.rs`, `rust/src/commands/sync/project_status_promotion_tests.rs`, `rust/src/commands/sync/mod.rs`, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are intentionally unchanged.
+- Rollback/Risk: low mechanical refactor inside staged promotion status producer. Rollback would inline the tests and restore raw schema/source strings; behavior should remain unchanged because focused promotion and sync/status tests cover the moved path.
+
 ## 2026-04-20 - Align live promotion status helpers
 - Summary: aligned the live promotion status producer with shared sync project-status JSON helpers, grouped live promotion schema keys as namespaced constants, and moved live promotion status tests into a dedicated Rust test module.
 - Tests: preserved live promotion readiness, blocker, handoff, continuation, mapping, and availability behavior while removing inline tests from the production producer.
@@ -81,10 +88,3 @@ Current AI change log only.
 - Impact: `python/grafana_utils/dashboard_authoring.py`, `python/grafana_utils/dashboard_cli.py`, `python/grafana_utils/dashboard_topology.py`, `python/grafana_utils/project_status_live.py`, `python/grafana_utils/access/parser.py`, `python/grafana_utils/access/workflows.py`, `python/grafana_utils/clients/access_client.py`, `python/grafana_utils/clients/alert_client.py`, `python/grafana_utils/profile_config.py`, focused Python tests, and AI trace docs.
 - Rollback/Risk: medium Python CLI behavior expansion. Dashboard plan is intentionally review-only and does not mutate Grafana; access browse local artifact mode reads existing export bundles from profile artifact lanes; status live now surfaces failures that were previously hidden.
 - Follow-up: none for this parity slice.
-
-## 2026-04-19 - Broaden artifact workspace local consumers
-- Summary: expanded artifact workspace local input routing so dashboard import/diff and access user/team/org/service-account import/diff can consume profile artifact runs through `--local`, `--run`, or `--run-id` without repeating input directories.
-- Tests: parser/runtime behavior changed; Rust tests not run.
-- Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all`; `make man`; `make html`; `make man-check`; `make html-check`; `make quality-docs-surface`; `make quality-ai-workflow`.
-- Impact: Rust dashboard/access CLI argument surfaces, dashboard/access dispatch path materialization, command docs, command-surface contract, and AI trace docs. Python implementation and README files are intentionally out of scope.
-- Rollback/Risk: medium CLI behavior expansion around required local input paths. Rollback would remove the new local input flags and restore explicit `--input-dir`/`--diff-dir` only behavior.

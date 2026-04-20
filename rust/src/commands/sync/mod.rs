@@ -179,5 +179,9 @@ mod sync_rust_tests;
 mod sync_project_status_rust_tests;
 
 #[cfg(test)]
+#[path = "project_status_promotion_tests.rs"]
+mod sync_project_status_promotion_rust_tests;
+
+#[cfg(test)]
 #[path = "workspace_preview_review_view_rust_tests.rs"]
 mod workspace_preview_review_view_rust_tests;
