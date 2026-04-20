@@ -171,6 +171,10 @@ mod sync_live_rust_tests;
 mod sync_live_project_status_promotion_rust_tests;
 
 #[cfg(test)]
+#[path = "live_project_status_sync_tests.rs"]
+mod sync_live_project_status_rust_tests;
+
+#[cfg(test)]
 #[path = "rust_tests.rs"]
 mod sync_rust_tests;
 

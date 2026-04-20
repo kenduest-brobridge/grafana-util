@@ -53,3 +53,10 @@
 - Baseline: Python artifact run selectors still accepted legacy `previous`, datasource lacked Rust-public `plan`, access lacked root `plan` and local import/diff/list coverage, and snapshot review could not resolve artifact workspace runs.
 - Current Update: Normalized Python artifact selectors to `latest`/`timestamp`/`run-id`, added datasource plan/local coverage, access plan/local coverage, and snapshot artifact review/export coverage.
 - Result: Python parity surfaces now match the Rust artifact-workspace direction for focused datasource, access, and snapshot flows.
+
+## 2026-04-20 - Split dashboard artifact command routing
+- State: Done
+- Scope: Rust dashboard command artifact workspace routing, local artifact input materialization, focused Rust tests, and AI trace docs. Public CLI behavior, command docs, generated docs, Python implementation, and output contracts are out of scope.
+- Baseline: `dashboard command_runner.rs` still owned both top-level command dispatch and artifact workspace run/local-input resolution, keeping export orchestration coupled to artifact path materialization.
+- Current Update: Extracted dashboard artifact run selection, output lane routing, latest-run recording, and local input materialization into `command_artifacts.rs`; `command_runner.rs` now delegates those artifact concerns while keeping command execution routing.
+- Result: Focused dashboard parser/artifact command tests, full Rust tests, maintainability report, and AI workflow checks pass.

@@ -17,6 +17,13 @@ Current AI-maintained status only.
 - Older entries moved to [`ai-status-archive-2026-04-19.md`](docs/internal/archive/ai-status-archive-2026-04-19.md).
 - Older entries moved to [`ai-status-archive-2026-04-20.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-04-20.md).
 
+## 2026-04-20 - Align live sync status helpers
+- State: Done
+- Scope: Rust live sync project-status shared JSON helper reuse, namespaced summary/signal constants, focused live sync status tests, sync/status validation, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
+- Baseline: `live_project_status_sync.rs` still owns a local `summary_number` helper, flat summary signal strings, and inline tests inside the production producer.
+- Current Update: Reused shared sync project-status JSON helpers, grouped live sync schema keys under namespaced constants, and moved live sync status tests into a dedicated module.
+- Result: Focused live sync tests, broader sync/status tests, formatter check, maintainability report, full Rust tests, and AI workflow checks pass.
+
 ## 2026-04-20 - Align staged promotion status helpers
 - State: Done
 - Scope: Rust staged promotion project-status schema constants, focused staged promotion status tests, sync/status validation, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
@@ -51,10 +58,3 @@ Current AI-maintained status only.
 - Baseline: Dashboard artifact workspace tests lived inside a broader parser/help workflow test file, `dashboard/mod.rs` mixed module registration with a long public/crate-private re-export block, and snapshot export had no direct latest-run pointer coverage for artifact-workspace timestamp runs.
 - Current Update: Split dashboard artifact workflow tests into a dedicated test module, moved dashboard facade re-exports into `facade_exports.rs`, and added a narrow snapshot artifact export latest-run coverage test.
 - Result: Focused dashboard artifact/parser tests, dashboard scope tests, snapshot scope tests, full Rust tests, formatter check, maintainability report, and AI workflow checks pass.
-
-## 2026-04-20 - Split dashboard artifact command routing
-- State: Done
-- Scope: Rust dashboard command artifact workspace routing, local artifact input materialization, focused Rust tests, and AI trace docs. Public CLI behavior, command docs, generated docs, Python implementation, and output contracts are out of scope.
-- Baseline: `dashboard command_runner.rs` still owned both top-level command dispatch and artifact workspace run/local-input resolution, keeping export orchestration coupled to artifact path materialization.
-- Current Update: Extracted dashboard artifact run selection, output lane routing, latest-run recording, and local input materialization into `command_artifacts.rs`; `command_runner.rs` now delegates those artifact concerns while keeping command execution routing.
-- Result: Focused dashboard parser/artifact command tests, full Rust tests, maintainability report, and AI workflow checks pass.

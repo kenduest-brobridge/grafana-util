@@ -17,6 +17,8 @@ use crate::project_status::{
 };
 use crate::project_status_model::StatusReading;
 
+use super::project_status_json::summary_number;
+
 const SYNC_DOMAIN_ID: &str = "sync";
 const SYNC_SCOPE: &str = "live";
 const SYNC_MODE: &str = "live-sync-surfaces";
@@ -29,17 +31,43 @@ const SYNC_REASON_BLOCKED_BY_BLOCKERS: &str = "blocked-by-blockers";
 const SYNC_SOURCE_KIND_SUMMARY: &str = "sync-summary";
 const SYNC_SOURCE_KIND_BUNDLE_PREFLIGHT: &str = "package-test";
 
-const SYNC_SIGNAL_KEYS_SUMMARY: &[&str] = &["summary.resourceCount"];
+mod summary_key {
+    pub(super) const RESOURCE_COUNT: &str = "resourceCount";
+    pub(super) const SYNC_BLOCKING_COUNT: &str = "syncBlockingCount";
+    pub(super) const PROVIDER_BLOCKING_COUNT: &str = "providerBlockingCount";
+    pub(super) const SECRET_PLACEHOLDER_BLOCKING_COUNT: &str = "secretPlaceholderBlockingCount";
+    pub(super) const ALERT_ARTIFACT_BLOCKED_COUNT: &str = "alertArtifactBlockedCount";
+    pub(super) const ALERT_ARTIFACT_PLAN_ONLY_COUNT: &str = "alertArtifactPlanOnlyCount";
+    pub(super) const BLOCKED_COUNT: &str = "blockedCount";
+    pub(super) const PLAN_ONLY_COUNT: &str = "planOnlyCount";
+}
+
+mod signal {
+    pub(super) const SUMMARY_RESOURCE_COUNT: &str = "summary.resourceCount";
+    pub(super) const SUMMARY_SYNC_BLOCKING_COUNT: &str = "summary.syncBlockingCount";
+    pub(super) const SUMMARY_PROVIDER_BLOCKING_COUNT: &str = "summary.providerBlockingCount";
+    pub(super) const SUMMARY_SECRET_PLACEHOLDER_BLOCKING_COUNT: &str =
+        "summary.secretPlaceholderBlockingCount";
+    pub(super) const SUMMARY_ALERT_ARTIFACT_COUNT: &str = "summary.alertArtifactCount";
+    pub(super) const SUMMARY_ALERT_ARTIFACT_BLOCKED_COUNT: &str =
+        "summary.alertArtifactBlockedCount";
+    pub(super) const SUMMARY_ALERT_ARTIFACT_PLAN_ONLY_COUNT: &str =
+        "summary.alertArtifactPlanOnlyCount";
+    pub(super) const SUMMARY_BLOCKED_COUNT: &str = "summary.blockedCount";
+    pub(super) const SUMMARY_PLAN_ONLY_COUNT: &str = "summary.planOnlyCount";
+}
+
+const SYNC_SIGNAL_KEYS_SUMMARY: &[&str] = &[signal::SUMMARY_RESOURCE_COUNT];
 const SYNC_SIGNAL_KEYS_BUNDLE_PREFLIGHT: &[&str] = &[
-    "summary.resourceCount",
-    "summary.syncBlockingCount",
-    "summary.providerBlockingCount",
-    "summary.secretPlaceholderBlockingCount",
-    "summary.alertArtifactCount",
-    "summary.alertArtifactBlockedCount",
-    "summary.alertArtifactPlanOnlyCount",
-    "summary.blockedCount",
-    "summary.planOnlyCount",
+    signal::SUMMARY_RESOURCE_COUNT,
+    signal::SUMMARY_SYNC_BLOCKING_COUNT,
+    signal::SUMMARY_PROVIDER_BLOCKING_COUNT,
+    signal::SUMMARY_SECRET_PLACEHOLDER_BLOCKING_COUNT,
+    signal::SUMMARY_ALERT_ARTIFACT_COUNT,
+    signal::SUMMARY_ALERT_ARTIFACT_BLOCKED_COUNT,
+    signal::SUMMARY_ALERT_ARTIFACT_PLAN_ONLY_COUNT,
+    signal::SUMMARY_BLOCKED_COUNT,
+    signal::SUMMARY_PLAN_ONLY_COUNT,
 ];
 
 const SYNC_BLOCKER_SYNC_BLOCKING: &str = "sync-blocking";
@@ -65,14 +93,6 @@ const SYNC_REEXPORT_AFTER_CHANGES_ACTIONS: &[&str] = &["re-run sync summary afte
 pub struct SyncLiveProjectStatusInputs<'a> {
     pub summary_document: Option<&'a Value>,
     pub bundle_preflight_document: Option<&'a Value>,
-}
-
-fn summary_number(document: &Value, key: &str) -> usize {
-    document
-        .get("summary")
-        .and_then(|value| value.get(key))
-        .and_then(Value::as_u64)
-        .unwrap_or(0) as usize
 }
 
 fn next_actions_for_partial(resources: usize, has_bundle_preflight: bool) -> Vec<String> {
@@ -124,121 +144,123 @@ pub(crate) fn build_live_sync_domain_status(
     let mut blockers = Vec::new();
     let mut warnings = Vec::new();
 
-    let (resources, status, reason_code, next_actions) =
-        if let Some(document) = inputs.bundle_preflight_document {
-            source_kinds.push(SYNC_SOURCE_KIND_BUNDLE_PREFLIGHT.to_string());
-            signal_keys.extend(
-                SYNC_SIGNAL_KEYS_BUNDLE_PREFLIGHT
-                    .iter()
-                    .map(|item| (*item).to_string()),
-            );
+    let (resources, status, reason_code, next_actions) = if let Some(document) =
+        inputs.bundle_preflight_document
+    {
+        source_kinds.push(SYNC_SOURCE_KIND_BUNDLE_PREFLIGHT.to_string());
+        signal_keys.extend(
+            SYNC_SIGNAL_KEYS_BUNDLE_PREFLIGHT
+                .iter()
+                .map(|item| (*item).to_string()),
+        );
 
-            let resources = summary_number(document, "resourceCount");
-            let sync_blocking = summary_number(document, "syncBlockingCount");
-            let provider_blocking = summary_number(document, "providerBlockingCount");
-            let secret_blocking = summary_number(document, "secretPlaceholderBlockingCount");
-            let alert_blocking = summary_number(document, "alertArtifactBlockedCount");
-            let alert_plan_only = summary_number(document, "alertArtifactPlanOnlyCount");
-            let bundle_blocking = summary_number(document, "blockedCount");
-            let bundle_plan_only = summary_number(document, "planOnlyCount");
+        let resources = summary_number(document, summary_key::RESOURCE_COUNT);
+        let sync_blocking = summary_number(document, summary_key::SYNC_BLOCKING_COUNT);
+        let provider_blocking = summary_number(document, summary_key::PROVIDER_BLOCKING_COUNT);
+        let secret_blocking =
+            summary_number(document, summary_key::SECRET_PLACEHOLDER_BLOCKING_COUNT);
+        let alert_blocking = summary_number(document, summary_key::ALERT_ARTIFACT_BLOCKED_COUNT);
+        let alert_plan_only = summary_number(document, summary_key::ALERT_ARTIFACT_PLAN_ONLY_COUNT);
+        let bundle_blocking = summary_number(document, summary_key::BLOCKED_COUNT);
+        let bundle_plan_only = summary_number(document, summary_key::PLAN_ONLY_COUNT);
 
-            // Keep the bundle-preflight handoff signals visible even when a
-            // subset of them does not change the final status.
-            if sync_blocking > 0 {
-                blockers.push(status_finding(
-                    SYNC_BLOCKER_SYNC_BLOCKING,
-                    sync_blocking,
-                    "summary.syncBlockingCount",
-                ));
-            }
-            if provider_blocking > 0 {
-                blockers.push(status_finding(
-                    SYNC_BLOCKER_PROVIDER_BLOCKING,
-                    provider_blocking,
-                    "summary.providerBlockingCount",
-                ));
-            }
-            if secret_blocking > 0 {
-                blockers.push(status_finding(
-                    SYNC_BLOCKER_SECRET_PLACEHOLDER_BLOCKING,
-                    secret_blocking,
-                    "summary.secretPlaceholderBlockingCount",
-                ));
-            }
-            if alert_blocking > 0 {
-                blockers.push(status_finding(
-                    SYNC_BLOCKER_ALERT_ARTIFACT_BLOCKING,
-                    alert_blocking,
-                    "summary.alertArtifactBlockedCount",
-                ));
-            }
-            if blockers.is_empty() && bundle_blocking > 0 {
-                blockers.push(status_finding(
-                    SYNC_BLOCKER_BUNDLE_BLOCKING,
-                    bundle_blocking,
-                    "summary.blockedCount",
-                ));
-            }
-            if alert_plan_only > 0 {
-                warnings.push(status_finding(
-                    SYNC_WARNING_ALERT_ARTIFACT_PLAN_ONLY,
-                    alert_plan_only,
-                    "summary.alertArtifactPlanOnlyCount",
-                ));
-            } else if bundle_plan_only > 0 {
-                warnings.push(status_finding(
-                    SYNC_WARNING_BUNDLE_PLAN_ONLY,
-                    bundle_plan_only,
-                    "summary.planOnlyCount",
-                ));
-            }
+        // Keep the bundle-preflight handoff signals visible even when a
+        // subset of them does not change the final status.
+        if sync_blocking > 0 {
+            blockers.push(status_finding(
+                SYNC_BLOCKER_SYNC_BLOCKING,
+                sync_blocking,
+                signal::SUMMARY_SYNC_BLOCKING_COUNT,
+            ));
+        }
+        if provider_blocking > 0 {
+            blockers.push(status_finding(
+                SYNC_BLOCKER_PROVIDER_BLOCKING,
+                provider_blocking,
+                signal::SUMMARY_PROVIDER_BLOCKING_COUNT,
+            ));
+        }
+        if secret_blocking > 0 {
+            blockers.push(status_finding(
+                SYNC_BLOCKER_SECRET_PLACEHOLDER_BLOCKING,
+                secret_blocking,
+                signal::SUMMARY_SECRET_PLACEHOLDER_BLOCKING_COUNT,
+            ));
+        }
+        if alert_blocking > 0 {
+            blockers.push(status_finding(
+                SYNC_BLOCKER_ALERT_ARTIFACT_BLOCKING,
+                alert_blocking,
+                signal::SUMMARY_ALERT_ARTIFACT_BLOCKED_COUNT,
+            ));
+        }
+        if blockers.is_empty() && bundle_blocking > 0 {
+            blockers.push(status_finding(
+                SYNC_BLOCKER_BUNDLE_BLOCKING,
+                bundle_blocking,
+                signal::SUMMARY_BLOCKED_COUNT,
+            ));
+        }
+        if alert_plan_only > 0 {
+            warnings.push(status_finding(
+                SYNC_WARNING_ALERT_ARTIFACT_PLAN_ONLY,
+                alert_plan_only,
+                signal::SUMMARY_ALERT_ARTIFACT_PLAN_ONLY_COUNT,
+            ));
+        } else if bundle_plan_only > 0 {
+            warnings.push(status_finding(
+                SYNC_WARNING_BUNDLE_PLAN_ONLY,
+                bundle_plan_only,
+                signal::SUMMARY_PLAN_ONLY_COUNT,
+            ));
+        }
 
-            let has_blockers = !blockers.is_empty();
-            let has_warnings = !warnings.is_empty();
-            let next_actions = if has_blockers {
-                SYNC_RESOLVE_BLOCKERS_ACTIONS
-                    .iter()
-                    .map(|item| (*item).to_string())
-                    .collect()
-            } else if resources == 0 {
-                next_actions_for_partial(resources, true)
-            } else {
-                next_actions_for_ready(has_warnings)
-            };
-            let status = if has_blockers {
-                PROJECT_STATUS_BLOCKED
-            } else if resources == 0 {
-                PROJECT_STATUS_PARTIAL
-            } else {
-                PROJECT_STATUS_READY
-            };
-            let reason_code = if has_blockers {
-                SYNC_REASON_BLOCKED_BY_BLOCKERS
-            } else if resources == 0 {
-                SYNC_REASON_PARTIAL_NO_DATA
-            } else {
-                SYNC_REASON_READY
-            };
-            (resources, status, reason_code, next_actions)
+        let has_blockers = !blockers.is_empty();
+        let has_warnings = !warnings.is_empty();
+        let next_actions = if has_blockers {
+            SYNC_RESOLVE_BLOCKERS_ACTIONS
+                .iter()
+                .map(|item| (*item).to_string())
+                .collect()
+        } else if resources == 0 {
+            next_actions_for_partial(resources, true)
         } else {
-            let resources = inputs
-                .summary_document
-                .map(|document| summary_number(document, "resourceCount"))
-                .unwrap_or(0);
-            signal_keys.extend(
-                SYNC_SIGNAL_KEYS_SUMMARY
-                    .iter()
-                    .map(|item| (*item).to_string()),
-            );
-
-            let next_actions = next_actions_for_partial(resources, false);
-            let reason_code = if resources == 0 {
-                SYNC_REASON_PARTIAL_NO_DATA
-            } else {
-                SYNC_REASON_PARTIAL_MISSING_SURFACES
-            };
-            (resources, PROJECT_STATUS_PARTIAL, reason_code, next_actions)
+            next_actions_for_ready(has_warnings)
         };
+        let status = if has_blockers {
+            PROJECT_STATUS_BLOCKED
+        } else if resources == 0 {
+            PROJECT_STATUS_PARTIAL
+        } else {
+            PROJECT_STATUS_READY
+        };
+        let reason_code = if has_blockers {
+            SYNC_REASON_BLOCKED_BY_BLOCKERS
+        } else if resources == 0 {
+            SYNC_REASON_PARTIAL_NO_DATA
+        } else {
+            SYNC_REASON_READY
+        };
+        (resources, status, reason_code, next_actions)
+    } else {
+        let resources = inputs
+            .summary_document
+            .map(|document| summary_number(document, summary_key::RESOURCE_COUNT))
+            .unwrap_or(0);
+        signal_keys.extend(
+            SYNC_SIGNAL_KEYS_SUMMARY
+                .iter()
+                .map(|item| (*item).to_string()),
+        );
+
+        let next_actions = next_actions_for_partial(resources, false);
+        let reason_code = if resources == 0 {
+            SYNC_REASON_PARTIAL_NO_DATA
+        } else {
+            SYNC_REASON_PARTIAL_MISSING_SURFACES
+        };
+        (resources, PROJECT_STATUS_PARTIAL, reason_code, next_actions)
+    };
 
     Some(
         StatusReading {
@@ -257,222 +279,4 @@ pub(crate) fn build_live_sync_domain_status(
         }
         .into_project_domain_status(),
     )
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{build_live_sync_domain_status, SyncLiveProjectStatusInputs};
-    use serde_json::json;
-
-    #[test]
-    fn build_live_sync_domain_status_returns_none_without_any_surfaces() {
-        assert!(build_live_sync_domain_status(SyncLiveProjectStatusInputs::default()).is_none());
-    }
-
-    #[test]
-    fn build_live_sync_domain_status_reports_blockers_from_bundle_preflight() {
-        let bundle_preflight = json!({
-            "kind": "grafana-utils-sync-bundle-preflight",
-            "summary": {
-                "resourceCount": 4,
-                "syncBlockingCount": 1,
-                "providerBlockingCount": 2,
-                "secretPlaceholderBlockingCount": 0,
-                "alertArtifactCount": 4,
-                "alertArtifactBlockedCount": 3,
-                "alertArtifactPlanOnlyCount": 1,
-                "blockedCount": 2,
-                "planOnlyCount": 1,
-            }
-        });
-
-        let domain = build_live_sync_domain_status(SyncLiveProjectStatusInputs {
-            summary_document: None,
-            bundle_preflight_document: Some(&bundle_preflight),
-        })
-        .unwrap();
-        let value = serde_json::to_value(domain).unwrap();
-
-        assert_eq!(value["id"], json!("sync"));
-        assert_eq!(value["scope"], json!("live"));
-        assert_eq!(value["mode"], json!("live-sync-surfaces"));
-        assert_eq!(value["status"], json!("blocked"));
-        assert_eq!(value["reasonCode"], json!("blocked-by-blockers"));
-        assert_eq!(value["primaryCount"], json!(4));
-        assert_eq!(value["blockerCount"], json!(6));
-        assert_eq!(value["warningCount"], json!(1));
-        assert_eq!(value["sourceKinds"], json!(["package-test"]));
-        assert_eq!(
-            value["signalKeys"],
-            json!([
-                "summary.resourceCount",
-                "summary.syncBlockingCount",
-                "summary.providerBlockingCount",
-                "summary.secretPlaceholderBlockingCount",
-                "summary.alertArtifactCount",
-                "summary.alertArtifactBlockedCount",
-                "summary.alertArtifactPlanOnlyCount",
-                "summary.blockedCount",
-                "summary.planOnlyCount",
-            ])
-        );
-        assert_eq!(value["blockers"].as_array().unwrap().len(), 3);
-        assert_eq!(
-            value["warnings"],
-            json!([{
-                "kind": "alert-artifact-plan-only",
-                "count": 1,
-                "source": "summary.alertArtifactPlanOnlyCount"
-            }])
-        );
-        assert!(value["nextActions"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .any(|item| item == "resolve sync workflow blockers in the fixed order: sync, provider, secret-placeholder, alert-artifact"));
-    }
-
-    #[test]
-    fn build_live_sync_domain_status_is_partial_when_only_summary_exists() {
-        let summary = json!({
-            "kind": "grafana-utils-sync-summary",
-            "summary": {
-                "resourceCount": 2,
-            }
-        });
-
-        let domain = build_live_sync_domain_status(SyncLiveProjectStatusInputs {
-            summary_document: Some(&summary),
-            bundle_preflight_document: None,
-        })
-        .unwrap();
-        let value = serde_json::to_value(domain).unwrap();
-
-        assert_eq!(value["status"], json!("partial"));
-        assert_eq!(value["reasonCode"], json!("partial-missing-surfaces"));
-        assert_eq!(value["primaryCount"], json!(2));
-        assert_eq!(value["sourceKinds"], json!(["sync-summary"]));
-        assert_eq!(value["signalKeys"], json!(["summary.resourceCount"]));
-        assert_eq!(
-            value["nextActions"],
-            json!([
-                "provide a staged package-test document before interpreting live sync readiness"
-            ])
-        );
-    }
-
-    #[test]
-    fn build_live_sync_domain_status_keeps_summary_and_bundle_sources_additive() {
-        let summary = json!({
-            "kind": "grafana-utils-sync-summary",
-            "summary": {
-                "resourceCount": 2,
-            }
-        });
-        let bundle_preflight = json!({
-            "kind": "grafana-utils-sync-bundle-preflight",
-            "summary": {
-                "resourceCount": 2,
-                "syncBlockingCount": 0,
-                "providerBlockingCount": 0,
-                "secretPlaceholderBlockingCount": 0,
-                "alertArtifactCount": 1,
-                "alertArtifactBlockedCount": 0,
-                "alertArtifactPlanOnlyCount": 0,
-                "blockedCount": 0,
-                "planOnlyCount": 0,
-            }
-        });
-
-        let domain = build_live_sync_domain_status(SyncLiveProjectStatusInputs {
-            summary_document: Some(&summary),
-            bundle_preflight_document: Some(&bundle_preflight),
-        })
-        .unwrap();
-        let value = serde_json::to_value(domain).unwrap();
-
-        assert_eq!(value["status"], json!("ready"));
-        assert_eq!(
-            value["sourceKinds"],
-            json!(["sync-summary", "package-test"])
-        );
-        assert_eq!(
-            value["signalKeys"],
-            json!([
-                "summary.resourceCount",
-                "summary.syncBlockingCount",
-                "summary.providerBlockingCount",
-                "summary.secretPlaceholderBlockingCount",
-                "summary.alertArtifactCount",
-                "summary.alertArtifactBlockedCount",
-                "summary.alertArtifactPlanOnlyCount",
-                "summary.blockedCount",
-                "summary.planOnlyCount",
-            ])
-        );
-        assert_eq!(value["warningCount"], json!(0));
-        assert_eq!(
-            value["nextActions"],
-            json!(["re-run sync summary after staged changes"])
-        );
-    }
-
-    #[test]
-    fn build_live_sync_domain_status_is_partial_when_bundle_preflight_has_no_resources() {
-        let bundle_preflight = json!({
-            "kind": "grafana-utils-sync-bundle-preflight",
-            "summary": {
-                "resourceCount": 0,
-                "syncBlockingCount": 0,
-                "providerBlockingCount": 0,
-                "secretPlaceholderBlockingCount": 0,
-                "alertArtifactBlockedCount": 0,
-                "alertArtifactPlanOnlyCount": 0,
-            }
-        });
-
-        let domain = build_live_sync_domain_status(SyncLiveProjectStatusInputs {
-            summary_document: None,
-            bundle_preflight_document: Some(&bundle_preflight),
-        })
-        .unwrap();
-
-        assert_eq!(domain.status, "partial");
-        assert_eq!(domain.reason_code, "partial-no-data");
-        assert_eq!(domain.primary_count, 0);
-        assert_eq!(
-            domain.next_actions,
-            vec!["stage at least one dashboard, datasource, or alert resource".to_string()]
-        );
-    }
-
-    #[test]
-    fn build_live_sync_domain_status_falls_back_to_generic_bundle_summary_keys() {
-        let bundle_preflight = json!({
-            "kind": "grafana-utils-sync-bundle-preflight",
-            "summary": {
-                "resourceCount": 3,
-                "blockedCount": 2,
-                "planOnlyCount": 1
-            }
-        });
-
-        let domain = build_live_sync_domain_status(SyncLiveProjectStatusInputs {
-            summary_document: None,
-            bundle_preflight_document: Some(&bundle_preflight),
-        })
-        .unwrap();
-        let value = serde_json::to_value(domain).unwrap();
-
-        assert_eq!(value["status"], json!("blocked"));
-        assert_eq!(value["reasonCode"], json!("blocked-by-blockers"));
-        assert_eq!(
-            value["blockers"],
-            json!([{
-                "kind": "bundle-blocking",
-                "count": 2,
-                "source": "summary.blockedCount"
-            }])
-        );
-    }
 }
