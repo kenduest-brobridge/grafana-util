@@ -17,6 +17,13 @@ Current AI change log only.
 - Older entries moved to [`ai-changes-archive-2026-04-19.md`](docs/internal/archive/ai-changes-archive-2026-04-19.md).
 - Older entries moved to [`ai-changes-archive-2026-04-20.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-changes-archive-2026-04-20.md).
 
+## 2026-04-20 - Continue Rust split and schema key cleanup
+- Summary: split overview parser/basic-render contract assertions, split alert runtime command args into a dedicated module, extracted project-status live HTTP test support, and grouped sync preflight summary/availability/body JSON keys under namespaced constants.
+- Tests: preserved overview contract rendering/parser behavior, alert CLI parser behavior, project-status live HTTP test coverage, and sync preflight dependency checks.
+- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet overview_contract --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet alert --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet grafana_api::project_status_live::tests --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet preflight --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet sync --lib`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `python3 scripts/rust_maintainability_report.py`; `cargo test --manifest-path rust/Cargo.toml --quiet`; `make quality-ai-workflow`; `git diff --check`.
+- Impact: `rust/src/commands/status/overview/contract_tests.rs`, `rust/src/commands/status/overview/contract_parser_tests.rs`, `rust/src/commands/alert/cli/args.rs`, `rust/src/commands/alert/cli/args_runtime.rs`, `rust/src/grafana/api/project_status_live_tests.rs`, `rust/src/grafana/api/project_status_live_test_support.rs`, `rust/src/commands/sync/preflight.rs`, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are intentionally unchanged.
+- Rollback/Risk: low mechanical split and constant centralization. Rollback would inline the moved test/args helpers and restore repeated JSON key literals; behavior is covered by focused and full Rust tests.
+
 ## 2026-04-20 - Split alert authoring CLI args
 - Summary: moved alert authoring scaffold/add/clone/route argument structs into a dedicated adjacent module while keeping `args.rs` as the alert CLI facade.
 - Tests: preserved alert parser and command coverage with no public CLI shape changes.
@@ -79,10 +86,3 @@ Current AI change log only.
 - Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet --lib`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `python3 scripts/rust_maintainability_report.py`; `cargo test --manifest-path rust/Cargo.toml --quiet`.
 - Impact: `rust/src/lib.rs`, `rust/src/commands/sync/root_preflight/mod.rs`, `rust/src/commands/resource/`, `rust/src/commands/dashboard/import_validation*.rs`, `rust/src/commands/access/org_workflows*.rs`, and AI trace docs. Public CLI paths, generated docs, Python implementation, and output contracts are intentionally unchanged.
 - Rollback/Risk: medium mechanical architecture cleanup across several Rust command boundaries. Rollback would re-inline the facade modules and restore the removed compatibility aliases; focused and full Rust tests cover compile-time visibility and moved workflow paths.
-
-## 2026-04-20 - Continue Rust architecture cleanup
-- Summary: split dashboard artifact workflow coverage into a dedicated Rust test module, moved dashboard facade re-exports into `facade_exports.rs`, and added snapshot artifact-workspace timestamp/latest-run coverage.
-- Tests: preserved behavior while narrowing test ownership and keeping the dashboard module root focused on module registration, constants, wrappers, and type definitions.
-- Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `cargo test --manifest-path rust/Cargo.toml --quiet dashboard_artifact_workflow --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet dashboard_cli_parser_help_workflow --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet snapshot_export_run_timestamp_uses_artifact_snapshot_root_and_records_latest_run --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet dashboard --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet snapshot --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet`; `python3 scripts/rust_maintainability_report.py`; `make quality-ai-workflow`.
-- Impact: `rust/src/commands/dashboard/mod.rs`, `rust/src/commands/dashboard/facade_exports.rs`, dashboard artifact/parser workflow tests, `rust/src/commands/snapshot/support.rs`, snapshot export tests, and AI trace docs. Public CLI paths and output contracts are intentionally unchanged.
-- Rollback/Risk: low mechanical architecture cleanup plus test coverage. Rollback would move facade re-exports and artifact tests back into their previous files and remove the snapshot artifact test.

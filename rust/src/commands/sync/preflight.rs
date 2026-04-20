@@ -15,6 +15,32 @@ use std::collections::BTreeSet;
 pub const SYNC_PREFLIGHT_KIND: &str = "grafana-utils-sync-preflight";
 pub const SYNC_PREFLIGHT_SCHEMA_VERSION: i64 = 1;
 
+mod summary_key {
+    pub(super) const CHECK_COUNT: &str = "checkCount";
+    pub(super) const OK_COUNT: &str = "okCount";
+    pub(super) const BLOCKING_COUNT: &str = "blockingCount";
+}
+
+mod availability_key {
+    pub(super) const DATASOURCE_UIDS: &str = "datasourceUids";
+    pub(super) const DATASOURCE_NAMES: &str = "datasourceNames";
+    pub(super) const PLUGIN_IDS: &str = "pluginIds";
+    pub(super) const CONTACT_POINTS: &str = "contactPoints";
+}
+
+mod body_key {
+    pub(super) const TYPE: &str = "type";
+    pub(super) const DATASOURCE_UID: &str = "datasourceUid";
+    pub(super) const DATASOURCE_UIDS: &str = "datasourceUids";
+    pub(super) const DATASOURCE_NAME: &str = "datasourceName";
+    pub(super) const DATASOURCE_NAMES: &str = "datasourceNames";
+    pub(super) const PLUGIN_IDS: &str = "pluginIds";
+    pub(super) const CONTACT_POINTS: &str = "contactPoints";
+    pub(super) const RECEIVER: &str = "receiver";
+    pub(super) const NOTIFICATION_SETTINGS: &str = "notificationSettings";
+    pub(super) const DATA: &str = "data";
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct SyncPreflightCheck {
     pub kind: String,
@@ -45,15 +71,15 @@ pub(crate) fn require_sync_preflight_summary(document: &Value) -> Result<SyncPre
     let document = require_json_object(document, "Sync preflight document")?;
     let summary = require_json_object_field(document, "summary", "Sync preflight document")?;
     let check_count = summary
-        .get("checkCount")
+        .get(summary_key::CHECK_COUNT)
         .and_then(Value::as_i64)
         .ok_or_else(|| message("Sync preflight summary is missing checkCount."))?;
     let ok_count = summary
-        .get("okCount")
+        .get(summary_key::OK_COUNT)
         .and_then(Value::as_i64)
         .ok_or_else(|| message("Sync preflight summary is missing okCount."))?;
     let blocking_count = summary
-        .get("blockingCount")
+        .get(summary_key::BLOCKING_COUNT)
         .and_then(Value::as_i64)
         .ok_or_else(|| message("Sync preflight summary is missing blockingCount."))?;
     Ok(SyncPreflightSummary {
@@ -92,13 +118,19 @@ fn build_datasource_checks(
     spec: &SyncResourceSpec,
     availability: &Map<String, Value>,
 ) -> Result<Vec<SyncPreflightCheck>> {
-    let available_uids = require_string_list(availability.get("datasourceUids"), "datasourceUids")?
-        .into_iter()
-        .collect::<BTreeSet<String>>();
-    let plugin_ids = require_string_list(availability.get("pluginIds"), "pluginIds")?
-        .into_iter()
-        .collect::<BTreeSet<String>>();
-    let datasource_type = normalize_text(spec.body.get("type"));
+    let available_uids = require_string_list(
+        availability.get(availability_key::DATASOURCE_UIDS),
+        availability_key::DATASOURCE_UIDS,
+    )?
+    .into_iter()
+    .collect::<BTreeSet<String>>();
+    let plugin_ids = require_string_list(
+        availability.get(availability_key::PLUGIN_IDS),
+        availability_key::PLUGIN_IDS,
+    )?
+    .into_iter()
+    .collect::<BTreeSet<String>>();
+    let datasource_type = normalize_text(spec.body.get(body_key::TYPE));
     let mut checks = vec![if available_uids.contains(&spec.identity) {
         SyncPreflightCheck {
             kind: "datasource".to_string(),
@@ -145,23 +177,34 @@ fn build_dashboard_checks(
     spec: &SyncResourceSpec,
     availability: &Map<String, Value>,
 ) -> Result<Vec<SyncPreflightCheck>> {
-    let available_uids = require_string_list(availability.get("datasourceUids"), "datasourceUids")?
-        .into_iter()
-        .collect::<BTreeSet<String>>();
-    let available_names =
-        require_string_list(availability.get("datasourceNames"), "datasourceNames")?
-            .into_iter()
-            .collect::<BTreeSet<String>>();
-    let datasource_uids =
-        require_string_list(spec.body.get("datasourceUids"), "dashboard datasourceUids")?;
+    let available_uids = require_string_list(
+        availability.get(availability_key::DATASOURCE_UIDS),
+        availability_key::DATASOURCE_UIDS,
+    )?
+    .into_iter()
+    .collect::<BTreeSet<String>>();
+    let available_names = require_string_list(
+        availability.get(availability_key::DATASOURCE_NAMES),
+        availability_key::DATASOURCE_NAMES,
+    )?
+    .into_iter()
+    .collect::<BTreeSet<String>>();
+    let datasource_uids = require_string_list(
+        spec.body.get(body_key::DATASOURCE_UIDS),
+        "dashboard datasourceUids",
+    )?;
     let datasource_names = require_string_list(
-        spec.body.get("datasourceNames"),
+        spec.body.get(body_key::DATASOURCE_NAMES),
         "dashboard datasourceNames",
     )?;
-    let available_plugin_ids = require_string_list(availability.get("pluginIds"), "pluginIds")?
-        .into_iter()
-        .collect::<BTreeSet<String>>();
-    let plugin_ids = require_string_list(spec.body.get("pluginIds"), "dashboard pluginIds")?;
+    let available_plugin_ids = require_string_list(
+        availability.get(availability_key::PLUGIN_IDS),
+        availability_key::PLUGIN_IDS,
+    )?
+    .into_iter()
+    .collect::<BTreeSet<String>>();
+    let plugin_ids =
+        require_string_list(spec.body.get(body_key::PLUGIN_IDS), "dashboard pluginIds")?;
     let mut checks = datasource_uids
         .into_iter()
         .map(|datasource_uid| {
@@ -219,17 +262,19 @@ fn is_builtin_alert_datasource_ref(value: &str) -> bool {
 
 fn collect_alert_datasource_uids(body: &Map<String, Value>) -> Result<Vec<String>> {
     let mut datasource_uids = BTreeSet::new();
-    let direct_uid = normalize_text(body.get("datasourceUid"));
+    let direct_uid = normalize_text(body.get(body_key::DATASOURCE_UID));
     if !direct_uid.is_empty() && !is_builtin_alert_datasource_ref(&direct_uid) {
         datasource_uids.insert(direct_uid);
     }
-    for datasource_uid in require_string_list(body.get("datasourceUids"), "alert datasourceUids")? {
+    for datasource_uid in
+        require_string_list(body.get(body_key::DATASOURCE_UIDS), "alert datasourceUids")?
+    {
         if !is_builtin_alert_datasource_ref(&datasource_uid) {
             datasource_uids.insert(datasource_uid);
         }
     }
     for item in body
-        .get("data")
+        .get(body_key::DATA)
         .and_then(Value::as_array)
         .into_iter()
         .flatten()
@@ -237,7 +282,7 @@ fn collect_alert_datasource_uids(body: &Map<String, Value>) -> Result<Vec<String
         let Some(object) = item.as_object() else {
             continue;
         };
-        let datasource_uid = normalize_text(object.get("datasourceUid"));
+        let datasource_uid = normalize_text(object.get(body_key::DATASOURCE_UID));
         if !datasource_uid.is_empty() && !is_builtin_alert_datasource_ref(&datasource_uid) {
             datasource_uids.insert(datasource_uid);
         }
@@ -247,17 +292,18 @@ fn collect_alert_datasource_uids(body: &Map<String, Value>) -> Result<Vec<String
 
 fn collect_alert_datasource_names(body: &Map<String, Value>) -> Result<Vec<String>> {
     let mut datasource_names = BTreeSet::new();
-    let direct_name = normalize_text(body.get("datasourceName"));
+    let direct_name = normalize_text(body.get(body_key::DATASOURCE_NAME));
     if !direct_name.is_empty() {
         datasource_names.insert(direct_name);
     }
-    for datasource_name in
-        require_string_list(body.get("datasourceNames"), "alert datasourceNames")?
-    {
+    for datasource_name in require_string_list(
+        body.get(body_key::DATASOURCE_NAMES),
+        "alert datasourceNames",
+    )? {
         datasource_names.insert(datasource_name);
     }
     for item in body
-        .get("data")
+        .get(body_key::DATA)
         .and_then(Value::as_array)
         .into_iter()
         .flatten()
@@ -265,7 +311,7 @@ fn collect_alert_datasource_names(body: &Map<String, Value>) -> Result<Vec<Strin
         let Some(object) = item.as_object() else {
             continue;
         };
-        let datasource_name = normalize_text(object.get("datasourceName"));
+        let datasource_name = normalize_text(object.get(body_key::DATASOURCE_NAME));
         if !datasource_name.is_empty() {
             datasource_names.insert(datasource_name);
         }
@@ -274,16 +320,19 @@ fn collect_alert_datasource_names(body: &Map<String, Value>) -> Result<Vec<Strin
 }
 
 fn collect_alert_contact_points(body: &Map<String, Value>) -> Result<Vec<String>> {
-    let mut contact_points = require_string_list(body.get("contactPoints"), "alert contactPoints")?
-        .into_iter()
-        .collect::<BTreeSet<String>>();
-    let receiver = normalize_text(body.get("receiver"));
+    let mut contact_points =
+        require_string_list(body.get(body_key::CONTACT_POINTS), "alert contactPoints")?
+            .into_iter()
+            .collect::<BTreeSet<String>>();
+    let receiver = normalize_text(body.get(body_key::RECEIVER));
     if !receiver.is_empty() {
         contact_points.insert(receiver);
     }
-    if let Some(notification_settings) = body.get("notificationSettings").and_then(Value::as_object)
+    if let Some(notification_settings) = body
+        .get(body_key::NOTIFICATION_SETTINGS)
+        .and_then(Value::as_object)
     {
-        let receiver = normalize_text(notification_settings.get("receiver"));
+        let receiver = normalize_text(notification_settings.get(body_key::RECEIVER));
         if !receiver.is_empty() {
             contact_points.insert(receiver);
         }
@@ -304,24 +353,33 @@ fn build_alert_checks(
             blocking: false,
         }]);
     }
-    let available_datasource_uids =
-        require_string_list(availability.get("datasourceUids"), "datasourceUids")?
-            .into_iter()
-            .collect::<BTreeSet<String>>();
-    let available_datasource_names =
-        require_string_list(availability.get("datasourceNames"), "datasourceNames")?
-            .into_iter()
-            .collect::<BTreeSet<String>>();
-    let available_contact_points =
-        require_string_list(availability.get("contactPoints"), "contactPoints")?
-            .into_iter()
-            .collect::<BTreeSet<String>>();
-    let available_plugin_ids = require_string_list(availability.get("pluginIds"), "pluginIds")?
-        .into_iter()
-        .collect::<BTreeSet<String>>();
+    let available_datasource_uids = require_string_list(
+        availability.get(availability_key::DATASOURCE_UIDS),
+        availability_key::DATASOURCE_UIDS,
+    )?
+    .into_iter()
+    .collect::<BTreeSet<String>>();
+    let available_datasource_names = require_string_list(
+        availability.get(availability_key::DATASOURCE_NAMES),
+        availability_key::DATASOURCE_NAMES,
+    )?
+    .into_iter()
+    .collect::<BTreeSet<String>>();
+    let available_contact_points = require_string_list(
+        availability.get(availability_key::CONTACT_POINTS),
+        availability_key::CONTACT_POINTS,
+    )?
+    .into_iter()
+    .collect::<BTreeSet<String>>();
+    let available_plugin_ids = require_string_list(
+        availability.get(availability_key::PLUGIN_IDS),
+        availability_key::PLUGIN_IDS,
+    )?
+    .into_iter()
+    .collect::<BTreeSet<String>>();
     let body_value = Value::Object(spec.body.clone());
     let body = require_json_object(&body_value, "alert body")?;
-    let plugin_ids = require_string_list(body.get("pluginIds"), "alert pluginIds")?;
+    let plugin_ids = require_string_list(body.get(body_key::PLUGIN_IDS), "alert pluginIds")?;
     let mut checks = vec![SyncPreflightCheck {
         kind: "alert-live-apply".to_string(),
         identity: spec.identity.clone(),

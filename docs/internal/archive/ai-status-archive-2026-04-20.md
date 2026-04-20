@@ -88,3 +88,10 @@
 - Baseline: `live_project_status_promotion.rs` still owned local JSON summary/section helpers and inline tests after staged promotion was moved to shared project-status helpers.
 - Current Update: Aligned the live promotion producer with shared sync project-status JSON helpers, grouped live promotion schema keys under namespaced constants, and moved its tests behind a dedicated module.
 - Result: Focused live/staged promotion tests, broader sync/status tests, full Rust tests, formatter check, maintainability report, and AI workflow checks pass.
+
+## 2026-04-20 - Align staged promotion status helpers
+- State: Done
+- Scope: Rust staged promotion project-status schema constants, focused staged promotion status tests, sync/status validation, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
+- Baseline: `project_status_promotion.rs` still keeps staged promotion schema/source strings flat or inline and owns its test module inside the production producer.
+- Current Update: Grouped staged promotion JSON keys and signal sources under namespaced constants and moved staged promotion status tests into a dedicated module.
+- Result: Focused promotion tests, broader sync/status tests, formatter check, maintainability report, full Rust tests, and AI workflow checks pass.
