@@ -2,9 +2,16 @@
 
 use serde_json::Value;
 
+pub(super) mod section_name {
+    pub(in crate::sync) const SUMMARY: &str = "summary";
+    pub(in crate::sync) const PROVIDER_ASSESSMENT: &str = "providerAssessment";
+    pub(in crate::sync) const SECRET_PLACEHOLDER_ASSESSMENT: &str = "secretPlaceholderAssessment";
+    pub(in crate::sync) const ALERT_ARTIFACT_ASSESSMENT: &str = "alertArtifactAssessment";
+}
+
 pub(super) fn summary_number(document: &Value, key: &str) -> usize {
     document
-        .get("summary")
+        .get(section_name::SUMMARY)
         .and_then(|value| value.get(key))
         .and_then(Value::as_u64)
         .unwrap_or(0) as usize
@@ -42,7 +49,7 @@ pub(super) fn section_number(document: Option<&Value>, section: &str, key: &str)
 pub(super) fn section_summary_number(document: &Value, section: &str, key: &str) -> usize {
     section_object(Some(document), section)
         .and_then(Value::as_object)
-        .and_then(|object| object.get("summary"))
+        .and_then(|object| object.get(section_name::SUMMARY))
         .and_then(Value::as_object)
         .and_then(|object| object.get(key))
         .and_then(Value::as_u64)

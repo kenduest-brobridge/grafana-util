@@ -17,6 +17,13 @@ Current AI-maintained status only.
 - Older entries moved to [`ai-status-archive-2026-04-19.md`](docs/internal/archive/ai-status-archive-2026-04-19.md).
 - Older entries moved to [`ai-status-archive-2026-04-20.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-04-20.md).
 
+## 2026-04-20 - Clean up sync staged schema keys
+- State: Done
+- Scope: Rust sync staged document renderers, workspace preview review view, sync project-status JSON helpers, focused sync/status tests, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
+- Baseline: sync staged rendering and review helpers still read tool-owned fields such as `kind`, `summary`, `resourceCount`, and review metadata as repeated raw strings.
+- Current Update: Grouped sync staged document, summary, review, and project-status section names behind local namespaced constants while leaving ordinary Grafana raw keys unchanged.
+- Result: Focused render, workspace preview, sync project-status, sync, status, formatter, maintainability, AI workflow, and full Rust tests pass.
+
 ## 2026-04-20 - Continue Rust split and schema key cleanup
 - State: Done
 - Scope: Rust status overview contract test split, alert CLI args family split, project-status live test support extraction, sync preflight schema-key cleanup, focused Rust tests, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
@@ -51,10 +58,3 @@ Current AI-maintained status only.
 - Baseline: `grafana/api/sync_live_read.rs` and `grafana/api/sync_live.rs` repeat availability map keys such as `datasourceUids`, `pluginIds`, and `contactPoints` as raw strings.
 - Current Update: Moved sync live availability keys into a shared namespaced module and reused them from both read and merge paths.
 - Result: Focused availability tests, broader sync/status tests, formatter check, maintainability report, full Rust tests, and AI workflow checks pass.
-
-## 2026-04-20 - Align live sync status helpers
-- State: Done
-- Scope: Rust live sync project-status shared JSON helper reuse, namespaced summary/signal constants, focused live sync status tests, sync/status validation, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
-- Baseline: `live_project_status_sync.rs` still owns a local `summary_number` helper, flat summary signal strings, and inline tests inside the production producer.
-- Current Update: Reused shared sync project-status JSON helpers, grouped live sync schema keys under namespaced constants, and moved live sync status tests into a dedicated module.
-- Result: Focused live sync tests, broader sync/status tests, formatter check, maintainability report, full Rust tests, and AI workflow checks pass.

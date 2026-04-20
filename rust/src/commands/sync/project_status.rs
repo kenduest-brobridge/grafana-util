@@ -13,7 +13,9 @@ use crate::project_status::{
 };
 use crate::project_status_model::StatusReading;
 
-use super::project_status_json::{section_array_count, section_summary_number, summary_number};
+use super::project_status_json::{
+    section_array_count, section_name, section_object, section_summary_number, summary_number,
+};
 
 const SYNC_DOMAIN_ID: &str = "sync";
 const SYNC_SCOPE: &str = "staged";
@@ -96,31 +98,43 @@ pub(crate) fn build_sync_domain_status(
         );
         let sync_blocking = summary_number(document, "syncBlockingCount");
         let provider_blocking = summary_number(document, "providerBlockingCount").max(
-            section_summary_number(document, "providerAssessment", "blockingCount"),
+            section_summary_number(document, section_name::PROVIDER_ASSESSMENT, "blockingCount"),
         );
-        let provider_plan_count = section_array_count(document, "providerAssessment", "plans");
-        let secret_blocking = summary_number(document, "secretPlaceholderBlockingCount").max(
-            section_summary_number(document, "secretPlaceholderAssessment", "blockingCount"),
+        let provider_plan_count =
+            section_array_count(document, section_name::PROVIDER_ASSESSMENT, "plans");
+        let secret_blocking =
+            summary_number(document, "secretPlaceholderBlockingCount").max(section_summary_number(
+                document,
+                section_name::SECRET_PLACEHOLDER_ASSESSMENT,
+                "blockingCount",
+            ));
+        let secret_placeholder_plan_count = section_array_count(
+            document,
+            section_name::SECRET_PLACEHOLDER_ASSESSMENT,
+            "plans",
         );
-        let secret_placeholder_plan_count =
-            section_array_count(document, "secretPlaceholderAssessment", "plans");
-        let alert_blocking = summary_number(document, "alertArtifactBlockedCount").max(
-            section_summary_number(document, "alertArtifactAssessment", "blockedCount"),
-        );
-        let alert_plan_only = summary_number(document, "alertArtifactPlanOnlyCount").max(
-            section_summary_number(document, "alertArtifactAssessment", "planOnlyCount"),
-        );
-        let alert_artifact_count = summary_number(document, "alertArtifactCount").max(
-            section_summary_number(document, "alertArtifactAssessment", "resourceCount"),
-        );
-        let provider_assessment_present = document
-            .get("providerAssessment")
-            .and_then(Value::as_object)
-            .is_some();
-        let secret_placeholder_assessment_present = document
-            .get("secretPlaceholderAssessment")
-            .and_then(Value::as_object)
-            .is_some();
+        let alert_blocking =
+            summary_number(document, "alertArtifactBlockedCount").max(section_summary_number(
+                document,
+                section_name::ALERT_ARTIFACT_ASSESSMENT,
+                "blockedCount",
+            ));
+        let alert_plan_only =
+            summary_number(document, "alertArtifactPlanOnlyCount").max(section_summary_number(
+                document,
+                section_name::ALERT_ARTIFACT_ASSESSMENT,
+                "planOnlyCount",
+            ));
+        let alert_artifact_count =
+            summary_number(document, "alertArtifactCount").max(section_summary_number(
+                document,
+                section_name::ALERT_ARTIFACT_ASSESSMENT,
+                "resourceCount",
+            ));
+        let provider_assessment_present =
+            section_object(Some(document), section_name::PROVIDER_ASSESSMENT).is_some();
+        let secret_placeholder_assessment_present =
+            section_object(Some(document), section_name::SECRET_PLACEHOLDER_ASSESSMENT).is_some();
 
         if provider_assessment_present {
             signal_keys.push(SYNC_PROVIDER_ASSESSMENT_SIGNAL_KEY.to_string());

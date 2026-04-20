@@ -15,7 +15,28 @@ use crate::review_contract::{
     REVIEW_ACTION_WOULD_CREATE, REVIEW_ACTION_WOULD_DELETE, REVIEW_ACTION_WOULD_UPDATE,
     REVIEW_STATUS_BLOCKED, REVIEW_STATUS_READY, REVIEW_STATUS_SAME, REVIEW_STATUS_WARNING,
 };
+use crate::sync::workbench::SYNC_PLAN_KIND;
 use serde_json::{Map, Value};
+
+const PLAN_KEY_ACTION: &str = "action";
+const PLAN_KEY_ACTION_ID: &str = "actionId";
+const PLAN_KEY_ACTIONS: &str = "actions";
+const PLAN_KEY_BLOCKED_REASON: &str = "blockedReason";
+const PLAN_KEY_DETAIL: &str = "detail";
+const PLAN_KEY_DETAILS: &str = "details";
+const PLAN_KEY_DOMAIN: &str = "domain";
+const PLAN_KEY_IDENTITY: &str = "identity";
+const PLAN_KEY_KIND: &str = "kind";
+const PLAN_KEY_KIND_ORDER: &str = "kindOrder";
+const PLAN_KEY_NAME: &str = "name";
+const PLAN_KEY_OPERATIONS: &str = "operations";
+const PLAN_KEY_ORDER_GROUP: &str = "orderGroup";
+const PLAN_KEY_REASON: &str = "reason";
+const PLAN_KEY_RESOURCE_KIND: &str = "resourceKind";
+const PLAN_KEY_REVIEW_HINTS: &str = "reviewHints";
+const PLAN_KEY_SOURCE_PATH: &str = "sourcePath";
+const PLAN_KEY_STATUS: &str = "status";
+const PLAN_KEY_UID: &str = "uid";
 
 fn derive_domain(resource_kind: &str) -> String {
     match resource_kind {
@@ -33,20 +54,20 @@ fn derive_domain(resource_kind: &str) -> String {
 
 fn derive_resource_kind(action: &Map<String, Value>) -> String {
     action
-        .get("resourceKind")
+        .get(PLAN_KEY_RESOURCE_KIND)
         .and_then(Value::as_str)
-        .or_else(|| action.get("kind").and_then(Value::as_str))
+        .or_else(|| action.get(PLAN_KEY_KIND).and_then(Value::as_str))
         .unwrap_or("workspace")
         .to_string()
 }
 
 fn derive_identity(action: &Map<String, Value>) -> String {
     action
-        .get("identity")
+        .get(PLAN_KEY_IDENTITY)
         .and_then(Value::as_str)
-        .or_else(|| action.get("uid").and_then(Value::as_str))
-        .or_else(|| action.get("name").and_then(Value::as_str))
-        .or_else(|| action.get("sourcePath").and_then(Value::as_str))
+        .or_else(|| action.get(PLAN_KEY_UID).and_then(Value::as_str))
+        .or_else(|| action.get(PLAN_KEY_NAME).and_then(Value::as_str))
+        .or_else(|| action.get(PLAN_KEY_SOURCE_PATH).and_then(Value::as_str))
         .unwrap_or("unknown")
         .to_string()
 }
@@ -58,7 +79,7 @@ fn derive_action_id(
     identity: &str,
 ) -> String {
     action
-        .get("actionId")
+        .get(PLAN_KEY_ACTION_ID)
         .and_then(Value::as_str)
         .map(str::to_string)
         .unwrap_or_else(|| {
@@ -68,7 +89,7 @@ fn derive_action_id(
                 resource_kind
             };
             let identity_kind = if action
-                .get("uid")
+                .get(PLAN_KEY_UID)
                 .and_then(Value::as_str)
                 .map(|text| !text.trim().is_empty())
                 .unwrap_or(false)
@@ -109,66 +130,78 @@ fn normalize_action(action: &Value) -> Result<WorkspaceReviewAction> {
     let mut normalized = object.clone();
     let resource_kind = derive_resource_kind(&normalized);
     let domain = normalized
-        .get("domain")
+        .get(PLAN_KEY_DOMAIN)
         .and_then(Value::as_str)
         .map(str::to_string)
         .unwrap_or_else(|| derive_domain(&resource_kind));
     let identity = derive_identity(&normalized);
     let action_name = normalized
-        .get("action")
+        .get(PLAN_KEY_ACTION)
         .and_then(Value::as_str)
         .unwrap_or("unknown")
         .to_string();
-    if !normalized.contains_key("resourceKind") {
+    if !normalized.contains_key(PLAN_KEY_RESOURCE_KIND) {
         normalized.insert(
-            "resourceKind".to_string(),
+            PLAN_KEY_RESOURCE_KIND.to_string(),
             Value::String(resource_kind.clone()),
         );
     }
-    if !normalized.contains_key("domain") {
-        normalized.insert("domain".to_string(), Value::String(domain.clone()));
+    if !normalized.contains_key(PLAN_KEY_DOMAIN) {
+        normalized.insert(PLAN_KEY_DOMAIN.to_string(), Value::String(domain.clone()));
     }
-    if !normalized.contains_key("kind") {
-        normalized.insert("kind".to_string(), Value::String(resource_kind.clone()));
+    if !normalized.contains_key(PLAN_KEY_KIND) {
+        normalized.insert(
+            PLAN_KEY_KIND.to_string(),
+            Value::String(resource_kind.clone()),
+        );
     }
-    if !normalized.contains_key("identity") {
-        normalized.insert("identity".to_string(), Value::String(identity.clone()));
+    if !normalized.contains_key(PLAN_KEY_IDENTITY) {
+        normalized.insert(
+            PLAN_KEY_IDENTITY.to_string(),
+            Value::String(identity.clone()),
+        );
     }
     let status = derive_status(
         &action_name,
-        normalized.get("status").and_then(Value::as_str),
+        normalized.get(PLAN_KEY_STATUS).and_then(Value::as_str),
     );
-    normalized.insert("status".to_string(), Value::String(status.clone()));
+    normalized.insert(PLAN_KEY_STATUS.to_string(), Value::String(status.clone()));
     let action_id = derive_action_id(&normalized, &domain, &resource_kind, &identity);
-    if !normalized.contains_key("actionId") {
-        normalized.insert("actionId".to_string(), Value::String(action_id.clone()));
-    }
-    if !normalized.contains_key("orderGroup") {
+    if !normalized.contains_key(PLAN_KEY_ACTION_ID) {
         normalized.insert(
-            "orderGroup".to_string(),
+            PLAN_KEY_ACTION_ID.to_string(),
+            Value::String(action_id.clone()),
+        );
+    }
+    if !normalized.contains_key(PLAN_KEY_ORDER_GROUP) {
+        normalized.insert(
+            PLAN_KEY_ORDER_GROUP.to_string(),
             Value::String(review_action_group(&action_name).to_string()),
         );
     }
-    if !normalized.contains_key("kindOrder") {
+    if !normalized.contains_key(PLAN_KEY_KIND_ORDER) {
         normalized.insert(
-            "kindOrder".to_string(),
+            PLAN_KEY_KIND_ORDER.to_string(),
             Value::Number(review_operation_kind_rank(&domain, &action_name).into()),
         );
     }
-    if !normalized.contains_key("reviewHints") {
-        normalized.insert("reviewHints".to_string(), Value::Array(Vec::new()));
+    if !normalized.contains_key(PLAN_KEY_REVIEW_HINTS) {
+        normalized.insert(PLAN_KEY_REVIEW_HINTS.to_string(), Value::Array(Vec::new()));
     }
-    if !normalized.contains_key("blockedReason") {
-        if let Some(reason) = normalized.get("reason").and_then(Value::as_str) {
+    if !normalized.contains_key(PLAN_KEY_BLOCKED_REASON) {
+        if let Some(reason) = normalized.get(PLAN_KEY_REASON).and_then(Value::as_str) {
             normalized.insert(
-                "blockedReason".to_string(),
+                PLAN_KEY_BLOCKED_REASON.to_string(),
                 Value::String(reason.to_string()),
             );
         }
     }
-    if !normalized.contains_key("details") {
-        if let Some(detail) = normalized.get("detail").and_then(Value::as_str) {
-            normalized.insert("details".to_string(), Value::String(detail.to_string()));
+    if !normalized.contains_key(PLAN_KEY_DETAILS) {
+        if let Some(detail) = normalized.get(PLAN_KEY_DETAIL).and_then(Value::as_str) {
+            normalized.insert(
+                PLAN_KEY_DETAILS.to_string(),
+                Value::String(detail.to_string()),
+            );
         }
     }
     Ok(WorkspaceReviewAction {
@@ -179,24 +212,24 @@ fn normalize_action(action: &Value) -> Result<WorkspaceReviewAction> {
         identity,
         status,
         order_group: normalized
-            .get("orderGroup")
+            .get(PLAN_KEY_ORDER_GROUP)
             .and_then(Value::as_str)
             .unwrap_or("review")
             .to_string(),
         kind_order: normalized
-            .get("kindOrder")
+            .get(PLAN_KEY_KIND_ORDER)
             .and_then(Value::as_i64)
             .unwrap_or(0) as usize,
         blocked_reason: normalized
-            .get("blockedReason")
+            .get(PLAN_KEY_BLOCKED_REASON)
             .and_then(Value::as_str)
             .map(str::to_string),
         details: normalized
-            .get("details")
+            .get(PLAN_KEY_DETAILS)
             .and_then(Value::as_str)
             .map(str::to_string),
         review_hints: normalized
-            .get("reviewHints")
+            .get(PLAN_KEY_REVIEW_HINTS)
             .and_then(Value::as_array)
             .map(|items| {
                 items
@@ -212,8 +245,8 @@ fn normalize_action(action: &Value) -> Result<WorkspaceReviewAction> {
 
 fn collect_actions(document: &Map<String, Value>) -> Result<Vec<WorkspaceReviewAction>> {
     let source = document
-        .get("actions")
-        .or_else(|| document.get("operations"))
+        .get(PLAN_KEY_ACTIONS)
+        .or_else(|| document.get(PLAN_KEY_OPERATIONS))
         .and_then(Value::as_array)
         .ok_or_else(|| message("Sync plan document is missing actions or operations."))?;
     let mut actions = source
@@ -235,7 +268,7 @@ pub(crate) fn build_workspace_review_view(document: &Value) -> Result<WorkspaceR
     let object = document
         .as_object()
         .ok_or_else(|| message("Sync plan document is not a JSON object."))?;
-    if object.get("kind").and_then(Value::as_str) != Some("grafana-utils-sync-plan") {
+    if object.get(PLAN_KEY_KIND).and_then(Value::as_str) != Some(SYNC_PLAN_KIND) {
         return Err(message("Sync plan document kind is not supported."));
     }
     let actions = collect_actions(object)?;

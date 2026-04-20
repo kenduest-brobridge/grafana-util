@@ -17,6 +17,13 @@ Current AI change log only.
 - Older entries moved to [`ai-changes-archive-2026-04-19.md`](docs/internal/archive/ai-changes-archive-2026-04-19.md).
 - Older entries moved to [`ai-changes-archive-2026-04-20.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-changes-archive-2026-04-20.md).
 
+## 2026-04-20 - Clean up sync staged schema keys
+- Summary: grouped sync staged render, workspace preview review, and project-status helper document keys under local namespaced constants while preserving the existing public JSON/output shape.
+- Tests: preserved sync summary/plan/apply-intent rendering, workspace preview review normalization, and sync project-status aggregation behavior.
+- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet render_sync --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet workspace_preview_review_view --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet sync_project_status --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet sync --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet status --lib`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `python3 scripts/rust_maintainability_report.py`; `cargo test --manifest-path rust/Cargo.toml --quiet`; `make quality-ai-workflow`; `git diff --check`.
+- Impact: `rust/src/commands/sync/staged_documents_render.rs`, `rust/src/commands/sync/workspace_preview_review_view.rs`, `rust/src/commands/sync/project_status_json.rs`, `rust/src/commands/sync/project_status.rs`, `todo.md`, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are intentionally unchanged.
+- Rollback/Risk: low mechanical key centralization in sync-owned document readers. Rollback would restore repeated raw strings; focused and full Rust tests cover the moved access paths.
+
 ## 2026-04-20 - Continue Rust split and schema key cleanup
 - Summary: split overview parser/basic-render contract assertions, split alert runtime command args into a dedicated module, extracted project-status live HTTP test support, and grouped sync preflight summary/availability/body JSON keys under namespaced constants.
 - Tests: preserved overview contract rendering/parser behavior, alert CLI parser behavior, project-status live HTTP test coverage, and sync preflight dependency checks.
@@ -79,10 +86,3 @@ Current AI change log only.
 - Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet sync_project_status --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet project_status_promotion --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet status --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet sync --lib`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `python3 scripts/rust_maintainability_report.py`; `cargo test --manifest-path rust/Cargo.toml --quiet`.
 - Impact: `rust/src/commands/sync/project_status.rs`, `rust/src/commands/sync/project_status_json.rs`, `rust/src/commands/sync/project_status_tests.rs`, `rust/src/commands/sync/project_status_promotion.rs`, `rust/src/commands/sync/mod.rs`, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are intentionally unchanged.
 - Rollback/Risk: low mechanical refactor inside sync-owned status producers. Rollback would restore local JSON helpers and inline sync tests; behavior should remain unchanged because focused and full Rust tests cover the moved paths.
-
-## 2026-04-20 - Split Rust architecture hotspots
-- Summary: removed obsolete sync compatibility aliases, routed root preflight through canonical sync modules, and split large Rust command hotspots for resource, dashboard import validation, and access org workflows into focused facade-backed modules.
-- Tests: preserved public Rust command surfaces and behavior while narrowing module ownership for resource CLI/catalog/runtime/rendering, dashboard import validation auth/org/dependency validation, and access org live/sync/diff workflows.
-- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet --lib`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `python3 scripts/rust_maintainability_report.py`; `cargo test --manifest-path rust/Cargo.toml --quiet`.
-- Impact: `rust/src/lib.rs`, `rust/src/commands/sync/root_preflight/mod.rs`, `rust/src/commands/resource/`, `rust/src/commands/dashboard/import_validation*.rs`, `rust/src/commands/access/org_workflows*.rs`, and AI trace docs. Public CLI paths, generated docs, Python implementation, and output contracts are intentionally unchanged.
-- Rollback/Risk: medium mechanical architecture cleanup across several Rust command boundaries. Rollback would re-inline the facade modules and restore the removed compatibility aliases; focused and full Rust tests cover compile-time visibility and moved workflow paths.
