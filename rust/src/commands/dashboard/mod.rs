@@ -189,7 +189,7 @@ pub fn run_dashboard_cli(args: DashboardCliArgs) -> Result<()> {
 }
 
 #[cfg(test)]
-#[path = "authoring_rust_tests.rs"]
+#[path = "authoring/rust_tests.rs"]
 mod authoring_rust_tests;
 #[cfg(test)]
 #[path = "dashboard_artifact_workflow_rust_tests.rs"]

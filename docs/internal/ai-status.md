@@ -17,6 +17,13 @@ Current AI-maintained status only.
 - Older entries moved to [`ai-status-archive-2026-04-19.md`](docs/internal/archive/ai-status-archive-2026-04-19.md).
 - Older entries moved to [`ai-status-archive-2026-04-20.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-04-20.md).
 
+## 2026-04-20 - Move dashboard authoring into directory boundary
+- State: Done
+- Scope: Rust dashboard authoring module layout, focused authoring/dashboard validation, and AI trace docs. Import/reconcile directory moves, inspect/governance moves, public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
+- Baseline: dashboard authoring implementation and root authoring regression tests lived as flat files in `commands/dashboard/`.
+- Current Update: Moved dashboard authoring implementation and direct authoring regression tests under `commands/dashboard/authoring/` while keeping `commands/dashboard/mod.rs` as the public facade.
+- Result: Focused authoring/dashboard tests, formatter, maintainability, AI workflow, and full Rust tests pass.
+
 ## 2026-04-20 - Split sync live read facets
 - State: Done
 - Scope: Rust Grafana sync live read dashboard/folder, datasource, alert, and availability facet extraction, focused sync/status tests, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
@@ -51,10 +58,3 @@ Current AI-maintained status only.
 - Baseline: `commands/status/tests.rs` mixes shared status contract fixtures, staged behavior tests, renderer tests, and CLI parser/help assertions in one large test module.
 - Current Update: Moved status CLI help/parser/output-mode assertions into a dedicated adjacent Rust test module while keeping staged/render fixture-heavy coverage in the original contract test file.
 - Result: Focused status parser tests, broader status tests, formatter check, maintainability report, full Rust tests, and AI workflow checks pass.
-
-## 2026-04-20 - Split project status live API tests
-- State: Done
-- Scope: Rust Grafana project-status live API test organization, focused project-status live tests, sync/status validation, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
-- Baseline: `grafana/api/project_status_live.rs` mixes live project-status read helpers with an inline test module, keeping the file near 800 lines.
-- Current Update: Moved project-status live API tests into a dedicated adjacent Rust test module while keeping cfg(test) helper functions available to other status tests.
-- Result: Focused project-status live tests, broader sync/status tests, formatter check, maintainability report, full Rust tests, and AI workflow checks pass.

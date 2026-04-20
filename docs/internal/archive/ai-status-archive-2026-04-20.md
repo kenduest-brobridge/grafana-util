@@ -109,3 +109,10 @@
 - Baseline: `grafana/api/sync_live_read.rs` and `grafana/api/sync_live.rs` repeat availability map keys such as `datasourceUids`, `pluginIds`, and `contactPoints` as raw strings.
 - Current Update: Moved sync live availability keys into a shared namespaced module and reused them from both read and merge paths.
 - Result: Focused availability tests, broader sync/status tests, formatter check, maintainability report, full Rust tests, and AI workflow checks pass.
+
+## 2026-04-20 - Split project status live API tests
+- State: Done
+- Scope: Rust Grafana project-status live API test organization, focused project-status live tests, sync/status validation, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
+- Baseline: `grafana/api/project_status_live.rs` mixes live project-status read helpers with an inline test module, keeping the file near 800 lines.
+- Current Update: Moved project-status live API tests into a dedicated adjacent Rust test module while keeping cfg(test) helper functions available to other status tests.
+- Result: Focused project-status live tests, broader sync/status tests, formatter check, maintainability report, full Rust tests, and AI workflow checks pass.

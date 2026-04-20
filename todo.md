@@ -69,15 +69,15 @@ as a focused commit group with narrow validation.
 
 ### P2 - Dashboard Directory Re-layering
 
-- [ ] Propose the first directory boundary before moving files; prefer one stable domain at a time.
-- [ ] Move dashboard authoring into `commands/dashboard/authoring/` only if the facade remains easy to follow.
+- [x] Propose the first directory boundary before moving files; prefer one stable domain at a time.
+- [x] Move dashboard authoring into `commands/dashboard/authoring/` only if the facade remains easy to follow.
 - [ ] Move dashboard import/reconcile files into `commands/dashboard/import/` after schema cleanup reduces key drift.
 - [ ] Move inspect/governance/report files into a clearer inspect/governance sub-tree only when imports remain manageable.
 - [ ] Keep `commands/dashboard/mod.rs` as the public facade and avoid changing CLI command paths.
-- [ ] Use `git mv` for tracked file moves.
-- [ ] Run focused dashboard suites and parser/help tests.
+- [x] Use `git mv` for tracked file moves.
+- [x] Run focused dashboard suites and parser/help tests.
 - [ ] Run docs surface checks if public help or command routing changes.
-- [ ] Run full Rust tests.
+- [x] Run full Rust tests.
 
 ### P2 - Split `common/mod.rs`
 
