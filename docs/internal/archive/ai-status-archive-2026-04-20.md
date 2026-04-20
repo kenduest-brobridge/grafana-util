@@ -67,3 +67,10 @@
 - Baseline: Dashboard artifact workspace tests lived inside a broader parser/help workflow test file, `dashboard/mod.rs` mixed module registration with a long public/crate-private re-export block, and snapshot export had no direct latest-run pointer coverage for artifact-workspace timestamp runs.
 - Current Update: Split dashboard artifact workflow tests into a dedicated test module, moved dashboard facade re-exports into `facade_exports.rs`, and added a narrow snapshot artifact export latest-run coverage test.
 - Result: Focused dashboard artifact/parser tests, dashboard scope tests, snapshot scope tests, full Rust tests, formatter check, maintainability report, and AI workflow checks pass.
+
+## 2026-04-20 - Split Rust architecture hotspots
+- State: Done
+- Scope: Rust-only architecture cleanup for sync compatibility exports, resource command module boundaries, dashboard import validation boundaries, access org workflow boundaries, focused Rust tests, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
+- Baseline: `lib.rs` still exposed old sync compatibility aliases, `resource/mod.rs` held CLI definitions, catalog logic, runtime reads, renderers, and tests in one file, and dashboard/access workflow modules still contained large mixed-responsibility import/org validation flows.
+- Current Update: Removed obsolete sync compatibility re-exports, switched root preflight to canonical sync module paths, split resource CLI/catalog/runtime/rendering, split dashboard import validation auth/org-scope/dependency logic, and split access org live/sync/diff workflows behind facade modules.
+- Result: Focused worker tests, full Rust tests, formatter check, maintainability report, and AI workflow checks pass.

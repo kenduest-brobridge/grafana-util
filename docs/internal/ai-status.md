@@ -17,6 +17,13 @@ Current AI-maintained status only.
 - Older entries moved to [`ai-status-archive-2026-04-19.md`](docs/internal/archive/ai-status-archive-2026-04-19.md).
 - Older entries moved to [`ai-status-archive-2026-04-20.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-04-20.md).
 
+## 2026-04-20 - Split project status live API tests
+- State: Done
+- Scope: Rust Grafana project-status live API test organization, focused project-status live tests, sync/status validation, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
+- Baseline: `grafana/api/project_status_live.rs` mixes live project-status read helpers with an inline test module, keeping the file near 800 lines.
+- Current Update: Moved project-status live API tests into a dedicated adjacent Rust test module while keeping cfg(test) helper functions available to other status tests.
+- Result: Focused project-status live tests, broader sync/status tests, formatter check, maintainability report, full Rust tests, and AI workflow checks pass.
+
 ## 2026-04-20 - Align sync live availability keys
 - State: Done
 - Scope: Rust Grafana sync live availability key constants, availability merge/read helpers, focused availability tests, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
@@ -51,10 +58,3 @@ Current AI-maintained status only.
 - Baseline: Sync staged and promotion domain-status producers each owned local JSON summary/section helper functions, and `sync/project_status.rs` mixed production status shaping with inline tests.
 - Current Update: Extracted shared sync project-status JSON helpers, reused them from staged sync and promotion status producers, and moved sync domain-status tests behind a dedicated test module.
 - Result: Focused sync/status tests, full Rust tests, formatter check, maintainability report, and AI workflow checks pass.
-
-## 2026-04-20 - Split Rust architecture hotspots
-- State: Done
-- Scope: Rust-only architecture cleanup for sync compatibility exports, resource command module boundaries, dashboard import validation boundaries, access org workflow boundaries, focused Rust tests, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
-- Baseline: `lib.rs` still exposed old sync compatibility aliases, `resource/mod.rs` held CLI definitions, catalog logic, runtime reads, renderers, and tests in one file, and dashboard/access workflow modules still contained large mixed-responsibility import/org validation flows.
-- Current Update: Removed obsolete sync compatibility re-exports, switched root preflight to canonical sync module paths, split resource CLI/catalog/runtime/rendering, split dashboard import validation auth/org-scope/dependency logic, and split access org live/sync/diff workflows behind facade modules.
-- Result: Focused worker tests, full Rust tests, formatter check, maintainability report, and AI workflow checks pass.

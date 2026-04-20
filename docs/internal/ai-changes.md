@@ -17,6 +17,13 @@ Current AI change log only.
 - Older entries moved to [`ai-changes-archive-2026-04-19.md`](docs/internal/archive/ai-changes-archive-2026-04-19.md).
 - Older entries moved to [`ai-changes-archive-2026-04-20.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-changes-archive-2026-04-20.md).
 
+## 2026-04-20 - Split project status live API tests
+- Summary: moved Grafana project-status live API tests into a dedicated adjacent Rust test module, leaving production read/freshness helpers in `project_status_live.rs`.
+- Tests: preserved org, dashboard, datasource, version-history, alert-surface, and freshness coverage while reducing production/test mixing.
+- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet grafana_api::project_status_live::tests --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet project_status_live_org_id_scopes_live_reads --lib -- --test-threads=1`; `cargo test --manifest-path rust/Cargo.toml --quiet project_status_live_all_orgs_fans_out_across_visible_orgs --lib -- --test-threads=1`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `cargo test --manifest-path rust/Cargo.toml --quiet sync --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet status --lib`; `python3 scripts/rust_maintainability_report.py`; `cargo test --manifest-path rust/Cargo.toml --quiet`; `make quality-ai-workflow`; `git diff --check`.
+- Impact: `rust/src/grafana/api/project_status_live.rs`, `rust/src/grafana/api/project_status_live_tests.rs`, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are intentionally unchanged.
+- Rollback/Risk: low mechanical test split. Rollback would inline the tests again; production behavior is unchanged.
+
 ## 2026-04-20 - Align sync live availability keys
 - Summary: moved sync live availability map keys into a shared namespaced module and reused them from both the live read path and availability merge allow-list.
 - Tests: preserved Grafana API live availability behavior and sync/status status aggregation behavior while removing repeated raw availability key strings.
@@ -79,10 +86,3 @@ Current AI change log only.
 - Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `cargo test --manifest-path rust/Cargo.toml --quiet prompt --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet export_ --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet run_access_cli_with_request_routes_user_export --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet access_`; `python3 scripts/rust_maintainability_report.py`.
 - Impact: Rust access dispatch modules, dashboard export modules, dashboard prompt modules, and AI trace docs. No public CLI behavior or JSON contract change is intended.
 - Rollback/Risk: medium mechanical refactor across command orchestration boundaries. Rollback would re-inline the helper modules; behavior should remain unchanged because the focused command tests still cover the moved paths.
-
-## 2026-04-20 - Split Rust status producer tests
-- Summary: moved dashboard project-status and datasource live project-status inline Rust tests into adjacent test modules so the production producers stay focused and below the oversized-file threshold.
-- Tests: preserved private-module coverage through `#[path]` test modules and kept the existing status behavior assertions unchanged.
-- Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `cargo test --manifest-path rust/Cargo.toml --quiet project_status`; `python3 scripts/rust_maintainability_report.py`.
-- Impact: `rust/src/commands/dashboard/project_status.rs`, `rust/src/commands/dashboard/project_status_tests.rs`, `rust/src/commands/datasource/project_status/live.rs`, and `rust/src/commands/datasource/project_status/live_tests.rs`.
-- Rollback/Risk: low mechanical split. Rollback would inline the tests again; behavior should not change because production code was not altered.

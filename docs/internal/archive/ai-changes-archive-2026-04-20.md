@@ -91,3 +91,10 @@
 - Impact: `python/grafana_utils/profile_config.py`, `python/grafana_utils/datasource/parser.py`, `python/grafana_utils/datasource/workflows.py`, `python/grafana_utils/datasource_cli.py`, `python/grafana_utils/access/parser.py`, `python/grafana_utils/access/workflows.py`, `python/grafana_utils/snapshot_cli.py`, focused Python tests, unified CLI preview, and AI trace docs.
 - Rollback/Risk: medium Python CLI behavior expansion. Rollback would remove the new local artifact consumers and review-only plan surfaces; live mutation flows remain gated by existing import/add/modify/delete commands.
 - Follow-up: continue with dashboard/status/resource parity depth after this focused artifact and plan slice.
+
+## 2026-04-20 - Split Rust status producer tests
+- Summary: moved dashboard project-status and datasource live project-status inline Rust tests into adjacent test modules so the production producers stay focused and below the oversized-file threshold.
+- Tests: preserved private-module coverage through `#[path]` test modules and kept the existing status behavior assertions unchanged.
+- Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `cargo test --manifest-path rust/Cargo.toml --quiet project_status`; `python3 scripts/rust_maintainability_report.py`.
+- Impact: `rust/src/commands/dashboard/project_status.rs`, `rust/src/commands/dashboard/project_status_tests.rs`, `rust/src/commands/datasource/project_status/live.rs`, and `rust/src/commands/datasource/project_status/live_tests.rs`.
+- Rollback/Risk: low mechanical split. Rollback would inline the tests again; behavior should not change because production code was not altered.
