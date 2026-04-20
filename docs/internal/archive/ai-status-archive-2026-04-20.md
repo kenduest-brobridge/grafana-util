@@ -102,3 +102,10 @@
 - Baseline: `live_project_status_sync.rs` still owns a local `summary_number` helper, flat summary signal strings, and inline tests inside the production producer.
 - Current Update: Reused shared sync project-status JSON helpers, grouped live sync schema keys under namespaced constants, and moved live sync status tests into a dedicated module.
 - Result: Focused live sync tests, broader sync/status tests, formatter check, maintainability report, full Rust tests, and AI workflow checks pass.
+
+## 2026-04-20 - Align sync live availability keys
+- State: Done
+- Scope: Rust Grafana sync live availability key constants, availability merge/read helpers, focused availability tests, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
+- Baseline: `grafana/api/sync_live_read.rs` and `grafana/api/sync_live.rs` repeat availability map keys such as `datasourceUids`, `pluginIds`, and `contactPoints` as raw strings.
+- Current Update: Moved sync live availability keys into a shared namespaced module and reused them from both read and merge paths.
+- Result: Focused availability tests, broader sync/status tests, formatter check, maintainability report, full Rust tests, and AI workflow checks pass.

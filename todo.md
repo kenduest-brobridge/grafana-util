@@ -56,16 +56,16 @@ as a focused commit group with narrow validation.
 
 ### P1 - Split `grafana/api/sync_live_read.rs`
 
-- [ ] Keep the existing public API/facade stable before moving code.
-- [ ] Split dashboard live-read collection into a dedicated child module.
-- [ ] Split datasource live-read collection into a dedicated child module.
-- [ ] Split folder live-read collection into a dedicated child module if it has enough independent behavior.
-- [ ] Split alert live-read collection into a dedicated child module.
-- [ ] Keep availability aggregation in one clear module after the read facets are separated.
-- [ ] Avoid changing live apply or request behavior during the split.
-- [ ] Run `cargo test --manifest-path rust/Cargo.toml --quiet sync_live --lib`.
-- [ ] Run `cargo test --manifest-path rust/Cargo.toml --quiet status --lib`.
-- [ ] Run full Rust tests.
+- [x] Keep the existing public API/facade stable before moving code.
+- [x] Split dashboard live-read collection into a dedicated child module.
+- [x] Split datasource live-read collection into a dedicated child module.
+- [x] Split folder live-read collection into a dedicated child module if it has enough independent behavior.
+- [x] Split alert live-read collection into a dedicated child module.
+- [x] Keep availability aggregation in one clear module after the read facets are separated.
+- [x] Avoid changing live apply or request behavior during the split.
+- [x] Run `cargo test --manifest-path rust/Cargo.toml --quiet sync_live --lib`.
+- [x] Run `cargo test --manifest-path rust/Cargo.toml --quiet status --lib`.
+- [x] Run full Rust tests.
 
 ### P2 - Dashboard Directory Re-layering
 

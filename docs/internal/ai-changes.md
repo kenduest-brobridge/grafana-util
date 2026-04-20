@@ -17,6 +17,13 @@ Current AI change log only.
 - Older entries moved to [`ai-changes-archive-2026-04-19.md`](docs/internal/archive/ai-changes-archive-2026-04-19.md).
 - Older entries moved to [`ai-changes-archive-2026-04-20.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-changes-archive-2026-04-20.md).
 
+## 2026-04-20 - Split sync live read facets
+- Summary: moved sync live read dashboard/folder, datasource, alert, and availability assembly logic into dedicated child modules while keeping `sync_live_read.rs` as the facade.
+- Tests: preserved live resource-spec and availability behavior for client and request-closure paths.
+- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet sync_live --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet fetch_live_resource_specs_with_request --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet fetch_live_availability_with_request --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet status --lib`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `python3 scripts/rust_maintainability_report.py`; `cargo test --manifest-path rust/Cargo.toml --quiet`; `make quality-ai-workflow`; `git diff --check`.
+- Impact: `rust/src/grafana/api/sync_live_read.rs`, `rust/src/grafana/api/sync_live_read/dashboard.rs`, `rust/src/grafana/api/sync_live_read/datasource.rs`, `rust/src/grafana/api/sync_live_read/alert.rs`, `rust/src/grafana/api/sync_live_read/availability.rs`, `todo.md`, and AI trace docs. Public CLI/output contracts are intentionally unchanged.
+- Rollback/Risk: low mechanical extraction. Rollback would inline the dashboard/folder, datasource, alert, and availability loops back into `sync_live_read.rs`; focused sync-live tests cover both request and client paths.
+
 ## 2026-04-20 - Clean up sync staged schema keys
 - Summary: grouped sync staged render, workspace preview review, and project-status helper document keys under local namespaced constants while preserving the existing public JSON/output shape.
 - Tests: preserved sync summary/plan/apply-intent rendering, workspace preview review normalization, and sync project-status aggregation behavior.
@@ -79,10 +86,3 @@ Current AI change log only.
 - Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet live_promotion_project_status --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet project_status_promotion --lib`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `cargo test --manifest-path rust/Cargo.toml --quiet sync --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet status --lib`; `python3 scripts/rust_maintainability_report.py`; `cargo test --manifest-path rust/Cargo.toml --quiet`.
 - Impact: `rust/src/commands/sync/live_project_status_promotion.rs`, `rust/src/commands/sync/live_project_status_promotion_tests.rs`, `rust/src/commands/sync/project_status_json.rs`, `rust/src/commands/sync/mod.rs`, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are intentionally unchanged.
 - Rollback/Risk: low mechanical refactor inside live promotion status producer. Rollback would restore local JSON helpers and inline tests; behavior should remain unchanged because focused promotion tests cover the moved path.
-
-## 2026-04-20 - Clarify sync project-status boundary
-- Summary: extracted shared sync project-status JSON helpers, reused them across staged sync and promotion domain-status producers, and moved sync domain-status tests into a dedicated Rust test module.
-- Tests: preserved existing sync and promotion project-status behavior while reducing production/test mixing in `sync/project_status.rs`.
-- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet sync_project_status --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet project_status_promotion --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet status --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet sync --lib`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `python3 scripts/rust_maintainability_report.py`; `cargo test --manifest-path rust/Cargo.toml --quiet`.
-- Impact: `rust/src/commands/sync/project_status.rs`, `rust/src/commands/sync/project_status_json.rs`, `rust/src/commands/sync/project_status_tests.rs`, `rust/src/commands/sync/project_status_promotion.rs`, `rust/src/commands/sync/mod.rs`, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are intentionally unchanged.
-- Rollback/Risk: low mechanical refactor inside sync-owned status producers. Rollback would restore local JSON helpers and inline sync tests; behavior should remain unchanged because focused and full Rust tests cover the moved paths.
