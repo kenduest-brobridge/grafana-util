@@ -74,3 +74,10 @@
 - Baseline: `lib.rs` still exposed old sync compatibility aliases, `resource/mod.rs` held CLI definitions, catalog logic, runtime reads, renderers, and tests in one file, and dashboard/access workflow modules still contained large mixed-responsibility import/org validation flows.
 - Current Update: Removed obsolete sync compatibility re-exports, switched root preflight to canonical sync module paths, split resource CLI/catalog/runtime/rendering, split dashboard import validation auth/org-scope/dependency logic, and split access org live/sync/diff workflows behind facade modules.
 - Result: Focused worker tests, full Rust tests, formatter check, maintainability report, and AI workflow checks pass.
+
+## 2026-04-20 - Clarify sync project-status boundary
+- State: Done
+- Scope: Rust sync project-status producer boundaries, shared sync document JSON helpers, focused sync/status tests, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
+- Baseline: Sync staged and promotion domain-status producers each owned local JSON summary/section helper functions, and `sync/project_status.rs` mixed production status shaping with inline tests.
+- Current Update: Extracted shared sync project-status JSON helpers, reused them from staged sync and promotion status producers, and moved sync domain-status tests behind a dedicated test module.
+- Result: Focused sync/status tests, full Rust tests, formatter check, maintainability report, and AI workflow checks pass.

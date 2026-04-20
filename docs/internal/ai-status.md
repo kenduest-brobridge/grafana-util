@@ -17,6 +17,13 @@ Current AI-maintained status only.
 - Older entries moved to [`ai-status-archive-2026-04-19.md`](docs/internal/archive/ai-status-archive-2026-04-19.md).
 - Older entries moved to [`ai-status-archive-2026-04-20.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-04-20.md).
 
+## 2026-04-20 - Split status parser tests
+- State: Done
+- Scope: Rust status command parser/help test organization, focused parser/status tests, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
+- Baseline: `commands/status/tests.rs` mixes shared status contract fixtures, staged behavior tests, renderer tests, and CLI parser/help assertions in one large test module.
+- Current Update: Moved status CLI help/parser/output-mode assertions into a dedicated adjacent Rust test module while keeping staged/render fixture-heavy coverage in the original contract test file.
+- Result: Focused status parser tests, broader status tests, formatter check, maintainability report, full Rust tests, and AI workflow checks pass.
+
 ## 2026-04-20 - Split project status live API tests
 - State: Done
 - Scope: Rust Grafana project-status live API test organization, focused project-status live tests, sync/status validation, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
@@ -51,10 +58,3 @@ Current AI-maintained status only.
 - Baseline: `live_project_status_promotion.rs` still owned local JSON summary/section helpers and inline tests after staged promotion was moved to shared project-status helpers.
 - Current Update: Aligned the live promotion producer with shared sync project-status JSON helpers, grouped live promotion schema keys under namespaced constants, and moved its tests behind a dedicated module.
 - Result: Focused live/staged promotion tests, broader sync/status tests, full Rust tests, formatter check, maintainability report, and AI workflow checks pass.
-
-## 2026-04-20 - Clarify sync project-status boundary
-- State: Done
-- Scope: Rust sync project-status producer boundaries, shared sync document JSON helpers, focused sync/status tests, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
-- Baseline: Sync staged and promotion domain-status producers each owned local JSON summary/section helper functions, and `sync/project_status.rs` mixed production status shaping with inline tests.
-- Current Update: Extracted shared sync project-status JSON helpers, reused them from staged sync and promotion status producers, and moved sync domain-status tests behind a dedicated test module.
-- Result: Focused sync/status tests, full Rust tests, formatter check, maintainability report, and AI workflow checks pass.

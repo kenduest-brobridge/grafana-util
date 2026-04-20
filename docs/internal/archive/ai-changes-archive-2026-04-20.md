@@ -98,3 +98,10 @@
 - Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `cargo test --manifest-path rust/Cargo.toml --quiet project_status`; `python3 scripts/rust_maintainability_report.py`.
 - Impact: `rust/src/commands/dashboard/project_status.rs`, `rust/src/commands/dashboard/project_status_tests.rs`, `rust/src/commands/datasource/project_status/live.rs`, and `rust/src/commands/datasource/project_status/live_tests.rs`.
 - Rollback/Risk: low mechanical split. Rollback would inline the tests again; behavior should not change because production code was not altered.
+
+## 2026-04-20 - Split Rust command orchestration modules
+- Summary: split the remaining oversized Rust production files for access dispatch, dashboard export, and dashboard prompt transformation into focused helper modules while preserving the existing public entrypoints.
+- Tests: kept the refactor behavior-preserving with focused access, export, and prompt test filters plus formatter and maintainability checks.
+- Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `cargo test --manifest-path rust/Cargo.toml --quiet prompt --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet export_ --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet run_access_cli_with_request_routes_user_export --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet access_`; `python3 scripts/rust_maintainability_report.py`.
+- Impact: Rust access dispatch modules, dashboard export modules, dashboard prompt modules, and AI trace docs. No public CLI behavior or JSON contract change is intended.
+- Rollback/Risk: medium mechanical refactor across command orchestration boundaries. Rollback would re-inline the helper modules; behavior should remain unchanged because the focused command tests still cover the moved paths.

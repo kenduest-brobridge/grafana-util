@@ -17,6 +17,13 @@ Current AI change log only.
 - Older entries moved to [`ai-changes-archive-2026-04-19.md`](docs/internal/archive/ai-changes-archive-2026-04-19.md).
 - Older entries moved to [`ai-changes-archive-2026-04-20.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-changes-archive-2026-04-20.md).
 
+## 2026-04-20 - Split status parser tests
+- Summary: moved status CLI help, parser, and output-mode assertions into a dedicated adjacent Rust test module while leaving staged/render contract fixtures in the original test file.
+- Tests: preserved parser coverage for datasource provisioning, output modes, dashboard provisioning, and conflicting dashboard inputs.
+- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet project_status_cli --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet status --lib`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `python3 scripts/rust_maintainability_report.py`; `cargo test --manifest-path rust/Cargo.toml --quiet`; `make quality-ai-workflow`; `git diff --check`.
+- Impact: `rust/src/commands/status/tests.rs`, `rust/src/commands/status/parser_tests.rs`, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are intentionally unchanged.
+- Rollback/Risk: low mechanical test split. Rollback would move parser tests back into the original status test file; behavior is unchanged.
+
 ## 2026-04-20 - Split project status live API tests
 - Summary: moved Grafana project-status live API tests into a dedicated adjacent Rust test module, leaving production read/freshness helpers in `project_status_live.rs`.
 - Tests: preserved org, dashboard, datasource, version-history, alert-surface, and freshness coverage while reducing production/test mixing.
@@ -79,10 +86,3 @@ Current AI change log only.
 - Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all`; `cargo test --manifest-path rust/Cargo.toml --quiet dashboard_cli_parser_help_workflow --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet dashboard_cli_parser_help_list_export --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet run_dashboard_cli --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet artifact --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet dashboard --lib`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `cargo test --manifest-path rust/Cargo.toml --quiet`; `python3 scripts/rust_maintainability_report.py`; `make quality-ai-workflow`.
 - Impact: `rust/src/commands/dashboard/command_runner.rs`, `rust/src/commands/dashboard/command_artifacts.rs`, dashboard module registration, and AI trace docs. Public CLI paths, flags, and output contracts are intentionally unchanged.
 - Rollback/Risk: low mechanical extraction. Rollback would re-inline the artifact helpers into the command runner; risk is import/visibility drift, covered by focused Rust tests.
-
-## 2026-04-20 - Split Rust command orchestration modules
-- Summary: split the remaining oversized Rust production files for access dispatch, dashboard export, and dashboard prompt transformation into focused helper modules while preserving the existing public entrypoints.
-- Tests: kept the refactor behavior-preserving with focused access, export, and prompt test filters plus formatter and maintainability checks.
-- Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `cargo test --manifest-path rust/Cargo.toml --quiet prompt --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet export_ --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet run_access_cli_with_request_routes_user_export --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet access_`; `python3 scripts/rust_maintainability_report.py`.
-- Impact: Rust access dispatch modules, dashboard export modules, dashboard prompt modules, and AI trace docs. No public CLI behavior or JSON contract change is intended.
-- Rollback/Risk: medium mechanical refactor across command orchestration boundaries. Rollback would re-inline the helper modules; behavior should remain unchanged because the focused command tests still cover the moved paths.
