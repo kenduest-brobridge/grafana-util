@@ -17,6 +17,13 @@ Current AI-maintained status only.
 - Older entries moved to [`ai-status-archive-2026-04-19.md`](docs/internal/archive/ai-status-archive-2026-04-19.md).
 - Older entries moved to [`ai-status-archive-2026-04-20.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-04-20.md).
 
+## 2026-04-20 - Align live promotion status helpers
+- State: Done
+- Scope: Rust live promotion project-status helper reuse, live promotion status tests, focused sync/status tests, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
+- Baseline: `live_project_status_promotion.rs` still owned local JSON summary/section helpers and inline tests after staged promotion was moved to shared project-status helpers.
+- Current Update: Aligned the live promotion producer with shared sync project-status JSON helpers, grouped live promotion schema keys under namespaced constants, and moved its tests behind a dedicated module.
+- Result: Focused live/staged promotion tests, broader sync/status tests, full Rust tests, formatter check, maintainability report, and AI workflow checks pass.
+
 ## 2026-04-20 - Clarify sync project-status boundary
 - State: Done
 - Scope: Rust sync project-status producer boundaries, shared sync document JSON helpers, focused sync/status tests, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
@@ -51,10 +58,3 @@ Current AI-maintained status only.
 - Baseline: Python artifact run selectors still accepted legacy `previous`, datasource lacked Rust-public `plan`, access lacked root `plan` and local import/diff/list coverage, and snapshot review could not resolve artifact workspace runs.
 - Current Update: Normalized Python artifact selectors to `latest`/`timestamp`/`run-id`, added datasource plan/local coverage, access plan/local coverage, and snapshot artifact review/export coverage.
 - Result: Python parity surfaces now match the Rust artifact-workspace direction for focused datasource, access, and snapshot flows.
-
-## 2026-04-20 - Complete Python Rust parity surfaces
-- State: Done
-- Scope: Python dashboard history diff/plan, dashboard topology interactive rendering, status live all-org/read-failure handling, access user/team browse entrypoints, artifact-workspace local browse resolution, focused Python tests, and AI trace docs. Rust implementation and generated docs are out of scope except as source-of-truth references.
-- Baseline: Python lacked Rust-public `dashboard history diff`, `dashboard plan`, and access browse entrypoints; topology interactive mode returned an unsupported error; status live silently swallowed several live read failures and called a missing dashboard client method.
-- Current Update: Added Python command wiring and runtime documents for dashboard plan/history diff, a deterministic topology interactive text browser, scoped live status all-org aggregation with blocked read-failure domains, access browse list/local-bundle flows, profile artifact lane resolution for access browse `--local/--run/--run-id`, dashboard plan `--use-export-org` routed review, and focused tests.
-- Result: Focused Python syntax/unit tests, full Python discovery, docs-surface, and AI workflow checks pass.

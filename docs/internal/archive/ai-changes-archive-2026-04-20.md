@@ -61,3 +61,10 @@
 - Impact: `rust/src/common/artifact_workspace.rs`, `rust/src/commands/config/profile/config.rs`, `rust/src/cli/mod.rs`, `rust/src/cli/dispatch.rs`, Rust dashboard/snapshot/datasource/access command modules, selected Rust tests, and AI trace docs.
 - Rollback/Risk: medium CLI behavior expansion guarded by explicit artifact flags or `--local`; rollback by removing artifact resolver usage and keeping existing explicit `--input-dir`/`--output-dir` paths.
 - Follow-up: add generated docs/contracts and broaden artifact local support for dashboard import/diff and access import/diff if desired.
+
+## 2026-04-19 - Formalize artifact workspace docs
+- Summary: documented artifact workspace defaults across command docs and getting-started. The docs now describe `grafana-util.yaml`, root `--config`, `GRAFANA_UTIL_CONFIG`, config-relative `artifact_root`, timestamp/latest/run-id selection, latest-run pointer behavior, and lane placement for dashboard, datasource, snapshot, and access exports.
+- Tests: no runtime behavior change; docs and contract coverage only.
+- Test Run: `make man`; `make html`; `make man-check`; `make html-check`; `make quality-docs-surface`; `make quality-ai-workflow`.
+- Impact: `docs/user-guide/{en,zh-TW}/getting-started.md`, artifact-related command docs under `docs/commands/{en,zh-TW}/`, `scripts/contracts/command-surface.json`, and AI trace docs.
+- Rollback/Risk: low docs/contract clarification. Rollback would remove operator guidance for the already implemented artifact workspace behavior.

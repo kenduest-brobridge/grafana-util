@@ -167,6 +167,10 @@ mod cli_task_first_smoke_rust_tests;
 mod sync_live_rust_tests;
 
 #[cfg(test)]
+#[path = "live_project_status_promotion_tests.rs"]
+mod sync_live_project_status_promotion_rust_tests;
+
+#[cfg(test)]
 #[path = "rust_tests.rs"]
 mod sync_rust_tests;
 

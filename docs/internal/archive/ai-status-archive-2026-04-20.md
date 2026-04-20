@@ -39,3 +39,10 @@
 - Baseline: Dashboard import/diff and access import/diff required explicit input or diff directories even after export/list/browse flows could resolve profile artifact runs.
 - Current Update: Added `--local`, `--run`, and `--run-id` artifact input resolution for dashboard import/diff and access user/team/org/service-account import/diff.
 - Result: Rust formatting, generated docs, docs-surface, and AI workflow checks pass. Rust tests were not run.
+
+## 2026-04-20 - Complete Python Rust parity surfaces
+- State: Done
+- Scope: Python dashboard history diff/plan, dashboard topology interactive rendering, status live all-org/read-failure handling, access user/team browse entrypoints, artifact-workspace local browse resolution, focused Python tests, and AI trace docs. Rust implementation and generated docs are out of scope except as source-of-truth references.
+- Baseline: Python lacked Rust-public `dashboard history diff`, `dashboard plan`, and access browse entrypoints; topology interactive mode returned an unsupported error; status live silently swallowed several live read failures and called a missing dashboard client method.
+- Current Update: Added Python command wiring and runtime documents for dashboard plan/history diff, a deterministic topology interactive text browser, scoped live status all-org aggregation with blocked read-failure domains, access browse list/local-bundle flows, profile artifact lane resolution for access browse `--local/--run/--run-id`, dashboard plan `--use-export-org` routed review, and focused tests.
+- Result: Focused Python syntax/unit tests, full Python discovery, docs-surface, and AI workflow checks pass.

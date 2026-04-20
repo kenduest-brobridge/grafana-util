@@ -58,6 +58,13 @@ pub(super) fn section_array_count(document: &Value, section: &str, key: &str) ->
         .unwrap_or(0)
 }
 
+pub(super) fn value_array_count(document: Option<&Value>) -> usize {
+    document
+        .and_then(Value::as_array)
+        .map(Vec::len)
+        .unwrap_or(0)
+}
+
 pub(super) fn push_unique(next_actions: &mut Vec<String>, action: &str) {
     if !next_actions.iter().any(|item| item == action) {
         next_actions.push(action.to_string());
