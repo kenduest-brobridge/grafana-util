@@ -50,7 +50,7 @@ as a focused commit group with narrow validation.
 - [x] Clean up `rust/src/commands/sync/workspace_preview_review_view.rs` plan and review document key access.
 - [x] Clean up `rust/src/commands/sync/project_status_json.rs` summary helper key access if it still reads tool-owned document sections directly.
 - [ ] Clean up `rust/src/commands/alert/runtime_support.rs` alert plan, delete-preview, and import dry-run document keys where they are tool-owned.
-- [ ] Clean up `rust/src/commands/dashboard/import_validation_dependencies.rs` summary/blocking document keys without globalizing ordinary Grafana keys such as `uid`, `name`, or `folderUid`.
+- [x] Clean up `rust/src/commands/dashboard/import_validation_dependencies.rs` summary/blocking document keys without globalizing ordinary Grafana keys such as `uid`, `name`, or `folderUid`.
 - [ ] Keep test fixture `json!` documents readable; do not force every fixture key through constants unless it removes real duplication.
 - [ ] Run focused validation for `sync`, `alert`, `dashboard import_validation`, and full Rust tests.
 

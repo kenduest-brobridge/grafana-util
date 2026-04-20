@@ -17,6 +17,13 @@ Current AI change log only.
 - Older entries moved to [`ai-changes-archive-2026-04-19.md`](docs/internal/archive/ai-changes-archive-2026-04-19.md).
 - Older entries moved to [`ai-changes-archive-2026-04-20.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-changes-archive-2026-04-20.md).
 
+## 2026-04-20 - Clean up dashboard import dependency schema keys
+- Summary: grouped dashboard import dependency availability, desired-spec, and preflight summary keys behind local schema namespaces while preserving ordinary Grafana raw payload reads.
+- Tests: preserved dependency preflight behavior for datasource/plugin availability, blocking summaries, routed import preflight, and dashboard plan relationships.
+- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet import --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet preflight --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet dashboard_plan --lib`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `python3 scripts/rust_maintainability_report.py`; `cargo test --manifest-path rust/Cargo.toml --quiet`; `make quality-ai-workflow`; `git diff --check`.
+- Impact: `rust/src/commands/dashboard/import_validation_dependencies.rs`, `todo.md`, and AI trace docs. Alert runtime schema cleanup, import directory moves, public CLI behavior, generated docs, Python implementation, and output contracts are intentionally unchanged.
+- Rollback/Risk: low mechanical key centralization. Rollback would restore repeated raw preflight strings; focused import/preflight/dashboard-plan tests cover the touched path.
+
 ## 2026-04-20 - Move dashboard authoring into directory boundary
 - Summary: moved dashboard authoring implementation and direct authoring regression tests under `commands/dashboard/authoring/` while keeping `commands/dashboard/mod.rs` as the facade.
 - Tests: preserved dashboard authoring helper imports, root test registration, and public dashboard CLI command paths.
@@ -79,10 +86,3 @@ Current AI change log only.
 - Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet live_sync_domain_status --lib`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `cargo test --manifest-path rust/Cargo.toml --quiet sync --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet status --lib`; `python3 scripts/rust_maintainability_report.py`; `cargo test --manifest-path rust/Cargo.toml --quiet`; `make quality-ai-workflow`; `git diff --check`.
 - Impact: `rust/src/commands/sync/live_project_status_sync.rs`, `rust/src/commands/sync/live_project_status_sync_tests.rs`, `rust/src/commands/sync/mod.rs`, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are intentionally unchanged.
 - Rollback/Risk: low mechanical refactor inside live sync status producer. Rollback would restore the local summary helper, inline tests, and raw schema/source strings; behavior should remain unchanged because focused sync/status tests cover the moved path.
-
-## 2026-04-20 - Align staged promotion status helpers
-- Summary: grouped staged promotion status JSON field names and signal source strings under namespaced constants, keeping the producer document-driven while removing flat schema string clutter.
-- Tests: moved staged promotion status assertions into a dedicated Rust test module and preserved blocker, partial, handoff, continuation, nested blocking, and remap-complexity behavior.
-- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet project_status_promotion --lib`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `cargo test --manifest-path rust/Cargo.toml --quiet sync --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet status --lib`; `python3 scripts/rust_maintainability_report.py`; `cargo test --manifest-path rust/Cargo.toml --quiet`; `make quality-ai-workflow`; `git diff --check`.
-- Impact: `rust/src/commands/sync/project_status_promotion.rs`, `rust/src/commands/sync/project_status_promotion_tests.rs`, `rust/src/commands/sync/mod.rs`, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are intentionally unchanged.
-- Rollback/Risk: low mechanical refactor inside staged promotion status producer. Rollback would inline the tests and restore raw schema/source strings; behavior should remain unchanged because focused promotion and sync/status tests cover the moved path.

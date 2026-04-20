@@ -116,3 +116,10 @@
 - Baseline: `grafana/api/project_status_live.rs` mixes live project-status read helpers with an inline test module, keeping the file near 800 lines.
 - Current Update: Moved project-status live API tests into a dedicated adjacent Rust test module while keeping cfg(test) helper functions available to other status tests.
 - Result: Focused project-status live tests, broader sync/status tests, formatter check, maintainability report, full Rust tests, and AI workflow checks pass.
+
+## 2026-04-20 - Split status parser tests
+- State: Done
+- Scope: Rust status command parser/help test organization, focused parser/status tests, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
+- Baseline: `commands/status/tests.rs` mixes shared status contract fixtures, staged behavior tests, renderer tests, and CLI parser/help assertions in one large test module.
+- Current Update: Moved status CLI help/parser/output-mode assertions into a dedicated adjacent Rust test module while keeping staged/render fixture-heavy coverage in the original contract test file.
+- Result: Focused status parser tests, broader status tests, formatter check, maintainability report, full Rust tests, and AI workflow checks pass.

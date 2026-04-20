@@ -11,6 +11,27 @@ use super::super::list::collect_dashboard_source_metadata;
 use super::super::{build_datasource_catalog, collect_datasource_refs, DEFAULT_DASHBOARD_TITLE};
 use super::super::{discover_dashboard_files, FOLDER_INVENTORY_FILENAME};
 
+mod dependency_schema {
+    pub(super) mod availability {
+        pub(crate) const DATASOURCE_UIDS: &str = "datasourceUids";
+        pub(crate) const DATASOURCE_NAMES: &str = "datasourceNames";
+        pub(crate) const PLUGIN_IDS: &str = "pluginIds";
+    }
+
+    pub(super) mod spec {
+        pub(crate) const KIND: &str = "kind";
+        pub(crate) const UID: &str = "uid";
+        pub(crate) const TITLE: &str = "title";
+        pub(crate) const BODY: &str = "body";
+        pub(crate) const SOURCE_PATH: &str = "sourcePath";
+    }
+
+    pub(super) mod summary {
+        pub(crate) const ROOT: &str = "summary";
+        pub(crate) const BLOCKING_COUNT: &str = "blockingCount";
+    }
+}
+
 fn collect_dashboard_panel_types(panels: &[Value], panel_types: &mut BTreeSet<String>) {
     for panel in panels {
         let Some(panel_object) = panel.as_object() else {
@@ -60,6 +81,28 @@ fn dashboard_import_dependency_availability_requirements(input_dir: &Path) -> Re
     Ok((needs_datasource_availability, needs_plugin_availability))
 }
 
+fn sorted_strings_value(values: BTreeSet<String>) -> Value {
+    Value::Array(values.into_iter().map(Value::String).collect::<Vec<_>>())
+}
+
+fn collect_plugin_ids(plugins: &[Value]) -> BTreeSet<String> {
+    plugins
+        .iter()
+        .filter_map(Value::as_object)
+        .filter_map(|plugin| plugin.get("id").and_then(Value::as_str))
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+        .collect::<BTreeSet<String>>()
+}
+
+fn insert_plugin_ids(availability: &mut Map<String, Value>, plugins: &[Value]) {
+    availability.insert(
+        dependency_schema::availability::PLUGIN_IDS.to_string(),
+        sorted_strings_value(collect_plugin_ids(plugins)),
+    );
+}
+
 fn build_dashboard_import_availability_from_datasources(
     datasources: &[Map<String, Value>],
 ) -> Map<String, Value> {
@@ -85,24 +128,17 @@ fn build_dashboard_import_availability_from_datasources(
         }
     }
     availability.insert(
-        "datasourceUids".to_string(),
-        Value::Array(
-            datasource_uids
-                .into_iter()
-                .map(Value::String)
-                .collect::<Vec<_>>(),
-        ),
+        dependency_schema::availability::DATASOURCE_UIDS.to_string(),
+        sorted_strings_value(datasource_uids),
     );
     availability.insert(
-        "datasourceNames".to_string(),
-        Value::Array(
-            datasource_names
-                .into_iter()
-                .map(Value::String)
-                .collect::<Vec<_>>(),
-        ),
+        dependency_schema::availability::DATASOURCE_NAMES.to_string(),
+        sorted_strings_value(datasource_names),
     );
-    availability.insert("pluginIds".to_string(), Value::Array(Vec::new()));
+    availability.insert(
+        dependency_schema::availability::PLUGIN_IDS.to_string(),
+        Value::Array(Vec::new()),
+    );
     availability
 }
 
@@ -120,23 +156,7 @@ where
     }
     match request_json(Method::GET, "/api/plugins", &[], None)? {
         Some(Value::Array(plugins)) => {
-            let plugin_ids = plugins
-                .iter()
-                .filter_map(Value::as_object)
-                .filter_map(|plugin| plugin.get("id").and_then(Value::as_str))
-                .map(str::trim)
-                .filter(|value| !value.is_empty())
-                .map(str::to_string)
-                .collect::<BTreeSet<String>>();
-            availability.insert(
-                "pluginIds".to_string(),
-                Value::Array(
-                    plugin_ids
-                        .into_iter()
-                        .map(Value::String)
-                        .collect::<Vec<_>>(),
-                ),
-            );
+            insert_plugin_ids(&mut availability, &plugins);
         }
         Some(_) => return Err(message("Unexpected plugin list response from Grafana.")),
         None => {}
@@ -156,23 +176,7 @@ fn build_dashboard_import_availability_with_client(
     }
     match client.request_json(Method::GET, "/api/plugins", &[], None)? {
         Some(Value::Array(plugins)) => {
-            let plugin_ids = plugins
-                .iter()
-                .filter_map(Value::as_object)
-                .filter_map(|plugin| plugin.get("id").and_then(Value::as_str))
-                .map(str::trim)
-                .filter(|value| !value.is_empty())
-                .map(str::to_string)
-                .collect::<BTreeSet<String>>();
-            availability.insert(
-                "pluginIds".to_string(),
-                Value::Array(
-                    plugin_ids
-                        .into_iter()
-                        .map(Value::String)
-                        .collect::<Vec<_>>(),
-                ),
-            );
+            insert_plugin_ids(&mut availability, &plugins);
         }
         Some(_) => return Err(message("Unexpected plugin list response from Grafana.")),
         None => {}
@@ -211,19 +215,53 @@ fn build_dashboard_import_dependency_specs(
         if let Some(panels) = dashboard.get("panels").and_then(Value::as_array) {
             collect_dashboard_panel_types(panels, &mut panel_types);
         }
-        desired_specs.push(serde_json::json!({
-            "kind": "dashboard",
-            "uid": uid,
-            "title": title,
-            "body": {
-                "datasourceNames": datasource_names,
-                "datasourceUids": datasource_uids,
-                "pluginIds": panel_types.into_iter().collect::<Vec<String>>(),
-            },
-            "sourcePath": dashboard_file.display().to_string(),
-        }));
+        let mut body = Map::new();
+        body.insert(
+            dependency_schema::availability::DATASOURCE_NAMES.to_string(),
+            serde_json::json!(datasource_names),
+        );
+        body.insert(
+            dependency_schema::availability::DATASOURCE_UIDS.to_string(),
+            serde_json::json!(datasource_uids),
+        );
+        body.insert(
+            dependency_schema::availability::PLUGIN_IDS.to_string(),
+            serde_json::json!(panel_types.into_iter().collect::<Vec<String>>()),
+        );
+
+        let mut spec = Map::new();
+        spec.insert(
+            dependency_schema::spec::KIND.to_string(),
+            Value::String("dashboard".to_string()),
+        );
+        spec.insert(
+            dependency_schema::spec::UID.to_string(),
+            Value::String(uid.to_string()),
+        );
+        spec.insert(
+            dependency_schema::spec::TITLE.to_string(),
+            Value::String(title.to_string()),
+        );
+        spec.insert(
+            dependency_schema::spec::BODY.to_string(),
+            Value::Object(body),
+        );
+        spec.insert(
+            dependency_schema::spec::SOURCE_PATH.to_string(),
+            Value::String(dashboard_file.display().to_string()),
+        );
+        desired_specs.push(Value::Object(spec));
     }
     Ok(desired_specs)
+}
+
+fn preflight_blocking_count(document: &Value) -> i64 {
+    document
+        .get(dependency_schema::summary::ROOT)
+        .and_then(Value::as_object)
+        .and_then(|summary| summary.get(dependency_schema::summary::BLOCKING_COUNT))
+        .and_then(Value::as_i64)
+        .unwrap_or(0)
 }
 
 pub(crate) fn validate_dashboard_import_dependencies_with_request<F>(
@@ -256,12 +294,7 @@ where
     )?;
     let document =
         build_sync_preflight_document(&desired_specs, Some(&Value::Object(availability)))?;
-    let blocking = document
-        .get("summary")
-        .and_then(Value::as_object)
-        .and_then(|summary| summary.get("blockingCount"))
-        .and_then(Value::as_i64)
-        .unwrap_or(0);
+    let blocking = preflight_blocking_count(&document);
     if blocking > 0 {
         return Err(message(format!(
             "Refusing dashboard import because preflight reports {blocking} blocking checks."
@@ -297,12 +330,7 @@ pub(crate) fn validate_dashboard_import_dependencies_with_client(
     )?;
     let document =
         build_sync_preflight_document(&desired_specs, Some(&Value::Object(availability)))?;
-    let blocking = document
-        .get("summary")
-        .and_then(Value::as_object)
-        .and_then(|summary| summary.get("blockingCount"))
-        .and_then(Value::as_i64)
-        .unwrap_or(0);
+    let blocking = preflight_blocking_count(&document);
     if blocking > 0 {
         return Err(message(format!(
             "Refusing dashboard import because preflight reports {blocking} blocking checks."

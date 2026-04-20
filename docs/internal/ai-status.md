@@ -17,6 +17,13 @@ Current AI-maintained status only.
 - Older entries moved to [`ai-status-archive-2026-04-19.md`](docs/internal/archive/ai-status-archive-2026-04-19.md).
 - Older entries moved to [`ai-status-archive-2026-04-20.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-04-20.md).
 
+## 2026-04-20 - Clean up dashboard import dependency schema keys
+- State: Done
+- Scope: Rust dashboard import dependency preflight schema-key cleanup, focused import/preflight/dashboard-plan validation, and AI trace docs. Alert runtime schema cleanup, import directory moves, public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
+- Baseline: `commands/dashboard/import_validation_dependencies.rs` mixed tool-owned preflight keys such as `datasourceUids`, `pluginIds`, `sourcePath`, and `summary.blockingCount` with ordinary Grafana payload field reads.
+- Current Update: Grouped dashboard dependency availability, resource-spec, and preflight summary keys under local schema namespaces while leaving Grafana raw payload fields direct.
+- Result: Focused import, preflight, dashboard-plan, formatter, maintainability, AI workflow, and full Rust tests pass.
+
 ## 2026-04-20 - Move dashboard authoring into directory boundary
 - State: Done
 - Scope: Rust dashboard authoring module layout, focused authoring/dashboard validation, and AI trace docs. Import/reconcile directory moves, inspect/governance moves, public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
@@ -51,10 +58,3 @@ Current AI-maintained status only.
 - Baseline: `commands/alert/cli/args.rs` mixes shared/common args, runtime export/import/plan/delete args, authoring scaffold/add/clone/route args, and parse helpers in one large file.
 - Current Update: Moved alert authoring command-family args into a dedicated adjacent module while keeping `args.rs` as the facade for existing normalization and dispatch imports.
 - Result: Focused alert tests, formatter check, maintainability report, full Rust tests, and AI workflow checks pass.
-
-## 2026-04-20 - Split status parser tests
-- State: Done
-- Scope: Rust status command parser/help test organization, focused parser/status tests, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
-- Baseline: `commands/status/tests.rs` mixes shared status contract fixtures, staged behavior tests, renderer tests, and CLI parser/help assertions in one large test module.
-- Current Update: Moved status CLI help/parser/output-mode assertions into a dedicated adjacent Rust test module while keeping staged/render fixture-heavy coverage in the original contract test file.
-- Result: Focused status parser tests, broader status tests, formatter check, maintainability report, full Rust tests, and AI workflow checks pass.
