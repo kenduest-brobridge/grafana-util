@@ -17,6 +17,13 @@ Current AI change log only.
 - Older entries moved to [`ai-changes-archive-2026-04-19.md`](docs/internal/archive/ai-changes-archive-2026-04-19.md).
 - Older entries moved to [`ai-changes-archive-2026-04-20.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-changes-archive-2026-04-20.md).
 
+## 2026-04-20 - Clean up alert runtime schema keys
+- Summary: grouped alert runtime plan, delete-preview, and import dry-run document keys behind local schema namespaces while preserving Grafana raw alert payload reads.
+- Tests: preserved alert plan row summaries, plan execution reads, delete preview output, import dry-run summaries, and existing readable JSON fixtures.
+- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet alert --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet runtime --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet sync --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet import --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet import_validation --lib`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `python3 scripts/rust_maintainability_report.py`; `cargo test --manifest-path rust/Cargo.toml --quiet`; `make quality-ai-workflow`; `git diff --check`.
+- Impact: `rust/src/commands/alert/runtime_support.rs`, `todo.md`, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are intentionally unchanged.
+- Rollback/Risk: low mechanical key centralization. Rollback would restore repeated raw alert runtime document keys; focused alert/runtime and full Rust tests cover the touched paths.
+
 ## 2026-04-20 - Clean up dashboard import dependency schema keys
 - Summary: grouped dashboard import dependency availability, desired-spec, and preflight summary keys behind local schema namespaces while preserving ordinary Grafana raw payload reads.
 - Tests: preserved dependency preflight behavior for datasource/plugin availability, blocking summaries, routed import preflight, and dashboard plan relationships.
@@ -79,10 +86,3 @@ Current AI change log only.
 - Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet availability --lib`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `cargo test --manifest-path rust/Cargo.toml --quiet sync --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet status --lib`; `python3 scripts/rust_maintainability_report.py`; `cargo test --manifest-path rust/Cargo.toml --quiet`; `make quality-ai-workflow`; `git diff --check`.
 - Impact: `rust/src/grafana/api/sync_live.rs`, `rust/src/grafana/api/sync_live_read.rs`, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are intentionally unchanged.
 - Rollback/Risk: low mechanical refactor around availability document keys. Rollback would restore raw strings in read and merge paths; behavior should remain unchanged because the same key literals are centralized.
-
-## 2026-04-20 - Align live sync status helpers
-- Summary: reused the shared sync project-status JSON summary helper in the live sync status producer and grouped live sync summary keys and signal source strings under namespaced constants.
-- Tests: moved live sync status assertions into a dedicated Rust test module and preserved none, blocker, partial, additive source, no-resource, and generic bundle fallback behavior.
-- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet live_sync_domain_status --lib`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `cargo test --manifest-path rust/Cargo.toml --quiet sync --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet status --lib`; `python3 scripts/rust_maintainability_report.py`; `cargo test --manifest-path rust/Cargo.toml --quiet`; `make quality-ai-workflow`; `git diff --check`.
-- Impact: `rust/src/commands/sync/live_project_status_sync.rs`, `rust/src/commands/sync/live_project_status_sync_tests.rs`, `rust/src/commands/sync/mod.rs`, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are intentionally unchanged.
-- Rollback/Risk: low mechanical refactor inside live sync status producer. Rollback would restore the local summary helper, inline tests, and raw schema/source strings; behavior should remain unchanged because focused sync/status tests cover the moved path.

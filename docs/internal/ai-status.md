@@ -17,6 +17,13 @@ Current AI-maintained status only.
 - Older entries moved to [`ai-status-archive-2026-04-19.md`](docs/internal/archive/ai-status-archive-2026-04-19.md).
 - Older entries moved to [`ai-status-archive-2026-04-20.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-04-20.md).
 
+## 2026-04-20 - Clean up alert runtime schema keys
+- State: Done
+- Scope: Rust alert runtime plan, delete-preview, and import dry-run schema-key cleanup, focused sync/alert/import validation, and AI trace docs. Alert diff shared document internals, public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
+- Baseline: `commands/alert/runtime_support.rs` still repeated tool-owned plan row, plan document, delete-preview, and import dry-run keys directly in production render/read paths.
+- Current Update: Grouped alert runtime document, row, and summary keys under local schema namespaces while keeping Grafana raw alert payload fields direct.
+- Result: Focused sync, alert, runtime, dashboard import, formatter, maintainability, AI workflow, and full Rust tests pass.
+
 ## 2026-04-20 - Clean up dashboard import dependency schema keys
 - State: Done
 - Scope: Rust dashboard import dependency preflight schema-key cleanup, focused import/preflight/dashboard-plan validation, and AI trace docs. Alert runtime schema cleanup, import directory moves, public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
@@ -51,10 +58,3 @@ Current AI-maintained status only.
 - Baseline: Overview contract tests still mixed parser/basic-render smoke coverage with larger domain fixtures, alert args still mixed runtime and authoring command-family structs, project-status live tests owned local HTTP test helpers, and sync preflight repeated availability/body JSON keys inline.
 - Current Update: Split overview parser/basic-render contract assertions and alert runtime args into focused adjacent modules, extracted project-status live HTTP test support, and grouped sync preflight summary/availability/body JSON keys under namespaced modules.
 - Result: Focused overview, alert, project-status live, preflight, and sync tests pass; full validation is complete for this maintenance batch.
-
-## 2026-04-20 - Split alert authoring CLI args
-- State: Done
-- Scope: Rust alert CLI argument module boundaries, authoring command family args, focused alert parser tests, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
-- Baseline: `commands/alert/cli/args.rs` mixes shared/common args, runtime export/import/plan/delete args, authoring scaffold/add/clone/route args, and parse helpers in one large file.
-- Current Update: Moved alert authoring command-family args into a dedicated adjacent module while keeping `args.rs` as the facade for existing normalization and dispatch imports.
-- Result: Focused alert tests, formatter check, maintainability report, full Rust tests, and AI workflow checks pass.

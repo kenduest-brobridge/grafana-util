@@ -123,3 +123,10 @@
 - Baseline: `commands/status/tests.rs` mixes shared status contract fixtures, staged behavior tests, renderer tests, and CLI parser/help assertions in one large test module.
 - Current Update: Moved status CLI help/parser/output-mode assertions into a dedicated adjacent Rust test module while keeping staged/render fixture-heavy coverage in the original contract test file.
 - Result: Focused status parser tests, broader status tests, formatter check, maintainability report, full Rust tests, and AI workflow checks pass.
+
+## 2026-04-20 - Split alert authoring CLI args
+- State: Done
+- Scope: Rust alert CLI argument module boundaries, authoring command family args, focused alert parser tests, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
+- Baseline: `commands/alert/cli/args.rs` mixes shared/common args, runtime export/import/plan/delete args, authoring scaffold/add/clone/route args, and parse helpers in one large file.
+- Current Update: Moved alert authoring command-family args into a dedicated adjacent module while keeping `args.rs` as the facade for existing normalization and dispatch imports.
+- Result: Focused alert tests, formatter check, maintainability report, full Rust tests, and AI workflow checks pass.

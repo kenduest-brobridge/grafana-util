@@ -39,6 +39,51 @@ pub const ALERT_IMPORT_DRY_RUN_SCHEMA_VERSION: i64 = 1;
 pub const ALERT_MANAGED_POLICY_PREVIEW_SCHEMA_VERSION: i64 = 1;
 type AlertDesiredOperation = (PathBuf, String, Map<String, Value>);
 
+mod runtime_schema {
+    pub(super) mod document {
+        pub(crate) const KIND: &str = "kind";
+        pub(crate) const SCHEMA_VERSION: &str = "schemaVersion";
+        pub(crate) const TOOL_VERSION: &str = "toolVersion";
+        pub(crate) const REVIEW_REQUIRED: &str = "reviewRequired";
+        pub(crate) const REVIEWED: &str = "reviewed";
+        pub(crate) const ALLOW_PRUNE: &str = "allowPrune";
+        pub(crate) const ALLOW_POLICY_RESET: &str = "allowPolicyReset";
+        pub(crate) const SUMMARY: &str = "summary";
+        pub(crate) const ROWS: &str = "rows";
+    }
+
+    pub(super) mod row {
+        pub(crate) const DOMAIN: &str = "domain";
+        pub(crate) const RESOURCE_KIND: &str = "resourceKind";
+        pub(crate) const KIND: &str = "kind";
+        pub(crate) const IDENTITY: &str = "identity";
+        pub(crate) const ACTION_ID: &str = "actionId";
+        pub(crate) const ACTION: &str = "action";
+        pub(crate) const STATUS: &str = "status";
+        pub(crate) const REASON: &str = "reason";
+        pub(crate) const BLOCKED_REASON: &str = "blockedReason";
+        pub(crate) const REVIEW_HINTS: &str = "reviewHints";
+        pub(crate) const CHANGED_FIELDS: &str = "changedFields";
+        pub(crate) const CHANGES: &str = "changes";
+        pub(crate) const PATH: &str = "path";
+        pub(crate) const DESIRED: &str = "desired";
+        pub(crate) const LIVE: &str = "live";
+    }
+
+    pub(super) mod summary {
+        pub(crate) const PROCESSED: &str = "processed";
+        pub(crate) const CREATE: &str = "create";
+        pub(crate) const UPDATE: &str = "update";
+        pub(crate) const NOOP: &str = "noop";
+        pub(crate) const DELETE: &str = "delete";
+        pub(crate) const BLOCKED: &str = "blocked";
+        pub(crate) const WARNING: &str = "warning";
+        pub(crate) const WOULD_CREATE: &str = "wouldCreate";
+        pub(crate) const WOULD_UPDATE: &str = "wouldUpdate";
+        pub(crate) const WOULD_FAIL_EXISTING: &str = "wouldFailExisting";
+    }
+}
+
 fn row_object<'a>(row: &'a Value, label: &str) -> Result<&'a Map<String, Value>> {
     value_as_object(row, label)
 }
@@ -54,24 +99,27 @@ use crate::grafana_api::alert_live::{
     request_live_resources_by_kind_with_request, request_optional_object_with_request,
 };
 
+fn count_rows_by_action(rows: &[Value], action: &str) -> usize {
+    rows.iter()
+        .filter(|row| row.get(runtime_schema::row::ACTION).and_then(Value::as_str) == Some(action))
+        .count()
+}
+
 fn plan_summary(rows: &[Value]) -> Value {
-    let count = |action: &str| {
-        rows.iter()
-            .filter(|row| row.get("action").and_then(Value::as_str) == Some(action))
-            .count()
-    };
     let warning = rows
         .iter()
-        .filter(|row| row.get("status").and_then(Value::as_str) == Some("warning"))
+        .filter(|row| {
+            row.get(runtime_schema::row::STATUS).and_then(Value::as_str) == Some("warning")
+        })
         .count();
     json!({
-        "processed": rows.len(),
-        "create": count("create"),
-        "update": count("update"),
-        "noop": count("noop"),
-        "delete": count("delete"),
-        "blocked": count("blocked"),
-        "warning": warning,
+        (runtime_schema::summary::PROCESSED): rows.len(),
+        (runtime_schema::summary::CREATE): count_rows_by_action(rows, "create"),
+        (runtime_schema::summary::UPDATE): count_rows_by_action(rows, "update"),
+        (runtime_schema::summary::NOOP): count_rows_by_action(rows, "noop"),
+        (runtime_schema::summary::DELETE): count_rows_by_action(rows, "delete"),
+        (runtime_schema::summary::BLOCKED): count_rows_by_action(rows, "blocked"),
+        (runtime_schema::summary::WARNING): warning,
     })
 }
 
@@ -187,56 +235,52 @@ fn build_plan_row(input: PlanRowInput<'_>) -> Value {
     };
     let status = plan_status(input.action, input.blocked_reason, &input.review_hints);
     json!({
-        "domain": "alert",
-        "resourceKind": input.kind,
-        "kind": input.kind,
-        "identity": input.identity,
-        "actionId": plan_action_id(input.kind, input.identity, input.action),
-        "action": input.action,
-        "status": status,
-        "reason": input.reason,
-        "blockedReason": input.blocked_reason,
-        "reviewHints": input.review_hints,
-        "changedFields": changed_fields,
-        "changes": changes,
-        "path": input.path.map(path_string).map(Value::String).unwrap_or(Value::Null),
-        "desired": input.desired.map(|value| Value::Object(value.clone())).unwrap_or(Value::Null),
-        "live": input.live.map(|value| Value::Object(value.clone())).unwrap_or(Value::Null),
+        (runtime_schema::row::DOMAIN): "alert",
+        (runtime_schema::row::RESOURCE_KIND): input.kind,
+        (runtime_schema::row::KIND): input.kind,
+        (runtime_schema::row::IDENTITY): input.identity,
+        (runtime_schema::row::ACTION_ID): plan_action_id(input.kind, input.identity, input.action),
+        (runtime_schema::row::ACTION): input.action,
+        (runtime_schema::row::STATUS): status,
+        (runtime_schema::row::REASON): input.reason,
+        (runtime_schema::row::BLOCKED_REASON): input.blocked_reason,
+        (runtime_schema::row::REVIEW_HINTS): input.review_hints,
+        (runtime_schema::row::CHANGED_FIELDS): changed_fields,
+        (runtime_schema::row::CHANGES): changes,
+        (runtime_schema::row::PATH): input.path.map(path_string),
+        (runtime_schema::row::DESIRED): input.desired.map(|value| Value::Object(value.clone())).unwrap_or(Value::Null),
+        (runtime_schema::row::LIVE): input.live.map(|value| Value::Object(value.clone())).unwrap_or(Value::Null),
     })
 }
 
 pub fn build_alert_plan_document(rows: &[Value], allow_prune: bool) -> Value {
     json!({
-        "kind": ALERT_PLAN_KIND,
-        "schemaVersion": ALERT_PLAN_SCHEMA_VERSION,
-        "toolVersion": tool_version(),
-        "reviewRequired": true,
-        "reviewed": false,
-        "allowPrune": allow_prune,
-        "summary": plan_summary(rows),
-        "rows": rows,
+        (runtime_schema::document::KIND): ALERT_PLAN_KIND,
+        (runtime_schema::document::SCHEMA_VERSION): ALERT_PLAN_SCHEMA_VERSION,
+        (runtime_schema::document::TOOL_VERSION): tool_version(),
+        (runtime_schema::document::REVIEW_REQUIRED): true,
+        (runtime_schema::document::REVIEWED): false,
+        (runtime_schema::document::ALLOW_PRUNE): allow_prune,
+        (runtime_schema::document::SUMMARY): plan_summary(rows),
+        (runtime_schema::document::ROWS): rows,
     })
 }
 
 pub fn build_alert_delete_preview_document(rows: &[Value], allow_policy_reset: bool) -> Value {
-    let count = |action: &str| {
-        rows.iter()
-            .filter(|row| row.get("action").and_then(Value::as_str) == Some(action))
-            .count()
-    };
+    let summary = json!({
+        (runtime_schema::summary::PROCESSED): rows.len(),
+        (runtime_schema::summary::DELETE): count_rows_by_action(rows, "delete"),
+        (runtime_schema::summary::BLOCKED): count_rows_by_action(rows, "blocked"),
+    });
     json!({
-        "kind": ALERT_DELETE_PREVIEW_KIND,
-        "schemaVersion": ALERT_DELETE_PREVIEW_SCHEMA_VERSION,
-        "toolVersion": tool_version(),
-        "reviewRequired": true,
-        "reviewed": false,
-        "allowPolicyReset": allow_policy_reset,
-        "summary": {
-            "processed": rows.len(),
-            "delete": count("delete"),
-            "blocked": count("blocked"),
-        },
-        "rows": rows,
+        (runtime_schema::document::KIND): ALERT_DELETE_PREVIEW_KIND,
+        (runtime_schema::document::SCHEMA_VERSION): ALERT_DELETE_PREVIEW_SCHEMA_VERSION,
+        (runtime_schema::document::TOOL_VERSION): tool_version(),
+        (runtime_schema::document::REVIEW_REQUIRED): true,
+        (runtime_schema::document::REVIEWED): false,
+        (runtime_schema::document::ALLOW_POLICY_RESET): allow_policy_reset,
+        (runtime_schema::document::SUMMARY): summary,
+        (runtime_schema::document::ROWS): rows,
     })
 }
 
@@ -359,16 +403,16 @@ pub fn build_alert_delete_preview_from_files(
         let identity = build_resource_identity(&kind, &payload);
         let blocked = kind == POLICIES_KIND && !allow_policy_reset;
         rows.push(json!({
-            "path": path_string(path),
-            "kind": kind,
-            "identity": identity,
-            "action": if blocked { "blocked" } else { "delete" },
-            "reason": if blocked {
+            (runtime_schema::row::PATH): path_string(path),
+            (runtime_schema::row::KIND): kind,
+            (runtime_schema::row::IDENTITY): identity,
+            (runtime_schema::row::ACTION): if blocked { "blocked" } else { "delete" },
+            (runtime_schema::row::REASON): if blocked {
                 "policy-reset-requires-allow-policy-reset"
             } else {
                 "explicit-delete-request"
             },
-            "desired": Value::Object(payload),
+            (runtime_schema::row::DESIRED): Value::Object(payload),
         }));
     }
     Ok(build_alert_delete_preview_document(
@@ -405,11 +449,15 @@ where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
     let plan = value_as_object(plan_document, "Alert plan document")?;
-    if plan.get("kind").and_then(Value::as_str) != Some(ALERT_PLAN_KIND) {
+    if plan
+        .get(runtime_schema::document::KIND)
+        .and_then(Value::as_str)
+        != Some(ALERT_PLAN_KIND)
+    {
         return Err(message("Alert plan document kind is not supported."));
     }
     let rows = plan
-        .get("rows")
+        .get(runtime_schema::document::ROWS)
         .and_then(Value::as_array)
         .ok_or_else(|| message("Alert plan document is missing rows."))?;
 
@@ -417,25 +465,28 @@ where
     let mut applied_count = 0usize;
     for row in rows {
         let row = row_object(row, "Alert plan row")?;
-        let action = row.get("action").and_then(Value::as_str).unwrap_or("");
+        let action = row
+            .get(runtime_schema::row::ACTION)
+            .and_then(Value::as_str)
+            .unwrap_or("");
         if !matches!(action, "create" | "update" | "delete") {
             continue;
         }
         let kind = row
-            .get("kind")
+            .get(runtime_schema::row::KIND)
             .and_then(Value::as_str)
             .ok_or_else(|| message("Alert plan row is missing kind."))?;
         let identity = row
-            .get("identity")
+            .get(runtime_schema::row::IDENTITY)
             .and_then(Value::as_str)
             .unwrap_or_default();
         let response = match action {
             "create" => {
-                let desired = payload_object_from_row(row, "desired")?;
+                let desired = payload_object_from_row(row, runtime_schema::row::DESIRED)?;
                 apply_create_with_request(&mut request_json, kind, desired)?
             }
             "update" => {
-                let desired = payload_object_from_row(row, "desired")?;
+                let desired = payload_object_from_row(row, runtime_schema::row::DESIRED)?;
                 apply_update_with_request(&mut request_json, kind, identity, desired)?
             }
             "delete" => {
@@ -551,30 +602,38 @@ pub fn build_alert_import_dry_run_document(rows: &[Value]) -> Value {
     let processed = rows.len();
     let would_create = rows
         .iter()
-        .filter(|row| row.get("action").and_then(Value::as_str) == Some("would-create"))
+        .filter(|row| {
+            row.get(runtime_schema::row::ACTION).and_then(Value::as_str) == Some("would-create")
+        })
         .count();
     let would_update = rows
         .iter()
-        .filter(|row| row.get("action").and_then(Value::as_str) == Some("would-update"))
+        .filter(|row| {
+            row.get(runtime_schema::row::ACTION).and_then(Value::as_str) == Some("would-update")
+        })
         .count();
     let would_fail_existing = rows
         .iter()
-        .filter(|row| row.get("action").and_then(Value::as_str) == Some("would-fail-existing"))
+        .filter(|row| {
+            row.get(runtime_schema::row::ACTION).and_then(Value::as_str)
+                == Some("would-fail-existing")
+        })
         .count();
 
+    let summary = json!({
+        (runtime_schema::summary::PROCESSED): processed,
+        (runtime_schema::summary::WOULD_CREATE): would_create,
+        (runtime_schema::summary::WOULD_UPDATE): would_update,
+        (runtime_schema::summary::WOULD_FAIL_EXISTING): would_fail_existing,
+    });
     json!({
-        "kind": ALERT_IMPORT_DRY_RUN_KIND,
-        "schemaVersion": ALERT_IMPORT_DRY_RUN_SCHEMA_VERSION,
-        "toolVersion": tool_version(),
-        "reviewRequired": true,
-        "reviewed": false,
-        "summary": {
-            "processed": processed,
-            "wouldCreate": would_create,
-            "wouldUpdate": would_update,
-            "wouldFailExisting": would_fail_existing,
-        },
-        "rows": rows,
+        (runtime_schema::document::KIND): ALERT_IMPORT_DRY_RUN_KIND,
+        (runtime_schema::document::SCHEMA_VERSION): ALERT_IMPORT_DRY_RUN_SCHEMA_VERSION,
+        (runtime_schema::document::TOOL_VERSION): tool_version(),
+        (runtime_schema::document::REVIEW_REQUIRED): true,
+        (runtime_schema::document::REVIEWED): false,
+        (runtime_schema::document::SUMMARY): summary,
+        (runtime_schema::document::ROWS): rows,
     })
 }
 
