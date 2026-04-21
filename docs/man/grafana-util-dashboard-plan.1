@@ -14,7 +14,7 @@ Before: dashboard import and diff flows could show pieces of local\-vs\-live sta
 .IP \(bu 2
 After: dashboard plan shows create, update, remote\-only, delete\-candidate, blocked, and warning rows in one review model.
 .IP \(bu 2
-JSON output is structured for CI and future TUI review. Rows include stable actionId, status, changed fields, target evidence, dependency hints, and review hints.
+JSON output is structured for CI and future TUI review. Rows include stable actionId, status, changed fields, target evidence, dependency hints, and review hints. Folder permission rows also include subject, permission, and inherited markers.
 .IP \(bu 2
 Multi\-org export roots are resolved from exported org IDs, not from file\-system folder names alone.
 .SH COMMON OPTIONS
@@ -40,6 +40,12 @@ keep missing destination orgs as review\-only would\-create entries in the plan.
 .B \-\-prune
 show remote\-only dashboards as would\-delete candidates. Without this flag they remain extra\-remote.
 .TP
+.B \-\-include\-folder\-permissions
+include folder permission drift review from raw/permissions.json.
+.TP
+.B \-\-folder\-permission\-match
+choose uid or uid\-then\-path. The default is uid; uid\-then\-path falls back to folder path only when the exported UID is not found.
+.TP
 .B \-\-output\-format
 choose text, table, or json.
 .TP
@@ -58,6 +64,8 @@ provisioned or managed targets are blocked before an operator treats the plan as
 .IP \(bu 2
 unresolved datasource references and folder issues are surfaced as review hints
 .IP \(bu 2
+exported folder permission differences are visible before any import or restore workflow
+.IP \(bu 2
 missing destination orgs can stay as review\-only would\-create entries when \-\-create\-missing\-orgs is set
 .SH FAILURE CHECKS
 .IP \(bu 2
@@ -70,6 +78,8 @@ if \-\-only\-org\-id is set, confirm the exported source org IDs are present in 
 if delete candidates appear unexpectedly, rerun without \-\-prune and inspect extra\-remote rows first
 .IP \(bu 2
 if dependency hints appear, confirm the target Grafana has the expected datasource inventory and folder structure
+.IP \(bu 2
+if folder permission rows are blocked, confirm the exported folder UID exists on the target or rerun with \-\-folder\-permission\-match uid\-then\-path
 .SH EXAMPLES
 .PP
 Build a review\-first dashboard reconcile plan from a local dashboard export tree against live Grafana.

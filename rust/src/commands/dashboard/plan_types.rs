@@ -2,6 +2,7 @@
 
 use serde::Serialize;
 use serde_json::{Map, Value};
+use std::collections::BTreeSet;
 use std::path::PathBuf;
 
 use super::FolderInventoryItem;
@@ -16,6 +17,17 @@ pub(super) struct DashboardPlanChange {
     pub(super) field: String,
     pub(super) before: Value,
     pub(super) after: Value,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct FolderPermissionPlanDetails {
+    pub(super) subject_type: String,
+    pub(super) subject_key: String,
+    pub(super) subject_name: String,
+    pub(super) permission: i64,
+    pub(super) permission_name: String,
+    pub(super) inherited: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -44,6 +56,8 @@ pub(super) struct DashboardPlanAction {
     pub(super) dependency_hints: Vec<String>,
     pub(super) blocked_reason: Option<String>,
     pub(super) review_hints: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(super) permission: Option<FolderPermissionPlanDetails>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -115,7 +129,7 @@ pub(super) struct DashboardPlanReviewActionProjection {
 
 #[derive(Debug, Clone)]
 pub(super) struct DashboardPlanReviewProjection {
-    pub(super) domains: Vec<&'static str>,
+    pub(super) domains: Vec<String>,
     pub(super) actions: Vec<DashboardPlanReviewActionProjection>,
 }
 
@@ -163,6 +177,12 @@ impl DashboardPlanReport {
             .iter()
             .map(DashboardPlanAction::to_review_projection)
             .collect::<Vec<_>>();
+        let domains = actions
+            .iter()
+            .map(|action| action.domain.clone())
+            .collect::<BTreeSet<_>>()
+            .into_iter()
+            .collect::<Vec<_>>();
         actions.sort_by(|left, right| {
             left.kind_order
                 .cmp(&right.kind_order)
@@ -173,14 +193,16 @@ impl DashboardPlanReport {
                 .then_with(|| left.identity.cmp(&right.identity))
                 .then_with(|| left.action_id.cmp(&right.action_id))
         });
-        DashboardPlanReviewProjection {
-            domains: vec!["dashboard"],
-            actions,
-        }
+        DashboardPlanReviewProjection { domains, actions }
     }
 
     pub(super) fn build_review_envelope(&self) -> Value {
         let projection = self.build_review_projection();
+        let domain_refs = projection
+            .domains
+            .iter()
+            .map(String::as_str)
+            .collect::<Vec<_>>();
         let review = build_review_mutation_envelope(
             projection
                 .actions
@@ -200,7 +222,7 @@ impl DashboardPlanReport {
                     raw: action.raw,
                 })
                 .collect(),
-            &projection.domains,
+            &domain_refs,
         );
         Value::Object(Map::from_iter(vec![
             (
@@ -283,7 +305,12 @@ pub(super) struct LiveDashboard {
     pub(super) payload: Value,
 }
 
-pub(super) type PlanLiveState = (Vec<Map<String, Value>>, Vec<LiveDashboard>);
+#[derive(Debug, Clone)]
+pub(super) struct PlanLiveState {
+    pub(super) live_datasources: Vec<Map<String, Value>>,
+    pub(super) live_dashboards: Vec<LiveDashboard>,
+    pub(super) live_folders: Vec<FolderInventoryItem>,
+}
 
 #[derive(Debug, Clone)]
 pub(super) struct OrgPlanInput {
@@ -296,7 +323,10 @@ pub(super) struct OrgPlanInput {
     pub(super) local_dashboards: Vec<LocalDashboard>,
     pub(super) live_dashboards: Vec<LiveDashboard>,
     pub(super) live_datasources: Vec<Map<String, Value>>,
+    pub(super) live_folders: Vec<FolderInventoryItem>,
     pub(super) folder_inventory: Vec<FolderInventoryItem>,
+    pub(super) folder_permission_resources: Vec<FolderPermissionResource>,
+    pub(super) live_folder_permission_resources: Vec<FolderPermissionResource>,
 }
 
 #[derive(Debug, Clone)]
@@ -304,5 +334,28 @@ pub(super) struct DashboardPlanInput {
     pub(super) scope: String,
     pub(super) input_type: String,
     pub(super) prune: bool,
+    pub(super) include_folder_permissions: bool,
+    pub(super) folder_permission_match: String,
     pub(super) orgs: Vec<OrgPlanInput>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(super) struct FolderPermissionEntry {
+    pub(super) subject_type: String,
+    pub(super) subject_key: String,
+    pub(super) subject_id: String,
+    pub(super) subject_name: String,
+    pub(super) permission: i64,
+    pub(super) permission_name: String,
+    pub(super) inherited: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(super) struct FolderPermissionResource {
+    pub(super) uid: String,
+    pub(super) title: String,
+    pub(super) path: String,
+    pub(super) org: String,
+    pub(super) org_id: String,
+    pub(super) permissions: Vec<FolderPermissionEntry>,
 }

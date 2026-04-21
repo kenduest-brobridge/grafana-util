@@ -427,6 +427,7 @@ pub(super) fn build_org_actions(org: &OrgPlanInput, prune: bool) -> Vec<Dashboar
             dependency_hints,
             blocked_reason,
             review_hints,
+            permission: None,
         });
     }
 
@@ -479,6 +480,7 @@ pub(super) fn build_org_actions(org: &OrgPlanInput, prune: bool) -> Vec<Dashboar
             blocked_reason: blocked
                 .then_some(REVIEW_REASON_TARGET_PROVISIONED_OR_MANAGED.to_string()),
             review_hints: vec![format!("{REVIEW_HINT_REMOTE_ONLY} dashboard candidate")],
+            permission: None,
         });
     }
 

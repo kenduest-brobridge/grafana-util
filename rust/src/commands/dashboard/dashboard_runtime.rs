@@ -92,9 +92,13 @@ pub(super) fn parse_dashboard_plan_output_column(
         "match_basis" | "matchBasis" => Ok("match_basis".to_string()),
         "changed_fields" | "changedFields" => Ok("changed_fields".to_string()),
         "blocked_reason" | "blockedReason" => Ok("blocked_reason".to_string()),
+        "subject_type" | "subjectType" => Ok("subject_type".to_string()),
+        "subject_name" | "subjectName" => Ok("subject_name".to_string()),
+        "permission_name" | "permissionName" => Ok("permission_name".to_string()),
+        "inherited" => Ok("inherited".to_string()),
         "source_file" | "sourceFile" => Ok("source_file".to_string()),
         _ => Err(format!(
-            "Unsupported --output-columns value '{value}'. Supported values: all, action_id, action, status, dashboard_uid, dashboard_title, folder_uid, folder_path, source_org_id, source_org_name, target_org_id, target_org_name, match_basis, changed_fields, blocked_reason, source_file."
+            "Unsupported --output-columns value '{value}'. Supported values: all, action_id, action, status, dashboard_uid, dashboard_title, folder_uid, folder_path, source_org_id, source_org_name, target_org_id, target_org_name, match_basis, changed_fields, blocked_reason, subject_type, subject_name, permission_name, inherited, source_file."
         )),
     }
 }

@@ -151,3 +151,10 @@
 - Baseline: `grafana/api/sync_live_read.rs` still owned folder, dashboard, datasource, alert, and availability read loops in one large adapter module.
 - Current Update: Moved dashboard/folder, datasource, alert, and availability live-read assembly into dedicated child modules while keeping the parent as the public facade.
 - Result: Focused sync live, status, formatter, maintainability, AI workflow, and full Rust tests pass.
+
+## 2026-04-20 - Move dashboard authoring into directory boundary
+- State: Done
+- Scope: Rust dashboard authoring module layout, focused authoring/dashboard validation, and AI trace docs. Import/reconcile directory moves, inspect/governance moves, public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
+- Baseline: dashboard authoring implementation and root authoring regression tests lived as flat files in `commands/dashboard/`.
+- Current Update: Moved dashboard authoring implementation and direct authoring regression tests under `commands/dashboard/authoring/` while keeping `commands/dashboard/mod.rs` as the public facade.
+- Result: Focused authoring/dashboard tests, formatter, maintainability, AI workflow, and full Rust tests pass.

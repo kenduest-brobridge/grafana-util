@@ -13,6 +13,21 @@ pub enum DashboardPlanOutputFormat {
     Json,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+pub enum FolderPermissionMatchMode {
+    Uid,
+    UidThenPath,
+}
+
+impl FolderPermissionMatchMode {
+    pub(crate) fn as_str(self) -> &'static str {
+        match self {
+            FolderPermissionMatchMode::Uid => "uid",
+            FolderPermissionMatchMode::UidThenPath => "uid-then-path",
+        }
+    }
+}
+
 #[derive(Debug, Clone, Args)]
 pub struct PlanArgs {
     #[command(flatten)]
@@ -76,6 +91,22 @@ pub struct PlanArgs {
         help_heading = "Review Options"
     )]
     pub show_same: bool,
+    #[arg(
+        long = "include-folder-permissions",
+        default_value_t = false,
+        help = "Include read-only folder permission drift review from raw/permissions.json.",
+        help_heading = "Review Options"
+    )]
+    pub include_folder_permissions: bool,
+    #[arg(
+        long = "folder-permission-match",
+        value_enum,
+        default_value_t = FolderPermissionMatchMode::Uid,
+        requires = "include_folder_permissions",
+        help = "Match exported folder permissions by uid, or by uid with folder path fallback.",
+        help_heading = "Review Options"
+    )]
+    pub folder_permission_match: FolderPermissionMatchMode,
     #[arg(
         long = "output-columns",
         value_delimiter = ',',

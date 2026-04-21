@@ -44,7 +44,7 @@ pub use cli_defs_command_live::{
     BrowseArgs, CloneLiveArgs, DeleteArgs, DiffArgs, EditLiveArgs, GetArgs,
 };
 pub use cli_defs_command_local::{ImportArgs, PatchFileArgs, PublishArgs, ReviewArgs, ServeArgs};
-pub use cli_defs_command_plan::{DashboardPlanOutputFormat, PlanArgs};
+pub use cli_defs_command_plan::{DashboardPlanOutputFormat, FolderPermissionMatchMode, PlanArgs};
 
 /// Arguments for importing dashboards from a local export directory.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]

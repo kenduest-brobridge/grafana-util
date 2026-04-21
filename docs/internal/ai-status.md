@@ -17,6 +17,13 @@ Current AI-maintained status only.
 - Older entries moved to [`ai-status-archive-2026-04-19.md`](docs/internal/archive/ai-status-archive-2026-04-19.md).
 - Older entries moved to [`ai-status-archive-2026-04-20.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-04-20.md).
 
+## 2026-04-20 - Add dashboard folder permission drift review
+- State: Done
+- Scope: Rust dashboard plan CLI, permission bundle loading, folder permission drift actions/rendering, focused tests, and AI trace docs. Dashboard import permission restore, dashboard-level ACL replay, generated docs, Python implementation, and access subject lifecycle are out of scope.
+- Baseline: Dashboard export writes `raw/permissions.json`, but dashboard plan/import treat it as metadata and cannot compare exported folder ACLs against live Grafana.
+- Current Update: Added `dashboard plan --include-folder-permissions`, UID-first folder permission comparison, optional path fallback, permission detail rendering, command docs, and regression coverage.
+- Result: Focused dashboard plan/parser tests, docs surface, formatter, and full Rust tests pass.
+
 ## 2026-04-20 - Add contract promotion report
 - State: Done
 - Scope: Contract promotion report behavior, unit coverage, maintainer docs, TODO tracking, and AI trace docs. Public CLI behavior, generated docs, schema artifacts, Rust implementation, and Python package behavior are out of scope.
@@ -51,10 +58,3 @@ Current AI-maintained status only.
 - Baseline: `commands/dashboard/import_validation_dependencies.rs` mixed tool-owned preflight keys such as `datasourceUids`, `pluginIds`, `sourcePath`, and `summary.blockingCount` with ordinary Grafana payload field reads.
 - Current Update: Grouped dashboard dependency availability, resource-spec, and preflight summary keys under local schema namespaces while leaving Grafana raw payload fields direct.
 - Result: Focused import, preflight, dashboard-plan, formatter, maintainability, AI workflow, and full Rust tests pass.
-
-## 2026-04-20 - Move dashboard authoring into directory boundary
-- State: Done
-- Scope: Rust dashboard authoring module layout, focused authoring/dashboard validation, and AI trace docs. Import/reconcile directory moves, inspect/governance moves, public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
-- Baseline: dashboard authoring implementation and root authoring regression tests lived as flat files in `commands/dashboard/`.
-- Current Update: Moved dashboard authoring implementation and direct authoring regression tests under `commands/dashboard/authoring/` while keeping `commands/dashboard/mod.rs` as the public facade.
-- Result: Focused authoring/dashboard tests, formatter, maintainability, AI workflow, and full Rust tests pass.

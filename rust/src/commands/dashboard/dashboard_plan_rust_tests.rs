@@ -1,8 +1,8 @@
 use super::*;
 use crate::common::message;
 use crate::dashboard::{
-    CommonCliArgs, DashboardPlanOutputFormat, InspectExportInputType, PlanArgs,
-    EXPORT_METADATA_FILENAME, TOOL_SCHEMA_VERSION,
+    CommonCliArgs, DashboardPlanOutputFormat, FolderPermissionMatchMode, InspectExportInputType,
+    PlanArgs, EXPORT_METADATA_FILENAME, TOOL_SCHEMA_VERSION,
 };
 use reqwest::Method;
 use serde_json::{json, Value};
@@ -114,13 +114,18 @@ fn sample_plan_input(prune: bool) -> DashboardPlanInput {
         local_dashboards: vec![local_same, local_create],
         live_dashboards: vec![live_same, live_extra],
         live_datasources: Vec::new(),
+        live_folders: folder_inventory.clone(),
         folder_inventory,
+        folder_permission_resources: Vec::new(),
+        live_folder_permission_resources: Vec::new(),
     };
 
     DashboardPlanInput {
         scope: "current-org".to_string(),
         input_type: "raw".to_string(),
         prune,
+        include_folder_permissions: false,
+        folder_permission_match: "uid".to_string(),
         orgs: vec![org],
     }
 }
@@ -153,8 +158,13 @@ fn sample_missing_org_input(org_action: &str) -> DashboardPlanInput {
             local_dashboards: vec![local],
             live_dashboards: Vec::new(),
             live_datasources: Vec::new(),
+            live_folders: Vec::new(),
             folder_inventory: Vec::new(),
+            folder_permission_resources: Vec::new(),
+            live_folder_permission_resources: Vec::new(),
         }],
+        include_folder_permissions: false,
+        folder_permission_match: "uid".to_string(),
     }
 }
 
@@ -169,6 +179,8 @@ fn make_plan_args(input_dir: PathBuf) -> PlanArgs {
         create_missing_orgs: false,
         prune: false,
         show_same: false,
+        include_folder_permissions: false,
+        folder_permission_match: FolderPermissionMatchMode::Uid,
         output_columns: Vec::new(),
         list_columns: false,
         no_header: false,
@@ -219,6 +231,114 @@ fn write_export_org_scope(root: &Path, org_id: &str, org_name: &str, uid: &str) 
                 "version": 1
             },
             "meta": {"folderUid": "general"}
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    raw_dir
+}
+
+fn write_single_scope_with_folder_permissions(root: &Path) -> PathBuf {
+    let raw_dir = root.join("raw");
+    fs::create_dir_all(&raw_dir).unwrap();
+    fs::write(
+        raw_dir.join(EXPORT_METADATA_FILENAME),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-dashboard-export-index",
+            "schemaVersion": TOOL_SCHEMA_VERSION,
+            "variant": "raw",
+            "dashboardCount": 1,
+            "indexFile": "index.json",
+            "foldersFile": "folders.json",
+            "permissionsFile": "permissions.json",
+            "format": "grafana-web-import-preserve-uid",
+            "org": "Main Org.",
+            "orgId": "1"
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        raw_dir.join("folders.json"),
+        serde_json::to_string_pretty(&json!([
+            {
+                "uid": "infra",
+                "title": "Infra",
+                "path": "Platform / Infra",
+                "org": "Main Org.",
+                "orgId": "1"
+            }
+        ]))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        raw_dir.join("index.json"),
+        serde_json::to_string_pretty(&json!([
+            {
+                "uid": "cpu-main",
+                "title": "CPU Main",
+                "path": "cpu-main.json",
+                "format": "grafana-web-import-preserve-uid",
+                "folderUid": "infra",
+                "folderPath": "Platform / Infra",
+                "org": "Main Org.",
+                "orgId": "1"
+            }
+        ]))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        raw_dir.join("cpu-main.json"),
+        serde_json::to_string_pretty(&json!({
+            "dashboard": {
+                "uid": "cpu-main",
+                "title": "CPU Main",
+                "panels": [],
+                "version": 1
+            },
+            "meta": {"folderUid": "infra"}
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        raw_dir.join("permissions.json"),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-dashboard-permission-bundle",
+            "schemaVersion": 1,
+            "resources": [
+                {
+                    "kind": "grafana-utils-dashboard-permission",
+                    "schemaVersion": 1,
+                    "resource": {"kind": "folder", "uid": "infra", "title": "Infra"},
+                    "permissions": [
+                        {
+                            "resourceKind": "folder",
+                            "resourceUid": "infra",
+                            "resourceTitle": "Infra",
+                            "subjectType": "role",
+                            "subjectKey": "role:Viewer",
+                            "subjectId": "Viewer",
+                            "subjectName": "Viewer",
+                            "permission": 1,
+                            "permissionName": "View",
+                            "inherited": false
+                        }
+                    ],
+                    "org": "Main Org.",
+                    "orgId": "1"
+                },
+                {
+                    "kind": "grafana-utils-dashboard-permission",
+                    "schemaVersion": 1,
+                    "resource": {"kind": "dashboard", "uid": "cpu-main", "title": "CPU Main"},
+                    "permissions": [],
+                    "org": "Main Org.",
+                    "orgId": "1"
+                }
+            ]
         }))
         .unwrap(),
     )
@@ -300,6 +420,183 @@ fn dashboard_plan_text_includes_review_narrative() {
         .any(|line| line.contains("Blocked reason: target-org-missing")));
 }
 
+fn permission_entry(
+    subject: &str,
+    permission: i64,
+    name: &str,
+    inherited: bool,
+) -> FolderPermissionEntry {
+    FolderPermissionEntry {
+        subject_type: "role".to_string(),
+        subject_key: format!("role:{subject}"),
+        subject_id: subject.to_string(),
+        subject_name: subject.to_string(),
+        permission,
+        permission_name: name.to_string(),
+        inherited,
+    }
+}
+
+#[test]
+fn dashboard_plan_includes_folder_permission_drift_actions() {
+    let mut input = sample_plan_input(false);
+    input.include_folder_permissions = true;
+    input.orgs[0].folder_permission_resources = vec![FolderPermissionResource {
+        uid: "infra".to_string(),
+        title: "Infra".to_string(),
+        path: "Platform / Infra".to_string(),
+        org: "Main Org.".to_string(),
+        org_id: "1".to_string(),
+        permissions: vec![
+            permission_entry("Viewer", 1, "View", true),
+            permission_entry("Editor", 2, "Edit", false),
+        ],
+    }];
+    input.orgs[0].live_folder_permission_resources = vec![FolderPermissionResource {
+        uid: "infra".to_string(),
+        title: "Infra".to_string(),
+        path: "Platform / Infra".to_string(),
+        org: "Main Org.".to_string(),
+        org_id: "1".to_string(),
+        permissions: vec![
+            permission_entry("Viewer", 1, "View", true),
+            permission_entry("Editor", 1, "View", false),
+            permission_entry("Admin", 4, "Admin", false),
+        ],
+    }];
+
+    let report = build_dashboard_plan(input);
+
+    assert_eq!(report.review["summary"]["domainCount"], 2);
+    assert!(report.review["domains"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|domain| domain["id"] == "folder-permission"));
+    assert!(report.actions.iter().any(|action| {
+        action.domain == "folder-permission"
+            && action.action == "same"
+            && action
+                .permission
+                .as_ref()
+                .map(|permission| permission.inherited)
+                .unwrap_or(false)
+    }));
+    assert!(report.actions.iter().any(|action| {
+        action.domain == "folder-permission"
+            && action.action == "would-update"
+            && action.changed_fields == vec!["permission".to_string()]
+    }));
+    assert!(report
+        .actions
+        .iter()
+        .any(|action| { action.domain == "folder-permission" && action.action == "extra-remote" }));
+}
+
+#[test]
+fn dashboard_plan_blocks_folder_permission_when_uid_missing() {
+    let mut input = sample_plan_input(false);
+    input.include_folder_permissions = true;
+    input.folder_permission_match = "uid".to_string();
+    input.orgs[0].folder_permission_resources = vec![FolderPermissionResource {
+        uid: "missing-folder".to_string(),
+        title: "Missing".to_string(),
+        path: "Platform / Missing".to_string(),
+        org: "Main Org.".to_string(),
+        org_id: "1".to_string(),
+        permissions: vec![permission_entry("Viewer", 1, "View", false)],
+    }];
+
+    let report = build_dashboard_plan(input);
+
+    let action = report
+        .actions
+        .iter()
+        .find(|action| action.domain == "folder-permission")
+        .unwrap();
+    assert_eq!(action.status, "blocked");
+    assert_eq!(
+        action.blocked_reason.as_deref(),
+        Some("missing-live-folder")
+    );
+    assert_eq!(action.match_basis, "uid");
+}
+
+#[test]
+fn dashboard_plan_can_match_folder_permission_by_path_fallback() {
+    let mut input = sample_plan_input(false);
+    input.include_folder_permissions = true;
+    input.folder_permission_match = "uid-then-path".to_string();
+    input.orgs[0].folder_permission_resources = vec![FolderPermissionResource {
+        uid: "source-infra".to_string(),
+        title: "Infra".to_string(),
+        path: "Platform / Infra".to_string(),
+        org: "Main Org.".to_string(),
+        org_id: "1".to_string(),
+        permissions: vec![permission_entry("Viewer", 1, "View", false)],
+    }];
+    input.orgs[0].live_folder_permission_resources = vec![FolderPermissionResource {
+        uid: "dest-infra".to_string(),
+        title: "Infra".to_string(),
+        path: "Platform / Infra".to_string(),
+        org: "Main Org.".to_string(),
+        org_id: "1".to_string(),
+        permissions: vec![permission_entry("Viewer", 1, "View", false)],
+    }];
+
+    let report = build_dashboard_plan(input);
+
+    let action = report
+        .actions
+        .iter()
+        .find(|action| action.domain == "folder-permission")
+        .unwrap();
+    assert_eq!(action.action, "same");
+    assert_eq!(action.match_basis, "uid-then-path");
+    assert_eq!(action.target_uid.as_deref(), Some("dest-infra"));
+}
+
+#[test]
+fn collect_plan_input_loads_folder_permissions_when_enabled() {
+    let temp = tempdir().unwrap();
+    let raw_dir = write_single_scope_with_folder_permissions(temp.path());
+    let mut args = make_plan_args(raw_dir);
+    args.include_folder_permissions = true;
+
+    let input = collect_plan_input_with_request(&args, &mut |method, path, _params, _payload| {
+        match (method, path) {
+            (Method::GET, "/api/org") => Ok(Some(json!({"id": 1, "name": "Main Org."}))),
+            (Method::GET, "/api/datasources") => Ok(Some(json!([]))),
+            (Method::GET, "/api/search") => Ok(Some(json!([
+                {"uid": "cpu-main", "title": "CPU Main", "folderUid": "infra", "folderTitle": "Infra", "orgId": 1, "orgName": "Main Org."}
+            ]))),
+            (Method::GET, "/api/folders/infra") => Ok(Some(json!({
+                "uid": "infra",
+                "title": "Infra",
+                "parents": [{"uid": "platform", "title": "Platform"}]
+            }))),
+            (Method::GET, "/api/dashboards/uid/cpu-main") => Ok(Some(json!({
+                "dashboard": {"uid": "cpu-main", "title": "CPU Main", "version": 3, "panels": []},
+                "meta": {"folderUid": "infra", "folderTitle": "Infra"}
+            }))),
+            (Method::GET, "/api/folders/infra/permissions") => Ok(Some(json!([
+                {"role": "Viewer", "permission": 1, "permissionName": "View", "inherited": false}
+            ]))),
+            _ => Err(message(format!("unexpected request {path}"))),
+        }
+    })
+    .unwrap();
+
+    assert_eq!(input.orgs[0].folder_permission_resources.len(), 1);
+    assert_eq!(input.orgs[0].live_folder_permission_resources.len(), 1);
+
+    let report = build_dashboard_plan(input);
+    assert!(report
+        .actions
+        .iter()
+        .any(|action| action.domain == "folder-permission" && action.action == "same"));
+}
+
 #[test]
 fn build_dashboard_plan_aggregates_multiple_orgs_and_would_create_counts() {
     let mut input = sample_plan_input(true);
@@ -325,7 +622,10 @@ fn build_dashboard_plan_aggregates_multiple_orgs_and_would_create_counts() {
         }],
         live_dashboards: Vec::new(),
         live_datasources: Vec::new(),
+        live_folders: Vec::new(),
         folder_inventory: Vec::new(),
+        folder_permission_resources: Vec::new(),
+        live_folder_permission_resources: Vec::new(),
     });
 
     let report = build_dashboard_plan(input);

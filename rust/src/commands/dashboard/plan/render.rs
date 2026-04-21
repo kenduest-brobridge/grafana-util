@@ -26,6 +26,10 @@ pub(crate) fn dashboard_plan_column_ids() -> &'static [&'static str] {
         "match_basis",
         "changed_fields",
         "blocked_reason",
+        "subject_type",
+        "subject_name",
+        "permission_name",
+        "inherited",
         "source_file",
     ]
 }
@@ -51,6 +55,10 @@ fn plan_output_columns(selected: &[String]) -> Vec<&'static str> {
             "match_basis" => Some("match_basis"),
             "changed_fields" => Some("changed_fields"),
             "blocked_reason" => Some("blocked_reason"),
+            "subject_type" => Some("subject_type"),
+            "subject_name" => Some("subject_name"),
+            "permission_name" => Some("permission_name"),
+            "inherited" => Some("inherited"),
             "source_file" => Some("source_file"),
             _ => None,
         })
@@ -152,6 +160,15 @@ pub(super) fn render_plan_text(report: &DashboardPlanReport, show_same: bool) ->
                 action.changed_fields.join(",")
             }
         ));
+        if let Some(permission) = &action.permission {
+            lines.push(format!(
+                "  permission subject={} name={} permission={} inherited={}",
+                permission.subject_type,
+                permission.subject_name,
+                permission.permission_name,
+                permission.inherited
+            ));
+        }
     }
     if let Some(reasons) = report
         .review
@@ -200,6 +217,26 @@ pub(super) fn render_plan_table(
                         }
                     }
                     "blocked_reason" => action.blocked_reason.clone().unwrap_or_default(),
+                    "subject_type" => action
+                        .permission
+                        .as_ref()
+                        .map(|permission| permission.subject_type.clone())
+                        .unwrap_or_default(),
+                    "subject_name" => action
+                        .permission
+                        .as_ref()
+                        .map(|permission| permission.subject_name.clone())
+                        .unwrap_or_default(),
+                    "permission_name" => action
+                        .permission
+                        .as_ref()
+                        .map(|permission| permission.permission_name.clone())
+                        .unwrap_or_default(),
+                    "inherited" => action
+                        .permission
+                        .as_ref()
+                        .map(|permission| permission.inherited.to_string())
+                        .unwrap_or_default(),
                     "source_file" => action.source_file.clone().unwrap_or_default(),
                     _ => String::new(),
                 })

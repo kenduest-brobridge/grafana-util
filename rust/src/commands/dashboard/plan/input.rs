@@ -21,6 +21,10 @@ use super::super::{
 };
 use super::reconcile::{build_live_dashboard_with_request, build_local_dashboard};
 use super::types::{DashboardPlanInput, OrgPlanInput, PlanLiveState};
+use super::{
+    permissions::{collect_live_folder_permission_resources, load_folder_permission_resources},
+    types,
+};
 
 pub(super) fn plan_export_org_variant_dir(input_type: InspectExportInputType) -> &'static str {
     match input_type {
@@ -379,6 +383,13 @@ fn load_local_org_plan_input(
         let document = load_json_file(&file)?;
         local_dashboards.push(build_local_dashboard(&document, &file, &folder_inventory)?);
     }
+    let folder_permission_resources = load_folder_permission_resources(
+        input_dir,
+        metadata
+            .as_ref()
+            .and_then(|item| item.permissions_file.as_deref()),
+        &folder_inventory,
+    )?;
     Ok(OrgPlanInput {
         source_org_id,
         source_org_name,
@@ -387,13 +398,19 @@ fn load_local_org_plan_input(
         org_action,
         input_dir: input_dir.to_path_buf(),
         local_dashboards,
+        folder_inventory,
         live_dashboards: Vec::new(),
         live_datasources: Vec::new(),
-        folder_inventory,
+        live_folders: Vec::new(),
+        folder_permission_resources,
+        live_folder_permission_resources: Vec::new(),
     })
 }
 
-fn collect_live_org_state_with_request<F>(request_json: &mut F) -> Result<PlanLiveState>
+fn collect_live_org_state_with_request<F>(
+    request_json: &mut F,
+    collect_folders: bool,
+) -> Result<PlanLiveState>
 where
     F: FnMut(reqwest::Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
@@ -401,6 +418,11 @@ where
     let mut live_dashboards = Vec::new();
     let summaries =
         super::super::list_dashboard_summaries_with_request(&mut *request_json, DEFAULT_PAGE_SIZE)?;
+    let live_folders = if collect_folders {
+        super::super::collect_folder_inventory_with_request(&mut *request_json, &summaries)?
+    } else {
+        Vec::new()
+    };
     let mut seen_uids = BTreeSet::new();
     for summary in summaries {
         let uid = string_field(&summary, "uid", "");
@@ -410,7 +432,35 @@ where
         let payload = super::super::fetch_dashboard_with_request(&mut *request_json, &uid)?;
         live_dashboards.push(build_live_dashboard_with_request(request_json, &payload)?);
     }
-    Ok((live_datasources, live_dashboards))
+    Ok(types::PlanLiveState {
+        live_datasources,
+        live_dashboards,
+        live_folders,
+    })
+}
+
+fn attach_live_state<F>(
+    org: &mut OrgPlanInput,
+    live_state: PlanLiveState,
+    request_json: &mut F,
+    include_folder_permissions: bool,
+    folder_permission_match: &str,
+) -> Result<()>
+where
+    F: FnMut(reqwest::Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
+{
+    org.live_datasources = live_state.live_datasources;
+    org.live_dashboards = live_state.live_dashboards;
+    org.live_folders = live_state.live_folders;
+    if include_folder_permissions {
+        org.live_folder_permission_resources = collect_live_folder_permission_resources(
+            request_json,
+            &org.folder_permission_resources,
+            &org.live_folders,
+            folder_permission_match,
+        )?;
+    }
+    Ok(())
 }
 
 fn collect_single_scope_with_request<F>(
@@ -456,9 +506,15 @@ where
             "current-org".to_string()
         },
     )?;
-    let (live_datasources, live_dashboards) = collect_live_org_state_with_request(request_json)?;
-    org.live_datasources = live_datasources;
-    org.live_dashboards = live_dashboards;
+    let live_state =
+        collect_live_org_state_with_request(request_json, args.include_folder_permissions)?;
+    attach_live_state(
+        &mut org,
+        live_state,
+        request_json,
+        args.include_folder_permissions,
+        args.folder_permission_match.as_str(),
+    )?;
     Ok(DashboardPlanInput {
         scope: if args.org_id.is_some() {
             "explicit-org".to_string()
@@ -470,6 +526,8 @@ where
             InspectExportInputType::Source => "source".to_string(),
         },
         prune: args.prune,
+        include_folder_permissions: args.include_folder_permissions,
+        folder_permission_match: args.folder_permission_match.as_str().to_string(),
         orgs: vec![org],
     })
 }
@@ -483,7 +541,7 @@ where
     F: FnMut(reqwest::Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
     collect_export_org_scope_with_live_collector(args, request_json, |_, request_json| {
-        collect_live_org_state_with_request(request_json)
+        collect_live_org_state_with_request(request_json, args.include_folder_permissions)
     })
 }
 
@@ -522,10 +580,14 @@ where
             target_plan.org_action.to_string(),
         )?;
         if let Some(target_org_id) = target_plan.target_org_id {
-            let (live_datasources, live_dashboards) =
-                collect_live_for_org(target_org_id, request_json)?;
-            org.live_datasources = live_datasources;
-            org.live_dashboards = live_dashboards;
+            let live_state = collect_live_for_org(target_org_id, request_json)?;
+            attach_live_state(
+                &mut org,
+                live_state,
+                request_json,
+                args.include_folder_permissions,
+                args.folder_permission_match.as_str(),
+            )?;
         }
         orgs.push(org);
     }
@@ -536,6 +598,8 @@ where
             InspectExportInputType::Source => "source".to_string(),
         },
         prune: args.prune,
+        include_folder_permissions: args.include_folder_permissions,
+        folder_permission_match: args.folder_permission_match.as_str().to_string(),
         orgs,
     })
 }
@@ -590,7 +654,10 @@ pub(super) fn collect_plan_input(args: &super::super::PlanArgs) -> Result<Dashbo
                      payload: Option<&Value>| {
                         scoped_client.request_json(method, path, params, payload)
                     };
-                collect_live_org_state_with_request(&mut scoped_request_json)
+                collect_live_org_state_with_request(
+                    &mut scoped_request_json,
+                    args.include_folder_permissions,
+                )
             },
         );
     }

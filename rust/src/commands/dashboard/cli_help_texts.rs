@@ -179,6 +179,9 @@ Examples:
   Build a dashboard plan from a raw export root:
     grafana-util dashboard plan --url http://localhost:3000 --basic-user admin --basic-password admin --input-dir ./dashboards/raw --output-format table
 
+  Include read-only folder permission drift review from raw/permissions.json:
+    grafana-util dashboard plan --url http://localhost:3000 --basic-user admin --basic-password admin --input-dir ./dashboards/raw --include-folder-permissions --folder-permission-match uid-then-path --output-format table
+
   Build a dashboard plan from a prompt/source export root:
     grafana-util dashboard plan --profile prod --input-dir ./dashboards/prompt --input-type source --output-format json
 

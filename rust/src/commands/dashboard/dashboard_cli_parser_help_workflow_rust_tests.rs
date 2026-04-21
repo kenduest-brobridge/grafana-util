@@ -1,6 +1,7 @@
 use super::*;
 use crate::dashboard::{
     DashboardPlanOutputFormat as DashboardPlanOutputFormatPublic,
+    FolderPermissionMatchMode as FolderPermissionMatchModePublic,
     InspectExportInputType as InspectExportInputTypePublic,
 };
 
@@ -65,6 +66,9 @@ fn parse_cli_supports_dashboard_plan_raw_table() {
         "actionId,dashboardTitle,folderUid",
         "--prune",
         "--show-same",
+        "--include-folder-permissions",
+        "--folder-permission-match",
+        "uid-then-path",
     ]);
 
     match args.command {
@@ -76,6 +80,11 @@ fn parse_cli_supports_dashboard_plan_raw_table() {
             assert_eq!(plan_args.input_type, InspectExportInputTypePublic::Raw);
             assert!(plan_args.prune);
             assert!(plan_args.show_same);
+            assert!(plan_args.include_folder_permissions);
+            assert_eq!(
+                plan_args.folder_permission_match,
+                FolderPermissionMatchModePublic::UidThenPath
+            );
             assert_eq!(
                 plan_args.output_format,
                 DashboardPlanOutputFormatPublic::Table
@@ -96,6 +105,7 @@ fn plan_help_mentions_review_first_model() {
     assert!(help.contains("--input-type"));
     assert!(help.contains("--output-columns"));
     assert!(help.contains("--show-same"));
+    assert!(help.contains("--include-folder-permissions"));
 }
 
 #[test]

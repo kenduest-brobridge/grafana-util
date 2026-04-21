@@ -8,6 +8,7 @@ Use this when you want to understand what a dashboard export would mean against 
 
 `dashboard plan` does not mutate Grafana. It turns local-vs-live dashboard differences into operator actions such as `same`, `would-create`, `would-update`, `extra-remote`, `would-delete`, and `blocked-target`.
 It remains a read-only review surface. `--use-export-org` maps a combined multi-org export root back to the matching target org IDs, and it requires Basic auth so the command can resolve live org routing.
+When a raw export includes `permissions.json`, `--include-folder-permissions` can add read-only folder permission drift rows to the same review plan. This reviews folder ACL differences only; it does not restore or apply permissions.
 
 ## Key flags
 - `--input-dir`: local dashboard export root or dashboard variant directory.
@@ -17,6 +18,8 @@ It remains a read-only review surface. `--use-export-org` maps a combined multi-
 - `--only-org-id`: limit the plan to one or more exported source org IDs.
 - `--create-missing-orgs`: keep missing destination orgs as review-only `would-create` entries in the plan.
 - `--prune`: show remote-only dashboards as `would-delete` candidates. Without this flag they remain `extra-remote`.
+- `--include-folder-permissions`: include folder permission drift review from `raw/permissions.json`.
+- `--folder-permission-match`: choose `uid` or `uid-then-path`. The default is `uid`; `uid-then-path` falls back to folder path only when the exported UID is not found.
 - `--output-format`: choose `text`, `table`, or `json`.
 - `--show-same`: include unchanged rows in text and table output.
 - `--output-columns`, `--list-columns`, `--no-header`: tune table output.
@@ -30,6 +33,11 @@ grafana-util dashboard plan --profile prod --input-dir ./dashboards/raw
 ```bash
 # Render a table with selected review columns.
 grafana-util dashboard plan --profile prod --input-dir ./dashboards/raw --output-format table --output-columns actionId,dashboardTitle,folderPath,status
+```
+
+```bash
+# Include read-only folder permission drift rows.
+grafana-util dashboard plan --profile prod --input-dir ./dashboards/raw --include-folder-permissions --folder-permission-match uid-then-path --output-format table
 ```
 
 ```bash
@@ -61,7 +69,7 @@ grafana-util dashboard plan --profile prod --input-dir ./dashboards/raw --prune 
 
 - **Before**: dashboard import and diff flows could show pieces of local-vs-live state, but there was no one dashboard-specific reconcile review document.
 - **After**: `dashboard plan` shows create, update, remote-only, delete-candidate, blocked, and warning rows in one review model.
-- JSON output is structured for CI and future TUI review. Rows include stable `actionId`, status, changed fields, target evidence, dependency hints, and review hints.
+- JSON output is structured for CI and future TUI review. Rows include stable `actionId`, status, changed fields, target evidence, dependency hints, and review hints. Folder permission rows also include subject, permission, and inherited markers.
 - Multi-org export roots are resolved from exported org IDs, not from file-system folder names alone.
 
 ## What success looks like
@@ -70,6 +78,7 @@ grafana-util dashboard plan --profile prod --input-dir ./dashboards/raw --prune 
 - remote-only dashboards are called out without deleting anything by default
 - provisioned or managed targets are blocked before an operator treats the plan as ready
 - unresolved datasource references and folder issues are surfaced as review hints
+- exported folder permission differences are visible before any import or restore workflow
 - missing destination orgs can stay as review-only `would-create` entries when `--create-missing-orgs` is set
 
 ## Failure checks
@@ -79,6 +88,7 @@ grafana-util dashboard plan --profile prod --input-dir ./dashboards/raw --prune 
 - if `--only-org-id` is set, confirm the exported source org IDs are present in the export metadata
 - if delete candidates appear unexpectedly, rerun without `--prune` and inspect `extra-remote` rows first
 - if dependency hints appear, confirm the target Grafana has the expected datasource inventory and folder structure
+- if folder permission rows are blocked, confirm the exported folder UID exists on the target or rerun with `--folder-permission-match uid-then-path`
 
 ## Related commands
 - [dashboard export](./dashboard-export.md)

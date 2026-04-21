@@ -1,6 +1,7 @@
 //! Dashboard review-first plan builder and renderer.
 
 mod input;
+mod permissions;
 mod reconcile;
 mod render;
 
@@ -9,6 +10,7 @@ use serde_json::Value;
 use crate::common::{message, print_supported_columns, tool_version, Result};
 
 use self::input::collect_plan_input;
+use self::permissions::build_folder_permission_actions;
 use self::reconcile::{build_org_actions, build_org_summary, build_summary};
 pub(crate) use self::render::dashboard_plan_column_ids;
 use self::render::print_dashboard_plan_report;
@@ -22,7 +24,9 @@ use self::render::{render_plan_table, render_plan_text};
 #[cfg(test)]
 use super::FolderInventoryItem;
 #[cfg(test)]
-use types::{LiveDashboard, LocalDashboard, OrgPlanInput};
+use types::{
+    FolderPermissionEntry, FolderPermissionResource, LiveDashboard, LocalDashboard, OrgPlanInput,
+};
 
 const PLAN_KIND: &str = "grafana-util-dashboard-plan";
 const PLAN_SCHEMA_VERSION: i64 = 1;
@@ -31,7 +35,13 @@ pub(crate) fn build_dashboard_plan(input: DashboardPlanInput) -> DashboardPlanRe
     let mut orgs = Vec::new();
     let mut actions = Vec::new();
     for org in &input.orgs {
-        let org_actions = build_org_actions(org, input.prune);
+        let mut org_actions = build_org_actions(org, input.prune);
+        if input.include_folder_permissions {
+            org_actions.extend(build_folder_permission_actions(
+                org,
+                &input.folder_permission_match,
+            ));
+        }
         orgs.push(build_org_summary(org, &org_actions));
         actions.extend(org_actions);
     }
