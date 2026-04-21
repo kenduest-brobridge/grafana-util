@@ -5,7 +5,7 @@ RUST_BUILD_TARGETS := build-rust build-rust-browser build-rust-native build-rust
 INSTALLER_TARGETS := install-local install-local-interactive test-installer-local
 QUALITY_TARGETS := test test-python test-rust fmt-rust-check lint-rust quality quality-python quality-rust quality-rust-feature-matrix quality-rust-feature-matrix-full quality-output-contracts quality-ai-workflow quality-architecture quality-docs-surface quality-alert-rust quality-sync-rust quality-workspace-noise
 REPORT_TARGETS := contract-promotion-report
-LIVE_TARGETS := seed-grafana-sample-data destroy-grafana-sample-data reset-grafana-all-data test-rust-live test-sync-live test-alert-live test-alert-live-artifact test-alert-live-replay test-access-live test-python-datasource-live test-datasource-live
+LIVE_TARGETS := seed-grafana-sample-data destroy-grafana-sample-data reset-grafana-all-data test-rust-live test-sync-live test-alert-live test-alert-live-artifact test-alert-live-replay test-python-live test-combined-live
 META_TARGETS := build
 
 .PHONY: $(VERSIONING_TARGETS) $(PYTHON_TARGETS) $(DOC_TARGETS) $(RUST_BUILD_TARGETS) $(INSTALLER_TARGETS) $(QUALITY_TARGETS) $(REPORT_TARGETS) $(LIVE_TARGETS) $(META_TARGETS)
@@ -129,9 +129,8 @@ $(BLUE)$(BOLD)Live smoke and sample data$(RESET)
   $(GREEN)make test-alert-live$(RESET)  Start Grafana in Docker and run the Rust alert live smoke path
   $(GREEN)make test-alert-live-artifact$(RESET)  Start Grafana in Docker and run the Rust alert artifact live smoke path
   $(GREEN)make test-alert-live-replay$(RESET)  Start Grafana in Docker and run the Rust alert replay live smoke path
-  $(GREEN)make test-access-live$(RESET)  Start Grafana in Docker and run the Python access live smoke test
-  $(GREEN)make test-python-datasource-live$(RESET)  Start Grafana in Docker and run the Python datasource live smoke test
-  $(GREEN)make test-datasource-live$(RESET)  Start Grafana in Docker and run the Rust and Python datasource live smoke tests
+  $(GREEN)make test-python-live$(RESET)  Start Grafana in Docker and run Python compatibility access and datasource smoke paths
+  $(GREEN)make test-combined-live$(RESET)  Start Grafana in Docker and run Rust live plus Python compatibility smoke paths
 
 endef
 
@@ -370,11 +369,8 @@ test-alert-live-artifact:
 test-alert-live-replay:
 	./scripts/test-rust-alert-replay-live-grafana.sh
 
-test-access-live:
-	./scripts/test-python-access-live-grafana.sh
+test-python-live:
+	./scripts/test-python-live-grafana.sh
 
-test-python-datasource-live:
-	bash ./scripts/test-python-datasource-live-grafana.sh
-
-test-datasource-live:
+test-combined-live:
 	./scripts/test-combined-live-grafana.sh

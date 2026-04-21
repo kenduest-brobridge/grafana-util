@@ -14,6 +14,46 @@ Format rule going forward:
 - keep older tagged releases below
 - use commit/tag history as the source of truth
 
+## [0.11.0] - 2026-04-21
+
+### Highlights
+
+- Review-first planning is broader and more consistent: dashboard plans can review multi-org routing, access plans cover aggregate resources, and artifact workspaces can carry review evidence across local import and diff workflows.
+- Dashboard export and plan workflows now expose more useful drift context, including folder permission review, source-layout alignment, masked datasource recovery guardrails, and safer raw-to-prompt/library-panel handling.
+- Rust quality, contract, and status evidence were tightened across the project so CI, docs, and generated artifacts better reflect the current command surface before release.
+
+### Added
+
+- `dashboard plan --include-folder-permissions` for read-only folder permission drift review from exported `raw/permissions.json` against live Grafana folders.
+- Dashboard plan multi-org routing review, including matching, missing, and would-create organization states.
+- Access plan aggregate resource coverage and expanded review-first plan contracts across access, dashboard, datasource, alert, and workspace flows.
+- Artifact workspace runs with exported review evidence, plus local artifact import/diff support for broader offline review workflows.
+- Contract promotion reporting for runtime golden files, schema/help manifests, public routes, docs entrypoints, generated docs, and artifact workspace evidence.
+- Expanded Python parity for access, dashboard, alert, artifact plan, and unified CLI review/runtime flows.
+
+### Changed
+
+- Dashboard source handling, export layout output formats, repair workflows, and command examples were refined so raw, prompt, provisioning, and source layouts behave more predictably.
+- Project status producers now route through shared status reading models for live promotion, staged promotion, datasource live state, alert live state, sync live state, and dashboard live read fallbacks.
+- Rust command, dashboard import, dashboard authoring, sync live read/apply, alert runtime, status parsing, and review-contract internals were split into smaller maintainable modules without changing public command roots.
+- Review narratives and review envelopes now provide clearer operator context across Rust review flows.
+- Maintainer TODOs, AI trace docs, architecture notes, generated command docs, manpages, and HTML docs were refreshed for the current dev-line command surface.
+
+### Fixed
+
+- Rust 1.95 clippy regressions that could fail CI even when tests passed.
+- Access org and service-account live smoke expectations for dry-run reconciliation output.
+- Dashboard prompt export checks for current raw-to-prompt datasource and library-panel semantics.
+- Dashboard all-org roots, dashboard source alignment, datasource masked-recovery import behavior, access import preflight checks, and dashboard prompt export guardrails.
+- Several output-contract and schema guardrails, including wildcard enum values, `minimumItems`, command examples, docs diff classification, and generated-doc validation.
+
+### Migration Notes
+
+- `grafana-util` remains the shipped CLI name; no public command root is intentionally renamed in this release line.
+- Python remains secondary. New Python entries mainly track parity for existing Rust-first workflows.
+- The folder permission lane is opt-in and review-only; import-time folder permission restore and dashboard ACL apply behavior remain out of scope.
+- If CI runs against Rust stable, expect Rust 1.95 clippy behavior to be enforced by the Rust quality gate.
+
 ## [0.10.2] - 2026-04-14
 
 ### Highlights

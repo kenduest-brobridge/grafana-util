@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
-GRAFANA_IMAGE="${GRAFANA_IMAGE:-grafana/grafana:12.4.1}"
+GRAFANA_IMAGE="${GRAFANA_IMAGE:-grafana/grafana:13.0.1}"
 GRAFANA_PORT="${GRAFANA_PORT:-43011}"
 GRAFANA_USER="${GRAFANA_USER:-admin}"
 GRAFANA_PASSWORD="${GRAFANA_PASSWORD:-admin}"
