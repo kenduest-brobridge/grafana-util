@@ -346,55 +346,60 @@ fn build_action_id(
     format!("org:{org}/folder-permission:{folder_uid}:{permission}:{seed}")
 }
 
-fn build_permission_action(
-    org: &OrgPlanInput,
-    source: &FolderPermissionResource,
-    live: Option<&FolderPermissionResource>,
-    permission: Option<&FolderPermissionEntry>,
-    action: &str,
-    status: &str,
-    match_basis: &str,
+struct PermissionActionInput<'a> {
+    org: &'a OrgPlanInput,
+    source: &'a FolderPermissionResource,
+    live: Option<&'a FolderPermissionResource>,
+    permission: Option<&'a FolderPermissionEntry>,
+    action: &'a str,
+    status: &'a str,
+    match_basis: &'a str,
     changed_fields: Vec<String>,
     changes: Vec<DashboardPlanChange>,
     blocked_reason: Option<String>,
     review_hints: Vec<String>,
     seed: usize,
-) -> DashboardPlanAction {
-    let permission_key = permission
+}
+
+fn build_permission_action(input: PermissionActionInput<'_>) -> DashboardPlanAction {
+    let permission_key = input
+        .permission
         .map(permission_key)
         .unwrap_or_else(|| "folder".to_string());
     DashboardPlanAction {
         action_id: build_action_id(
-            org.target_org_id
+            input
+                .org
+                .target_org_id
                 .as_deref()
-                .or(org.source_org_id.as_deref()),
-            &source.uid,
+                .or(input.org.source_org_id.as_deref()),
+            &input.source.uid,
             &permission_key,
-            seed,
+            input.seed,
         ),
         domain: DOMAIN_FOLDER_PERMISSION.to_string(),
         resource_kind: RESOURCE_KIND_FOLDER_PERMISSION.to_string(),
         dashboard_uid: String::new(),
-        title: source.title.clone(),
-        folder_uid: source.uid.clone(),
-        folder_path: source.path.clone(),
-        source_org_id: org.source_org_id.clone(),
-        source_org_name: org.source_org_name.clone(),
-        target_org_id: org.target_org_id.clone(),
-        target_org_name: org.target_org_name.clone(),
-        match_basis: match_basis.to_string(),
-        action: action.to_string(),
-        status: status.to_string(),
-        changed_fields,
-        changes,
+        title: input.source.title.clone(),
+        folder_uid: input.source.uid.clone(),
+        folder_path: input.source.path.clone(),
+        source_org_id: input.org.source_org_id.clone(),
+        source_org_name: input.org.source_org_name.clone(),
+        target_org_id: input.org.target_org_id.clone(),
+        target_org_name: input.org.target_org_name.clone(),
+        match_basis: input.match_basis.to_string(),
+        action: input.action.to_string(),
+        status: input.status.to_string(),
+        changed_fields: input.changed_fields,
+        changes: input.changes,
         source_file: Some("permissions.json".to_string()),
-        target_uid: live.map(|item| item.uid.clone()),
+        target_uid: input.live.map(|item| item.uid.clone()),
         target_version: None,
         target_evidence: Vec::new(),
         dependency_hints: Vec::new(),
-        blocked_reason,
-        review_hints,
-        permission: permission.map(permission_details),
+        blocked_reason: input.blocked_reason,
+        review_hints: input.review_hints,
+        permission: input.permission.map(permission_details),
     }
 }
 
@@ -452,24 +457,24 @@ pub(super) fn build_folder_permission_actions(
         let (live, match_basis, folder_block) =
             match_live_folder(source, &live_by_uid, &live_by_path, match_mode);
         if let Some(reason) = folder_block {
-            actions.push(build_permission_action(
+            actions.push(build_permission_action(PermissionActionInput {
                 org,
                 source,
-                None,
-                None,
-                REVIEW_ACTION_WOULD_UPDATE,
-                REVIEW_STATUS_BLOCKED,
-                &match_basis,
-                Vec::new(),
-                Vec::new(),
-                Some(if reason == STATUS_AMBIGUOUS_LIVE_FOLDER_PATH {
+                live: None,
+                permission: None,
+                action: REVIEW_ACTION_WOULD_UPDATE,
+                status: REVIEW_STATUS_BLOCKED,
+                match_basis: &match_basis,
+                changed_fields: Vec::new(),
+                changes: Vec::new(),
+                blocked_reason: Some(if reason == STATUS_AMBIGUOUS_LIVE_FOLDER_PATH {
                     REVIEW_REASON_AMBIGUOUS_LIVE_NAME_MATCH.to_string()
                 } else {
                     reason.clone()
                 }),
-                vec![reason],
-                actions.len(),
-            ));
+                review_hints: vec![reason],
+                seed: actions.len(),
+            }));
             continue;
         }
         let Some(live) = live else {
@@ -493,56 +498,56 @@ pub(super) fn build_folder_permission_actions(
             }
             match live_permissions.get(key) {
                 Some(live_permission) if *live_permission == *source_permission => {
-                    actions.push(build_permission_action(
+                    actions.push(build_permission_action(PermissionActionInput {
                         org,
                         source,
-                        Some(live),
-                        Some(source_permission),
-                        REVIEW_ACTION_SAME,
-                        REVIEW_STATUS_SAME,
-                        &match_basis,
-                        Vec::new(),
-                        Vec::new(),
-                        None,
+                        live: Some(live),
+                        permission: Some(source_permission),
+                        action: REVIEW_ACTION_SAME,
+                        status: REVIEW_STATUS_SAME,
+                        match_basis: &match_basis,
+                        changed_fields: Vec::new(),
+                        changes: Vec::new(),
+                        blocked_reason: None,
                         review_hints,
-                        actions.len(),
-                    ));
+                        seed: actions.len(),
+                    }));
                 }
                 Some(live_permission) => {
-                    actions.push(build_permission_action(
+                    actions.push(build_permission_action(PermissionActionInput {
                         org,
                         source,
-                        Some(live),
-                        Some(source_permission),
-                        REVIEW_ACTION_WOULD_UPDATE,
-                        REVIEW_STATUS_READY,
-                        &match_basis,
-                        vec!["permission".to_string()],
-                        vec![permission_change(
+                        live: Some(live),
+                        permission: Some(source_permission),
+                        action: REVIEW_ACTION_WOULD_UPDATE,
+                        status: REVIEW_STATUS_READY,
+                        match_basis: &match_basis,
+                        changed_fields: vec!["permission".to_string()],
+                        changes: vec![permission_change(
                             "permission",
                             live_permission.permission,
                             source_permission.permission,
                         )],
-                        None,
+                        blocked_reason: None,
                         review_hints,
-                        actions.len(),
-                    ));
+                        seed: actions.len(),
+                    }));
                 }
                 None => {
-                    actions.push(build_permission_action(
+                    actions.push(build_permission_action(PermissionActionInput {
                         org,
                         source,
-                        Some(live),
-                        Some(source_permission),
-                        REVIEW_ACTION_WOULD_CREATE,
-                        REVIEW_STATUS_READY,
-                        &match_basis,
-                        Vec::new(),
-                        Vec::new(),
-                        None,
+                        live: Some(live),
+                        permission: Some(source_permission),
+                        action: REVIEW_ACTION_WOULD_CREATE,
+                        status: REVIEW_STATUS_READY,
+                        match_basis: &match_basis,
+                        changed_fields: Vec::new(),
+                        changes: Vec::new(),
+                        blocked_reason: None,
                         review_hints,
-                        actions.len(),
-                    ));
+                        seed: actions.len(),
+                    }));
                 }
             }
         }
@@ -554,20 +559,20 @@ pub(super) fn build_folder_permission_actions(
             if live_permission.inherited {
                 review_hints.push("inherited=true".to_string());
             }
-            actions.push(build_permission_action(
+            actions.push(build_permission_action(PermissionActionInput {
                 org,
                 source,
-                Some(live),
-                Some(live_permission),
-                REVIEW_ACTION_EXTRA_REMOTE,
-                REVIEW_STATUS_WARNING,
-                &match_basis,
-                Vec::new(),
-                Vec::new(),
-                None,
+                live: Some(live),
+                permission: Some(live_permission),
+                action: REVIEW_ACTION_EXTRA_REMOTE,
+                status: REVIEW_STATUS_WARNING,
+                match_basis: &match_basis,
+                changed_fields: Vec::new(),
+                changes: Vec::new(),
+                blocked_reason: None,
                 review_hints,
-                actions.len(),
-            ));
+                seed: actions.len(),
+            }));
         }
     }
     actions

@@ -34,7 +34,7 @@ where
         Some(Value::Array(datasources)) => {
             for datasource in datasources {
                 let object = require_json_object(&datasource, "Grafana datasource payload")?;
-                append_datasource_resource_spec(&object, specs);
+                append_datasource_resource_spec(object, specs);
             }
         }
         Some(_) => return Err(message("Unexpected datasource list response from Grafana.")),
