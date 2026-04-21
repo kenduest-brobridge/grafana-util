@@ -101,16 +101,25 @@ impl<'a> SyncLiveClient<'a> {
 
     pub(crate) fn update_datasource(
         &self,
-        datasource_id: &str,
+        datasource_uid: &str,
+        fallback_datasource_id: Option<&str>,
         payload: &Map<String, Value>,
     ) -> Result<Map<String, Value>> {
-        self.api
-            .datasource()
-            .update_datasource(datasource_id, payload)
+        self.api.datasource().update_datasource_by_uid(
+            datasource_uid,
+            fallback_datasource_id,
+            payload,
+        )
     }
 
-    pub(crate) fn delete_datasource(&self, datasource_id: &str) -> Result<Value> {
-        self.api.datasource().delete_datasource(datasource_id)
+    pub(crate) fn delete_datasource(
+        &self,
+        datasource_uid: &str,
+        fallback_datasource_id: Option<&str>,
+    ) -> Result<Value> {
+        self.api
+            .datasource()
+            .delete_datasource_by_uid(datasource_uid, fallback_datasource_id)
     }
 
     pub(crate) fn create_alert_rule(
@@ -259,10 +268,11 @@ fn apply_datasource_operation_with_client(
             let target = client
                 .resolve_datasource_target(identity)?
                 .ok_or_else(|| datasource_sync_target_not_resolved(identity))?;
-            let datasource_id = resolve_live_datasource_id(&target, "update")?;
+            let datasource_uid = resolve_live_datasource_uid(&target, identity)?;
+            let datasource_id = resolve_live_datasource_id(&target, "update").ok();
             Ok(Value::Object(
                 client
-                    .update_datasource(&datasource_id, &body)?
+                    .update_datasource(&datasource_uid, datasource_id.as_deref(), &body)?
                     .into_iter()
                     .collect(),
             ))
@@ -271,9 +281,21 @@ fn apply_datasource_operation_with_client(
             let target = client
                 .resolve_datasource_target(identity)?
                 .ok_or_else(|| datasource_sync_target_not_resolved(identity))?;
-            let datasource_id = resolve_live_datasource_id(&target, "delete")?;
-            Ok(client.delete_datasource(&datasource_id)?)
+            let datasource_uid = resolve_live_datasource_uid(&target, identity)?;
+            let datasource_id = resolve_live_datasource_id(&target, "delete").ok();
+            Ok(client.delete_datasource(&datasource_uid, datasource_id.as_deref())?)
         }
         _ => Err(unsupported_datasource_sync_action(action)),
     }
+}
+
+fn resolve_live_datasource_uid(target: &Map<String, Value>, identity: &str) -> Result<String> {
+    target
+        .get("uid")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .or_else(|| (!identity.trim().is_empty()).then_some(identity.trim()))
+        .map(str::to_string)
+        .ok_or_else(|| crate::common::message("Datasource live apply requires a datasource uid."))
 }

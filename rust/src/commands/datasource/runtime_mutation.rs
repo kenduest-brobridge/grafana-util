@@ -145,17 +145,18 @@ pub(super) fn run_datasource_modify(args: super::DatasourceModifyArgs) -> Result
         )));
     }
     let payload = payload.ok_or_else(|| message("Datasource modify did not build a payload."))?;
-    let target_id =
-        target_id.ok_or_else(|| message("Datasource modify requires a live datasource id."))?;
-    datasource_client.update_datasource(
-        &target_id.to_string(),
+    datasource_client.update_datasource_by_uid(
+        &args.uid,
+        target_id.map(|id| id.to_string()).as_deref(),
         payload
             .as_object()
             .ok_or_else(|| message("Datasource modify payload must be an object."))?,
     )?;
     println!(
         "Modified datasource uid={} name={} id={}",
-        args.uid, name, target_id
+        args.uid,
+        name,
+        target_id.map(|id| id.to_string()).unwrap_or_default()
     );
     Ok(())
 }
@@ -238,14 +239,18 @@ pub(super) fn run_datasource_delete(args: super::DatasourceDeleteArgs) -> Result
     let target_id = matching
         .target_id
         .ok_or_else(|| message("Datasource delete requires a live datasource id."))?;
-    datasource_client.delete_datasource(&target_id.to_string())?;
+    let target_uid = if matching.target_uid.is_empty() {
+        args.uid.as_deref().unwrap_or_default()
+    } else {
+        matching.target_uid.as_str()
+    };
+    if target_uid.is_empty() {
+        return Err(message("Datasource delete requires a live datasource uid."));
+    }
+    datasource_client.delete_datasource_by_uid(target_uid, Some(&target_id.to_string()))?;
     println!(
         "Deleted datasource uid={} name={} type={} id={}",
-        if matching.target_uid.is_empty() {
-            args.uid.unwrap_or_default()
-        } else {
-            matching.target_uid
-        },
+        target_uid,
         if matching.target_name.is_empty() {
             args.name.unwrap_or_default()
         } else {

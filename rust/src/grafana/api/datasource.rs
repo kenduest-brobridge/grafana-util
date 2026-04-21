@@ -88,17 +88,37 @@ impl<'a> DatasourceResourceClient<'a> {
         }
     }
 
-    pub(crate) fn update_datasource(
+    pub(crate) fn update_datasource_by_uid(
         &self,
-        datasource_id: &str,
+        datasource_uid: &str,
+        fallback_datasource_id: Option<&str>,
         payload: &Map<String, Value>,
     ) -> Result<Map<String, Value>> {
-        match self.request_json(
+        let response = self.request_json(
             Method::PUT,
-            &format!("/api/datasources/{datasource_id}"),
+            &format!("/api/datasources/uid/{datasource_uid}"),
             &[],
             Some(&Value::Object(payload.clone())),
-        )? {
+        );
+        let value = match response {
+            Ok(value) => value,
+            Err(error) if error.status_code() == Some(404) => {
+                if let Some(datasource_id) =
+                    fallback_datasource_id.filter(|value| !value.trim().is_empty())
+                {
+                    self.request_json(
+                        Method::PUT,
+                        &format!("/api/datasources/{datasource_id}"),
+                        &[],
+                        Some(&Value::Object(payload.clone())),
+                    )?
+                } else {
+                    return Err(error);
+                }
+            }
+            Err(error) => return Err(error),
+        };
+        match value {
             Some(Value::Object(object)) => Ok(object),
             _ => Err(message(
                 "Unexpected datasource update response from Grafana.",
@@ -106,14 +126,36 @@ impl<'a> DatasourceResourceClient<'a> {
         }
     }
 
-    pub(crate) fn delete_datasource(&self, datasource_id: &str) -> Result<Value> {
-        Ok(self
-            .request_json(
-                Method::DELETE,
-                &format!("/api/datasources/{datasource_id}"),
-                &[],
-                None,
-            )?
-            .unwrap_or(Value::Null))
+    pub(crate) fn delete_datasource_by_uid(
+        &self,
+        datasource_uid: &str,
+        fallback_datasource_id: Option<&str>,
+    ) -> Result<Value> {
+        let response = self.request_json(
+            Method::DELETE,
+            &format!("/api/datasources/uid/{datasource_uid}"),
+            &[],
+            None,
+        );
+        match response {
+            Ok(value) => Ok(value.unwrap_or(Value::Null)),
+            Err(error) if error.status_code() == Some(404) => {
+                if let Some(datasource_id) =
+                    fallback_datasource_id.filter(|value| !value.trim().is_empty())
+                {
+                    Ok(self
+                        .request_json(
+                            Method::DELETE,
+                            &format!("/api/datasources/{datasource_id}"),
+                            &[],
+                            None,
+                        )?
+                        .unwrap_or(Value::Null))
+                } else {
+                    Err(error)
+                }
+            }
+            Err(error) => Err(error),
+        }
     }
 }

@@ -499,15 +499,18 @@ fn datasource_resource_client_crud_requests() {
         )
         .unwrap();
     let updated = datasource
-        .update_datasource(
-            "7",
+        .update_datasource_by_uid(
+            "prom-main",
+            Some("7"),
             &serde_json::json!({"uid":"prom-main","name":"Prometheus Updated"})
                 .as_object()
                 .unwrap()
                 .clone(),
         )
         .unwrap();
-    let deleted = datasource.delete_datasource("7").unwrap();
+    let deleted = datasource
+        .delete_datasource_by_uid("prom-main", Some("7"))
+        .unwrap();
 
     handle.join().unwrap();
 
@@ -518,8 +521,50 @@ fn datasource_resource_client_crud_requests() {
     let requests = requests.lock().unwrap().clone();
     assert_eq!(requests.len(), 3);
     assert!(requests[0].starts_with("POST /api/datasources "));
+    assert!(requests[1].starts_with("PUT /api/datasources/uid/prom-main "));
+    assert!(requests[2].starts_with("DELETE /api/datasources/uid/prom-main "));
+}
+
+#[test]
+fn datasource_resource_client_falls_back_to_id_when_uid_write_endpoint_is_missing() {
+    let responses = vec![
+        http_response("404 Not Found", r#"{"message":"Not found"}"#),
+        http_response(
+            "200 OK",
+            r#"{"uid":"prom-main","name":"Prometheus Updated"}"#,
+        ),
+        http_response("404 Not Found", r#"{"message":"Not found"}"#),
+        http_response("200 OK", r#"{"status":"deleted"}"#),
+    ];
+    let (base_url, requests, handle) = spawn_sequence_server(responses);
+    let api = build_test_api(base_url);
+    let datasource = DatasourceResourceClient::new(api.http_client());
+
+    let updated = datasource
+        .update_datasource_by_uid(
+            "prom-main",
+            Some("7"),
+            &serde_json::json!({"uid":"prom-main","name":"Prometheus Updated"})
+                .as_object()
+                .unwrap()
+                .clone(),
+        )
+        .unwrap();
+    let deleted = datasource
+        .delete_datasource_by_uid("prom-main", Some("7"))
+        .unwrap();
+
+    handle.join().unwrap();
+
+    assert_eq!(updated["name"], "Prometheus Updated");
+    assert_eq!(deleted["status"], "deleted");
+
+    let requests = requests.lock().unwrap().clone();
+    assert_eq!(requests.len(), 4);
+    assert!(requests[0].starts_with("PUT /api/datasources/uid/prom-main "));
     assert!(requests[1].starts_with("PUT /api/datasources/7 "));
-    assert!(requests[2].starts_with("DELETE /api/datasources/7 "));
+    assert!(requests[2].starts_with("DELETE /api/datasources/uid/prom-main "));
+    assert!(requests[3].starts_with("DELETE /api/datasources/7 "));
 }
 
 #[test]

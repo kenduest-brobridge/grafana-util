@@ -259,16 +259,27 @@ fn save_edit(
     }
     let existing = fetch_datasource_by_uid(client, &selected.uid)?;
     let payload = super::build_modify_payload(&existing, &updates)?;
-    let target_id = existing
-        .get("id")
-        .and_then(Value::as_i64)
-        .ok_or_else(|| message("Datasource browse edit requires a live datasource id."))?;
-    client.request_json(
+    let target_id = existing.get("id").and_then(Value::as_i64);
+    match client.request_json(
         Method::PUT,
-        &format!("/api/datasources/{target_id}"),
+        &format!("/api/datasources/uid/{}", selected.uid),
         &[],
         Some(&payload),
-    )?;
+    ) {
+        Ok(_) => {}
+        Err(error) if error.status_code() == Some(404) => {
+            let target_id = target_id.ok_or_else(|| {
+                message("Datasource browse edit requires a live datasource id fallback.")
+            })?;
+            client.request_json(
+                Method::PUT,
+                &format!("/api/datasources/{target_id}"),
+                &[],
+                Some(&payload),
+            )?;
+        }
+        Err(error) => return Err(error),
+    }
     let document = load_datasource_browse_document(client, args)?;
     state.replace_document(document);
     state.status = format!("Updated datasource {}.", selected.uid);
@@ -284,12 +295,23 @@ fn confirm_delete(
         .pending_delete
         .take()
         .ok_or_else(|| message("Datasource browse delete preview is missing."))?;
-    client.request_json(
+    match client.request_json(
         Method::DELETE,
-        &format!("/api/datasources/{}", pending.id),
+        &format!("/api/datasources/uid/{}", pending.uid),
         &[],
         None,
-    )?;
+    ) {
+        Ok(_) => {}
+        Err(error) if error.status_code() == Some(404) => {
+            client.request_json(
+                Method::DELETE,
+                &format!("/api/datasources/{}", pending.id),
+                &[],
+                None,
+            )?;
+        }
+        Err(error) => return Err(error),
+    }
     let document = load_datasource_browse_document(client, args)?;
     state.replace_document(document);
     state.status = format!("Deleted datasource {}.", pending.uid);
