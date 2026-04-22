@@ -451,23 +451,28 @@ Validation:
 
 ### Keep Public Command Wording Consistent
 
+Status: closed after public README and handbook examples were normalized to
+use `dashboard summary` for live review and `dashboard dependencies` for
+local/export review. The removed command path contract still keeps
+`dashboard analyze` as a blocked legacy reference.
+
 Problem:
 
 The project has intentionally moved away from stale `dashboard analyze` naming. Future command docs and help text can drift back unless wording stays guarded.
 
 Action:
 
-- [ ] Keep removed public paths in `scripts/contracts/command-surface.json`.
-- [ ] Keep docs checks rejecting removed public paths outside archive/trace contexts.
-- [ ] Prefer `dashboard summary` for live dashboard review.
-- [ ] Prefer `dashboard dependencies` for local/export dependency review.
-- [ ] Use `query analyzer` only for true internal analyzer code.
+- [x] Keep removed public paths in `scripts/contracts/command-surface.json`.
+- [x] Keep docs checks rejecting removed public paths outside archive/trace contexts.
+- [x] Prefer `dashboard summary` for live dashboard review.
+- [x] Prefer `dashboard dependencies` for local/export dependency review.
+- [x] Use `query analyzer` only for true internal analyzer code.
 
 Validation:
 
-- [ ] Run `make quality-docs-surface`.
-- [ ] Run `make quality-ai-workflow`.
-- [ ] Run targeted `rg` search for removed public paths.
+- [x] Run `make quality-docs-surface`.
+- [x] Run `make quality-ai-workflow`.
+- [x] Run targeted `rg` search for removed public paths.
 
 ## P3 - Product Surface Balance
 

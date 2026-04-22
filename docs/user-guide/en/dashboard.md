@@ -120,8 +120,8 @@ Use the dashboard area for estate-level governance:
 
 If your goal is not export or import, but understanding what a dashboard currently looks like, which dependencies it carries, and how variables resolve, start here.
 
-- `dashboard summary`: analyze one live dashboard's structure, queries, and dependencies.
-- `dashboard summary`: analyze an exported dashboard tree offline.
+- `dashboard summary`: review live dashboard structure, queries, and dependencies.
+- `dashboard dependencies`: review an exported dashboard tree offline.
 - `dashboard variables`: verify variables, datasource choices, and URL-scoped inputs.
 - `dashboard screenshot`: generate a reproducible dashboard or panel capture with a headless browser.
 - `dashboard dependencies`: trace the dashboard's upstream relationships at a glance.
@@ -273,7 +273,7 @@ This chapter helps you choose the workflow. Once you know which command you need
 | **Raw to Prompt** | `grafana-util dashboard convert raw-to-prompt --input-dir ./dashboards/raw --output-dir ./dashboards/prompt --overwrite --progress` |
 | **Import** | `grafana-util dashboard import --input-dir ./dashboards/raw --replace-existing --dry-run --table` |
 | **Diff** | `grafana-util dashboard diff --input-dir ./dashboards/raw --input-format raw` |
-| **Summary** | `grafana-util dashboard summary --input-dir ./dashboards/raw --input-format raw --output-format dependency` |
+| **Dependencies** | `grafana-util dashboard dependencies --input-dir ./dashboards/raw --input-format raw --output-format text` |
 | **Delete** | `grafana-util dashboard delete --uid <UID> --url <URL> --basic-user admin --basic-password admin` |
 | **Variables** | `grafana-util dashboard variables --uid <UID> --url <URL> --table` |
 | **Patch** | `grafana-util dashboard patch --input <FILE> --name "New Title" --output <FILE>` |

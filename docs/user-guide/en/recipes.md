@@ -83,7 +83,7 @@ Read each recipe as a small case study. Start from the problem statement, check 
 
 ```bash
 # Generate a report of all required datasources in your export tree
-grafana-util dashboard dependencies --input-dir ./backups/raw --input-format raw --output-format dependency
+grafana-util dashboard dependencies --input-dir ./backups/raw --input-format raw --output-format text
 ```
 
 **What to check**: Ensure every datasource listed in the dependency report exists in your target Grafana's `datasource list`.

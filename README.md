@@ -27,7 +27,7 @@ Grafana itself does not make those workflows especially convenient for dashboard
 | Before | After |
 | :--- | :--- |
 | Live checks, local JSON edits, dashboard exports, and apply steps are handled through separate scripts or UI clicks. | Start with `grafana-util status live`, inspect the workspace, run `grafana-util workspace preview`, then apply only after review. |
-| Dashboard dependency review means manually opening panels and data source settings. | Run `grafana-util dashboard summary --input-dir ./dashboards/raw --input-format raw --output-format dependency` to produce a reviewable dependency report. |
+| Dashboard dependency review means manually opening panels and data source settings. | Run `grafana-util dashboard dependencies --input-dir ./dashboards/raw --input-format raw --output-format text` to produce a reviewable dependency report. |
 
 Common uses:
 
@@ -35,7 +35,7 @@ Common uses:
 | :--- | :--- |
 | confirm Grafana is reachable | `grafana-util status live` |
 | save a reusable connection | `grafana-util config profile add ...` |
-| export or review dashboards | `grafana-util export dashboard` or `grafana-util dashboard summary` |
+| export or review dashboards | `grafana-util export dashboard`, `grafana-util dashboard summary` for live review, or `grafana-util dashboard dependencies` for local/export review |
 | review local changes before apply | `grafana-util workspace scan` then `workspace preview` |
 | work on alerts or routes | `grafana-util alert plan` or `alert preview-route` |
 | manage users, teams, orgs, or service accounts | `grafana-util access ...` |

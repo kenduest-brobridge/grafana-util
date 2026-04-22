@@ -83,7 +83,7 @@
 
 ```bash
 # 解決方案：匯入前先跑 pre-import inspection。
-grafana-util dashboard dependencies --input-dir ./backups/raw --input-format raw --output-format dependency
+grafana-util dashboard dependencies --input-dir ./backups/raw --input-format raw --output-format text
 ```
 
 **檢查重點**：確認依賴報告列出的每個 datasource，都存在於目標環境的 `datasource list`。
