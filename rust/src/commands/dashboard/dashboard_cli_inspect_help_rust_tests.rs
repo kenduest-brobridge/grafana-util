@@ -558,6 +558,27 @@ fn impact_help_mentions_git_sync_input_format() {
 }
 
 #[test]
+fn dashboard_cli_inspect_help_uses_review_wording_for_policy_source_errors() {
+    let error = DashboardCliArgs::try_parse_from([
+        "grafana-util",
+        "policy",
+        "--policy-source",
+        "builtin",
+        "--builtin-policy",
+        "default",
+        "--input-dir",
+        "./dashboards",
+        "--input-format",
+        "analysis",
+    ])
+    .unwrap_err()
+    .to_string();
+
+    assert!(error.contains("unsupported dashboard review input format"));
+    assert!(!error.contains("unsupported dashboard analysis input format"));
+}
+
+#[test]
 fn summary_live_help_mentions_report_and_panel_filter_flags() {
     let help = render_dashboard_subcommand_help("summary");
 

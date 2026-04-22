@@ -9,7 +9,8 @@ use crate::access::{Result, Scope, UserBrowseArgs};
 use crate::common::message;
 
 use super::user_browse_dialog::EditDialogState;
-use super::user_browse_input::{load_rows, BrowseAction};
+use super::user_browse_input::load_rows;
+use super::user_browse_key::BrowseAction;
 use super::user_browse_reload::reload_rows;
 use super::user_browse_state::{row_kind, BrowserState, DisplayMode, PaneFocus, SearchDirection};
 

@@ -72,7 +72,7 @@ impl Drop for TempInspectDir {
     }
 }
 
-pub(crate) fn build_analysis_live_export_args(
+pub(crate) fn build_review_live_export_args(
     common: &crate::dashboard::CommonCliArgs,
     output_dir: PathBuf,
     page_size: usize,
@@ -106,7 +106,7 @@ pub(crate) fn build_analysis_live_export_args(
 }
 
 fn build_live_export_args(args: &InspectLiveArgs, output_dir: PathBuf) -> ExportArgs {
-    let mut export_args = build_analysis_live_export_args(
+    let mut export_args = build_review_live_export_args(
         &args.common,
         output_dir,
         args.page_size,
@@ -117,10 +117,7 @@ fn build_live_export_args(args: &InspectLiveArgs, output_dir: PathBuf) -> Export
     export_args
 }
 
-pub(crate) fn prepare_live_analysis_import_dir(
-    temp_root: &Path,
-    all_orgs: bool,
-) -> Result<PathBuf> {
+pub(crate) fn prepare_live_review_import_dir(temp_root: &Path, all_orgs: bool) -> Result<PathBuf> {
     if !all_orgs {
         return Ok(temp_root.join(RAW_EXPORT_SUBDIR));
     }
@@ -343,7 +340,7 @@ fn run_interactive_inspect_live_tui_from_dir(input_dir: &Path) -> Result<usize> 
     );
     let governance = build_export_inspection_governance_document(&summary, &report);
     eprintln!(
-        "[summary-live --interactive] launching analysis workbench: {}",
+        "[summary-live --interactive] launching review workbench: {}",
         input_dir.display()
     );
     run_inspect_live_tui(&summary, &governance, &report)?;
@@ -591,7 +588,7 @@ pub(crate) fn prepare_inspect_live_import_dir(
     temp_root: &Path,
     args: &InspectLiveArgs,
 ) -> Result<PathBuf> {
-    prepare_live_analysis_import_dir(temp_root, args.all_orgs)
+    prepare_live_review_import_dir(temp_root, args.all_orgs)
 }
 
 #[cfg(test)]

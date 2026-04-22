@@ -19,7 +19,7 @@ fn parse_dashboard_summary_input_format(
         "provisioning" => Ok(super::DashboardImportInputFormat::Provisioning),
         "git-sync" => Ok(super::DashboardImportInputFormat::Raw),
         other => Err(format!(
-            "unsupported dashboard analysis input format {other:?}; use raw, provisioning, or git-sync"
+            "unsupported dashboard review input format {other:?}; use raw, provisioning, or git-sync"
         )),
     }
 }

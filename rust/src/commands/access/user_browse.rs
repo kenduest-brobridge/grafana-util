@@ -26,6 +26,9 @@ mod user_browse_dispatch;
 #[path = "user_browse_input.rs"]
 mod user_browse_input;
 #[cfg(feature = "tui")]
+#[path = "user_browse_key.rs"]
+mod user_browse_key;
+#[cfg(feature = "tui")]
 #[path = "user_browse_mutation.rs"]
 mod user_browse_mutation;
 #[cfg(feature = "tui")]
@@ -38,7 +41,9 @@ mod user_browse_render;
 #[path = "user_browse_state.rs"]
 mod user_browse_state;
 #[cfg(feature = "tui")]
-use user_browse_input::{handle_key, load_rows};
+use user_browse_input::load_rows;
+#[cfg(feature = "tui")]
+use user_browse_key::handle_key;
 #[cfg(feature = "tui")]
 use user_browse_render::render_frame;
 #[cfg(feature = "tui")]
@@ -90,9 +95,9 @@ where
             continue;
         }
         match handle_key(&mut request_json, args, &mut state, &key)? {
-            user_browse_input::BrowseAction::Continue => {}
-            user_browse_input::BrowseAction::Exit => return Ok(BrowseSwitch::Exit),
-            user_browse_input::BrowseAction::JumpToTeam => {
+            user_browse_key::BrowseAction::Continue => {}
+            user_browse_key::BrowseAction::Exit => return Ok(BrowseSwitch::Exit),
+            user_browse_key::BrowseAction::JumpToTeam => {
                 return Ok(BrowseSwitch::ToTeam(default_team_browse_args_from_user(
                     args,
                 )))

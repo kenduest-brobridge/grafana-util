@@ -12,7 +12,7 @@ use super::inspect::{
 };
 use super::inspect_governance::build_export_inspection_governance_document;
 use super::inspect_live::{
-    build_analysis_live_export_args, prepare_live_analysis_import_dir, TempInspectDir,
+    build_review_live_export_args, prepare_live_review_import_dir, TempInspectDir,
 };
 use super::inspect_report::build_export_inspection_query_report_document;
 use super::source_loader::load_dashboard_source;
@@ -96,7 +96,7 @@ fn build_artifacts_from_live(
     source: &DashboardLiveReviewSource<'_>,
 ) -> Result<DashboardReviewArtifacts> {
     let temp_dir = TempInspectDir::new("dashboard-review-live")?;
-    let export_args: ExportArgs = build_analysis_live_export_args(
+    let export_args: ExportArgs = build_review_live_export_args(
         source.common,
         temp_dir.path.clone(),
         source.page_size,
@@ -104,7 +104,7 @@ fn build_artifacts_from_live(
         source.all_orgs,
     );
     let _ = export_dashboards_with_org_clients(&export_args)?;
-    let input_dir = prepare_live_analysis_import_dir(&temp_dir.path, source.all_orgs)?;
+    let input_dir = prepare_live_review_import_dir(&temp_dir.path, source.all_orgs)?;
     build_artifacts_from_export_dir(
         &input_dir,
         DashboardImportInputFormat::Raw,
@@ -422,6 +422,51 @@ mod tests {
             }
             _ => panic!("expected saved artifact source"),
         }
+    }
+
+    #[test]
+    fn resolve_dashboard_review_artifacts_reuses_saved_review_artifacts_with_query_report() {
+        let temp = tempdir().unwrap();
+        let governance_path = temp.path().join("governance.json");
+        let queries_path = temp.path().join("queries.json");
+        fs::write(
+            &governance_path,
+            serde_json::to_string_pretty(&json!({
+                "summary": {"dashboardCount": 1},
+                "dashboardGovernance": [],
+                "dashboardDatasourceEdges": []
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        fs::write(
+            &queries_path,
+            serde_json::to_string_pretty(&json!({
+                "summary": {"dashboardCount": 1, "queryRecordCount": 0},
+                "queries": []
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        let common = make_common_args();
+
+        let artifacts = resolve_dashboard_review_artifacts(&DashboardReviewSourceArgs {
+            common: &common,
+            page_size: 500,
+            org_id: None,
+            all_orgs: false,
+            input_dir: None,
+            input_format: DashboardImportInputFormat::Raw,
+            input_type: None,
+            governance: Some(&governance_path),
+            queries: Some(&queries_path),
+            require_queries: true,
+        })
+        .unwrap();
+
+        assert_eq!(artifacts.governance["summary"]["dashboardCount"], json!(1));
+        assert_eq!(artifacts.queries["summary"]["queryRecordCount"], json!(0));
+        assert_eq!(artifacts.queries["queries"], json!([]));
     }
 
     #[test]

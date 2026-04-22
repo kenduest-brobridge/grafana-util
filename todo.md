@@ -85,17 +85,22 @@ as a focused commit group with narrow validation.
 
 ### P2 - Split `common/mod.rs`
 
-- [ ] Split only after the sync/API/dashboard cleanup above settles to avoid noisy import churn.
-- [ ] Extract shared error/result definitions into `common/error.rs`.
+- [x] Split only after the sync/API/dashboard cleanup above settles to avoid noisy import churn.
+- [x] Extract shared error/result definitions into `common/error.rs`.
 - [ ] Extract auth/header resolution into `common/auth.rs`.
 - [ ] Extract JSON render/color handling into `common/json_output.rs`.
 - [ ] Extract file output helpers into `common/io.rs`.
 - [ ] Extract string/path normalization helpers into `common/normalize.rs` if call sites stay readable.
 - [ ] Extract shared diff document helpers into `common/diff_document.rs`.
-- [ ] Keep `common/mod.rs` as the facade and preserve existing imports where practical.
-- [ ] Run `cargo test --manifest-path rust/Cargo.toml --quiet common --lib`.
+- [x] Keep `common/mod.rs` as the facade and preserve existing imports where practical.
+- [x] Run `cargo test --manifest-path rust/Cargo.toml --quiet common --lib`.
 - [ ] Run CLI help/parser tests.
 - [ ] Run full Rust tests.
+
+Task C first boundary complete: error/result definitions now live in
+`common/error.rs`; `common/mod.rs` remains the public facade. Auth, JSON,
+file output, normalization, diff-document, CLI help/parser, and full Rust test
+passes remain open.
 
 Completed cleanup now closed:
 
@@ -251,9 +256,11 @@ Problem:
 
 Action:
 
-- [ ] Extract only the next stable focused boundary if it remains mixed. Candidate boundary: key handling.
-- [ ] Keep public behavior unchanged.
-- [ ] Do not create all candidate modules in one pass unless each one removes a clearly mixed responsibility.
+- [x] Extract only the next stable focused boundary if it remains mixed. Candidate boundary: key handling.
+- [x] Keep public behavior unchanged.
+- [x] Do not create all candidate modules in one pass unless each one removes a clearly mixed responsibility.
+
+Completion note: extracted `user_browse_key.rs` as the user-browse modal/key-routing boundary, leaving row loading in `user_browse_input.rs`. Verified `cargo test --manifest-path rust/Cargo.toml --quiet access --lib`; full-tree `cargo fmt --manifest-path rust/Cargo.toml --all --check` is currently blocked by unrelated dashboard formatting drift, while the touched access files pass `rustfmt --edition 2021 --check`.
 
 Validation:
 
@@ -425,7 +432,7 @@ Validation:
 - [ ] Run `make schema-check`.
 - [ ] Run `make quality-docs-surface`.
 
-## P2 - Dashboard Review Model Completion
+## P2 - Dashboard Review Model Completion - Closed 2026-04-23
 
 ### Wire Review Source Model Into Remaining Dashboard Paths
 
@@ -433,19 +440,23 @@ Problem:
 
 `review_source.rs` now models export-tree, saved-artifact, and live review inputs for topology/impact/policy. Some dashboard summary/help/internal names still use inspection/analysis vocabulary where the concept is really review or summary.
 
+Completion note:
+
+Closed by auditing topology/impact/policy source resolution through `review_source`, renaming stale review-source `analysis` wording while keeping true query analyzer terms, and adding focused Rust coverage for saved review artifacts plus public review-source wording.
+
 Action:
 
-- [ ] Audit dashboard modules for stale user-facing `analysis` wording.
-- [ ] Keep true query analyzer internals as analyzer names.
-- [ ] Route any remaining policy/topology/impact source resolution through `review_source`.
-- [ ] Add tests around saved-artifact vs live/export source selection.
-- [ ] Do not rename internal analyzer modules that really parse query language or query family behavior.
+- [x] Audit dashboard modules for stale user-facing `analysis` wording.
+- [x] Keep true query analyzer internals as analyzer names.
+- [x] Route any remaining policy/topology/impact source resolution through `review_source`.
+- [x] Add tests around saved-artifact vs live/export source selection.
+- [x] Do not rename internal analyzer modules that really parse query language or query family behavior.
 
 Validation:
 
-- [ ] Run `cargo test --manifest-path rust/Cargo.toml --quiet topology`.
-- [ ] Run `cargo test --manifest-path rust/Cargo.toml --quiet governance_gate`.
-- [ ] Run `cargo test --manifest-path rust/Cargo.toml --quiet dashboard_cli_inspect_help`.
+- [x] Run `cargo test --manifest-path rust/Cargo.toml --quiet topology`.
+- [x] Run `cargo test --manifest-path rust/Cargo.toml --quiet governance_gate`.
+- [x] Run `cargo test --manifest-path rust/Cargo.toml --quiet dashboard_cli_inspect_help`.
 
 ## P3 - Docs And Generated Surface Discipline
 
