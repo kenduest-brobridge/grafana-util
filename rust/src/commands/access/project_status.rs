@@ -8,9 +8,7 @@
 
 use serde_json::Value;
 
-use crate::project_status::{
-    status_finding, ProjectDomainStatus, PROJECT_STATUS_PARTIAL, PROJECT_STATUS_READY,
-};
+use crate::project_status::{ProjectDomainStatus, PROJECT_STATUS_PARTIAL, PROJECT_STATUS_READY};
 use crate::project_status_model::{StatusReading, StatusRecordCount};
 
 use super::{
@@ -119,7 +117,7 @@ pub(crate) fn build_access_domain_status(
             total_records += summary_number(document, "recordCount");
         } else {
             missing_labels.push(spec.label);
-            warnings.push(status_finding(
+            warnings.push(StatusRecordCount::new(
                 ACCESS_MISSING_BUNDLE_KIND,
                 1,
                 spec.signal_key,
@@ -179,7 +177,7 @@ pub(crate) fn build_access_domain_status(
             .map(|item| (*item).to_string())
             .collect(),
         blockers: Vec::<StatusRecordCount>::new(),
-        warnings: warnings.into_iter().map(Into::into).collect(),
+        warnings,
         next_actions,
         freshness: Default::default(),
     };
@@ -190,7 +188,7 @@ pub(crate) fn build_access_domain_status(
 #[cfg(test)]
 mod access_project_status_rust_tests {
     use super::{build_access_domain_status, AccessDomainStatusInputs};
-    use crate::project_status::{PROJECT_STATUS_PARTIAL, PROJECT_STATUS_READY};
+    use crate::project_status::{status_finding, PROJECT_STATUS_PARTIAL, PROJECT_STATUS_READY};
     use serde_json::json;
 
     #[test]
@@ -230,7 +228,17 @@ mod access_project_status_rust_tests {
             ]
         );
         assert!(domain.blockers.is_empty());
-        assert_eq!(domain.warnings.len(), 2);
+        assert_eq!(
+            domain.warnings,
+            vec![
+                status_finding("missing-bundle-kind", 1, "summary.teams.recordCount"),
+                status_finding(
+                    "missing-bundle-kind",
+                    1,
+                    "summary.serviceAccounts.recordCount"
+                ),
+            ]
+        );
         assert_eq!(
             domain.next_actions,
             vec![

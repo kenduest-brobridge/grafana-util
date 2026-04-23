@@ -58,6 +58,20 @@ fn load_fixture(name: &str) -> serde_json::Value {
 }
 
 fn start_live_export_mock_server() -> (String, thread::JoinHandle<()>) {
+    start_live_export_mock_server_with_library_model(json!({
+        "id": 11,
+        "type": "graph",
+        "datasource": {"uid": "prom-main", "type": "prometheus"},
+        "targets": [{
+            "refId": "A",
+            "datasource": {"uid": "prom-main", "type": "prometheus"}
+        }]
+    }))
+}
+
+fn start_live_export_mock_server_with_library_model(
+    library_model: serde_json::Value,
+) -> (String, thread::JoinHandle<()>) {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let address = listener.local_addr().unwrap();
     let server = thread::spawn(move || {
@@ -110,15 +124,7 @@ fn start_live_export_mock_server() -> (String, thread::JoinHandle<()>) {
                         "name": "Shared Panel",
                         "kind": 1,
                         "type": "graph",
-                        "model": {
-                            "id": 11,
-                            "type": "graph",
-                            "datasource": {"uid": "prom-main", "type": "prometheus"},
-                            "targets": [{
-                                "refId": "A",
-                                "datasource": {"uid": "prom-main", "type": "prometheus"}
-                            }]
-                        }
+                        "model": library_model.clone()
                     }
                 }),
                 other => panic!("unexpected request path: {other}"),
@@ -1011,6 +1017,97 @@ fn raw_to_prompt_inlines_live_library_panel_models_without_losing_prompt_semanti
         prompt["__elements"]["shared-panel"]["model"]["targets"][0]["datasource"]["uid"],
         serde_json::Value::String("${DS_PROM_MAIN}".to_string())
     );
+}
+
+#[test]
+fn raw_to_prompt_maps_datasource_variable_current_when_live_library_model_uses_placeholder() {
+    let temp = tempdir().unwrap();
+    let input = temp.path().join("library-variable-live.json");
+    write_json(
+        &input,
+        json!({
+            "uid": "library-variable-live",
+            "title": "Library Variable Live",
+            "templating": {
+                "list": [{
+                    "name": "datasource",
+                    "type": "datasource",
+                    "query": "prometheus",
+                    "current": {
+                        "selected": true,
+                        "text": "Prometheus Main",
+                        "value": "prom-main"
+                    },
+                    "options": []
+                }]
+            },
+            "panels": [{
+                "id": 1,
+                "title": "Shared Panel",
+                "type": "graph",
+                "libraryPanel": {"uid": "shared-panel", "name": "Shared Panel"},
+                "targets": []
+            }]
+        }),
+    );
+
+    let (base_url, server) = start_live_export_mock_server_with_library_model(json!({
+        "id": 11,
+        "type": "graph",
+        "datasource": {"uid": "$datasource", "type": "prometheus"},
+        "targets": [{
+            "refId": "A",
+            "datasource": {"uid": "$datasource", "type": "prometheus"}
+        }]
+    }));
+
+    let mut args = make_args();
+    args.input_file = vec![input.clone()];
+    args.url = Some(base_url);
+    args.api_token = Some("token".to_string());
+
+    run_raw_to_prompt(&args).unwrap();
+    server.join().unwrap();
+
+    let output = temp.path().join("library-variable-live.prompt.json");
+    let prompt: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(output).unwrap()).unwrap();
+    let inputs = prompt["__inputs"].as_array().unwrap();
+    assert_eq!(inputs.len(), 1);
+    assert_eq!(inputs[0]["pluginId"], "prometheus");
+    assert!(prompt["templating"]["list"][0]["current"]["value"]
+        .as_str()
+        .is_some_and(|value| value.starts_with("${DS_")));
+    assert_eq!(
+        prompt["__elements"]["shared-panel"]["model"]["datasource"]["uid"],
+        serde_json::Value::String("$datasource".to_string())
+    );
+    assert_eq!(
+        prompt["__elements"]["shared-panel"]["model"]["targets"][0]["datasource"]["uid"],
+        serde_json::Value::String("$datasource".to_string())
+    );
+}
+
+#[test]
+fn raw_to_prompt_rejects_minimal_dashboard_v2_resource_spec_shape() {
+    let temp = tempdir().unwrap();
+    let input = temp.path().join("minimal-v2.json");
+    write_json(
+        &input,
+        json!({
+            "kind": "Dashboard",
+            "metadata": {"name": "minimal-v2"},
+            "spec": {
+                "title": "Minimal V2"
+            }
+        }),
+    );
+
+    let mut args = make_args();
+    args.input_file = vec![input];
+
+    let error = run_raw_to_prompt(&args).unwrap_err().to_string();
+    assert!(error.contains("dashboard raw-to-prompt completed with 1 failure"));
 }
 
 #[test]

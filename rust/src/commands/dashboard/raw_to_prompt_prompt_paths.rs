@@ -114,7 +114,12 @@ pub(crate) fn is_dashboard_v2_payload(payload: &Value) -> bool {
     object
         .get("spec")
         .and_then(Value::as_object)
-        .is_some_and(|spec| spec.contains_key("elements") || spec.contains_key("variables"))
+        .is_some_and(|spec| {
+            object.contains_key("apiVersion")
+                || object.contains_key("metadata")
+                || spec.contains_key("elements")
+                || spec.contains_key("variables")
+        })
 }
 
 pub(crate) fn collect_library_panel_portability_warnings(dashboard: &Value) -> Vec<String> {
@@ -323,6 +328,16 @@ mod tests {
         let payload = json!({
             "apiVersion": "dashboard.grafana.app/v1alpha1",
             "kind": "Dashboard"
+        });
+        assert!(is_dashboard_v2_payload(&payload));
+    }
+
+    #[test]
+    fn dashboard_v2_payload_is_detected_from_resource_spec_wrapper() {
+        let payload = json!({
+            "kind": "Dashboard",
+            "metadata": {"name": "minimal-v2"},
+            "spec": {"title": "Minimal V2"}
         });
         assert!(is_dashboard_v2_payload(&payload));
     }

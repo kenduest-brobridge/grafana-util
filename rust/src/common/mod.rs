@@ -4,181 +4,35 @@
 //! - Provide one canonical `Result` and `GrafanaCliError` API shared by all modules.
 //! - Centralize auth/header derivation, interactive credential prompting, and input parsing.
 //! - Own generic JSON helpers, FS helpers, and output serializers that keep command behavior uniform.
-use base64::{engine::general_purpose::STANDARD, Engine as _};
-use clap::{ColorChoice, ValueEnum};
-use regex::Regex;
-use rpassword::prompt_password;
-use serde::Serialize;
-use serde_json::{json, Map, Value};
-use std::cell::Cell;
-use std::env;
-use std::fs;
-use std::io::IsTerminal;
-use std::path::Path;
-use std::sync::OnceLock;
+use serde_json::{Map, Value};
 
+mod auth;
+mod diff_document;
 mod error;
+mod io;
+mod json_output;
+mod normalize;
+#[allow(unused_imports)]
+pub use auth::{env_value, resolve_auth_headers};
+#[allow(unused_imports)]
+pub use diff_document::{build_shared_diff_document, DiffOutputFormat, SharedDiffSummary};
+#[allow(unused_imports)]
 pub use error::{
     api_response, editor, invalid_header_name, invalid_header_value, invalid_url, message,
     parse_error, tui, validation, GrafanaCliError, Result,
 };
-
-thread_local! {
-    static JSON_COLOR_CHOICE: Cell<CliColorChoice> = const { Cell::new(CliColorChoice::Auto) };
-}
-
-const ANSI_RESET: &str = "\x1b[0m";
-const ANSI_JSON_KEY: &str = "\x1b[1;36m";
-const ANSI_JSON_STRING: &str = "\x1b[32m";
-const ANSI_JSON_NUMBER: &str = "\x1b[33m";
-const ANSI_JSON_BOOL: &str = "\x1b[35m";
-const ANSI_JSON_NULL: &str = "\x1b[2;90m";
-static ANSI_ESCAPE_RE: OnceLock<Regex> = OnceLock::new();
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum JsonContext {
-    ObjectExpectKey,
-    ObjectExpectValue,
-    Array,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
-pub enum CliColorChoice {
-    Auto,
-    Always,
-    #[value(alias = "none", alias = "off")]
-    Never,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
-pub enum DiffOutputFormat {
-    Text,
-    Json,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Default)]
-#[serde(rename_all = "camelCase")]
-pub struct SharedDiffSummary {
-    pub checked: usize,
-    pub same: usize,
-    pub different: usize,
-    pub missing_remote: usize,
-    pub extra_remote: usize,
-    pub ambiguous: usize,
-}
-
-impl From<CliColorChoice> for ColorChoice {
-    fn from(value: CliColorChoice) -> Self {
-        match value {
-            CliColorChoice::Auto => ColorChoice::Auto,
-            CliColorChoice::Always => ColorChoice::Always,
-            CliColorChoice::Never => ColorChoice::Never,
-        }
-    }
-}
-
-/// Set the thread-local JSON color policy used by shared render helpers.
-pub fn set_json_color_choice(choice: CliColorChoice) {
-    JSON_COLOR_CHOICE.with(|cell| cell.set(choice));
-}
-
-/// Read the current thread-local JSON color policy.
-pub fn json_color_choice() -> CliColorChoice {
-    JSON_COLOR_CHOICE.with(Cell::get)
-}
-
-/// Return whether JSON output should be colorized for the given policy and terminal state.
-pub fn json_color_enabled(choice: CliColorChoice, stdout_is_terminal: bool) -> bool {
-    match choice {
-        CliColorChoice::Always => true,
-        CliColorChoice::Never => false,
-        CliColorChoice::Auto => stdout_is_terminal,
-    }
-}
-
-/// Render pretty JSON with the active thread-local color policy.
-pub fn render_json_value<T>(payload: &T) -> Result<String>
-where
-    T: Serialize + ?Sized,
-{
-    render_json_value_with_choice(
-        payload,
-        json_color_choice(),
-        std::io::stdout().is_terminal(),
-    )
-}
-
-/// Render pretty JSON with an explicit color policy.
-pub fn render_json_value_with_choice<T>(
-    payload: &T,
-    choice: CliColorChoice,
-    stdout_is_terminal: bool,
-) -> Result<String>
-where
-    T: Serialize + ?Sized,
-{
-    let rendered = serde_json::to_string_pretty(payload)?;
-    if json_color_enabled(choice, stdout_is_terminal) {
-        Ok(format!("{}\n", colorize_json_pretty(&rendered)))
-    } else {
-        Ok(format!("{rendered}\n"))
-    }
-}
-
-/// Remove ANSI escape sequences so persisted output files remain plain text.
-pub fn strip_ansi_codes(text: &str) -> String {
-    let ansi_re = ANSI_ESCAPE_RE
-        .get_or_init(|| Regex::new(r"\x1b\[[0-9;?]*[ -/]*[@-~]").expect("valid ANSI regex"));
-    ansi_re.replace_all(text, "").into_owned()
-}
-
-/// Write user-facing rendered output to disk without ANSI color codes.
-pub fn write_plain_output_file(path: &Path, output: &str) -> Result<()> {
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)?;
-    }
-    let normalized = strip_ansi_codes(output).trim_end_matches('\n').to_string();
-    fs::write(path, format!("{normalized}\n"))?;
-    Ok(())
-}
-
-pub fn build_shared_diff_document(
-    kind: &str,
-    schema_version: i64,
-    summary: SharedDiffSummary,
-    rows: &[Value],
-) -> Value {
-    json!({
-        "kind": kind,
-        "schemaVersion": schema_version,
-        "toolVersion": TOOL_VERSION,
-        "summary": summary,
-        "rows": rows,
-    })
-}
-
-pub fn should_print_stdout(output_file: Option<&Path>, also_stdout: bool) -> bool {
-    output_file.is_none() || also_stdout
-}
-
-/// Persist plain-text artifacts and optionally mirror them to stdout.
-pub fn emit_plain_output(
-    output: &str,
-    output_file: Option<&Path>,
-    also_stdout: bool,
-) -> Result<()> {
-    let normalized = output.trim_end_matches('\n');
-    if normalized.is_empty() {
-        return Ok(());
-    }
-    if let Some(path) = output_file {
-        write_plain_output_file(path, normalized)?;
-    }
-    if should_print_stdout(output_file, also_stdout) {
-        println!("{normalized}");
-    }
-    Ok(())
-}
+#[allow(unused_imports)]
+pub use io::{
+    emit_plain_output, load_json_object_file, should_print_stdout, write_json_file,
+    write_plain_output_file,
+};
+#[allow(unused_imports)]
+pub use json_output::{
+    json_color_choice, json_color_enabled, render_json_value, render_json_value_with_choice,
+    set_json_color_choice, strip_ansi_codes, CliColorChoice,
+};
+#[allow(unused_imports)]
+pub use normalize::sanitize_path_component;
 
 /// Print one supported column id per line for discoverability-style CLI flags.
 pub fn print_supported_columns(columns: &[&str]) {
@@ -188,112 +42,6 @@ pub fn print_supported_columns(columns: &[&str]) {
 /// Return whether a selected column list asked for the full human-readable set.
 pub fn requested_columns_include_all(columns: &[String]) -> bool {
     columns.iter().any(|value| value == "all")
-}
-
-fn colorize_json_pretty(rendered: &str) -> String {
-    let mut colored = String::with_capacity(rendered.len() + 32);
-    let mut chars = rendered.chars().peekable();
-    let mut contexts: Vec<JsonContext> = Vec::new();
-
-    while let Some(ch) = chars.next() {
-        match ch {
-            '"' => {
-                let mut token = String::from("\"");
-                let mut escaped = false;
-                for next in chars.by_ref() {
-                    token.push(next);
-                    if escaped {
-                        escaped = false;
-                        continue;
-                    }
-                    if next == '\\' {
-                        escaped = true;
-                    } else if next == '"' {
-                        break;
-                    }
-                }
-                let is_key = matches!(contexts.last(), Some(JsonContext::ObjectExpectKey));
-                push_ansi_colored(
-                    &mut colored,
-                    if is_key {
-                        ANSI_JSON_KEY
-                    } else {
-                        ANSI_JSON_STRING
-                    },
-                    &token,
-                );
-            }
-            '{' => {
-                colored.push(ch);
-                contexts.push(JsonContext::ObjectExpectKey);
-            }
-            '}' => {
-                colored.push(ch);
-                contexts.pop();
-            }
-            '[' => {
-                colored.push(ch);
-                contexts.push(JsonContext::Array);
-            }
-            ']' => {
-                colored.push(ch);
-                contexts.pop();
-            }
-            ':' => {
-                colored.push(ch);
-                if let Some(context) = contexts.last_mut() {
-                    if matches!(context, JsonContext::ObjectExpectKey) {
-                        *context = JsonContext::ObjectExpectValue;
-                    }
-                }
-            }
-            ',' => {
-                colored.push(ch);
-                if let Some(context) = contexts.last_mut() {
-                    if matches!(context, JsonContext::ObjectExpectValue) {
-                        *context = JsonContext::ObjectExpectKey;
-                    }
-                }
-            }
-            ch if ch.is_whitespace() => colored.push(ch),
-            ch => {
-                let mut token = String::from(ch);
-                while let Some(&next) = chars.peek() {
-                    if next.is_whitespace()
-                        || matches!(next, '{' | '}' | '[' | ']' | ':' | ',' | '"')
-                    {
-                        break;
-                    }
-                    token.push(chars.next().expect("peeked character should exist"));
-                }
-                let color = match token.as_str() {
-                    "true" | "false" => ANSI_JSON_BOOL,
-                    "null" => ANSI_JSON_NULL,
-                    _ if token
-                        .chars()
-                        .next()
-                        .is_some_and(|first| first == '-' || first.is_ascii_digit()) =>
-                    {
-                        ANSI_JSON_NUMBER
-                    }
-                    _ => "",
-                };
-                if color.is_empty() {
-                    colored.push_str(&token);
-                } else {
-                    push_ansi_colored(&mut colored, color, &token);
-                }
-            }
-        }
-    }
-
-    colored
-}
-
-fn push_ansi_colored(output: &mut String, color: &str, token: &str) {
-    output.push_str(color);
-    output.push_str(token);
-    output.push_str(ANSI_RESET);
 }
 
 /// Canonical grafana-util version embedded in emitted JSON documents.
@@ -338,158 +86,6 @@ pub fn tool_git_commit() -> &'static str {
     TOOL_GIT_COMMIT
 }
 
-/// Read an environment variable and treat blank values as unset.
-pub fn env_value(name: &str) -> Option<String> {
-    match env::var(name) {
-        Ok(value) if !value.trim().is_empty() => Some(value),
-        _ => None,
-    }
-}
-
-/// Resolve Grafana authentication headers from CLI args, prompts, and environment.
-///
-/// Resolution order is intentional:
-/// - explicit token or prompted token
-/// - explicit/basic credentials
-/// - environment fallbacks
-///
-/// The function rejects mixed auth modes so downstream HTTP code never has to
-/// guess which credential source should win.
-pub fn resolve_auth_headers(
-    api_token: Option<&str>,
-    username: Option<&str>,
-    password: Option<&str>,
-    prompt_for_password: bool,
-    prompt_for_token: bool,
-) -> Result<Vec<(String, String)>> {
-    resolve_auth_headers_with_prompt(
-        api_token,
-        username,
-        password,
-        prompt_for_password,
-        prompt_for_token,
-        || prompt_password("Grafana Basic auth password: ").map_err(GrafanaCliError::from),
-        || prompt_password("Grafana API token: ").map_err(GrafanaCliError::from),
-    )
-}
-
-fn resolve_auth_headers_with_prompt<F, G>(
-    api_token: Option<&str>,
-    username: Option<&str>,
-    password: Option<&str>,
-    prompt_for_password: bool,
-    prompt_for_token: bool,
-    prompt_password_reader: F,
-    prompt_token_reader: G,
-) -> Result<Vec<(String, String)>>
-where
-    F: FnOnce() -> Result<String>,
-    G: FnOnce() -> Result<String>,
-{
-    let cli_token = api_token
-        .map(str::to_owned)
-        .filter(|value| !value.is_empty());
-    let cli_username = username
-        .map(str::to_owned)
-        .filter(|value| !value.is_empty());
-    let mut cli_password = password
-        .map(str::to_owned)
-        .filter(|value| !value.is_empty());
-
-    if cli_token.is_some() && prompt_for_token {
-        return Err(validation(
-            "Choose either --token / --api-token or --prompt-token, not both.",
-        ));
-    }
-    if (cli_token.is_some() || prompt_for_token)
-        && (cli_username.is_some() || cli_password.is_some() || prompt_for_password)
-    {
-        return Err(validation(
-            "Choose either token auth (--token / --api-token) or Basic auth \
-(--basic-user with --basic-password / --prompt-password), not both.",
-        ));
-    }
-    if prompt_for_password && cli_password.is_some() {
-        return Err(validation(
-            "Choose either --basic-password or --prompt-password, not both.",
-        ));
-    }
-    if cli_username.is_some() && cli_password.is_none() && !prompt_for_password {
-        return Err(validation(
-            "Basic auth requires both --basic-user and \
---basic-password or --prompt-password.",
-        ));
-    }
-    if cli_password.is_some() && cli_username.is_none() {
-        return Err(validation(
-            "Basic auth requires both --basic-user and \
---basic-password or --prompt-password.",
-        ));
-    }
-    if prompt_for_password && cli_username.is_none() {
-        return Err(validation("--prompt-password requires --basic-user."));
-    }
-
-    if prompt_for_token {
-        let token = prompt_token_reader()?;
-        return Ok(vec![(
-            "Authorization".to_string(),
-            format!("Bearer {token}"),
-        )]);
-    }
-
-    let token = cli_token.or_else(|| env_value("GRAFANA_API_TOKEN"));
-    if let Some(token) = token {
-        return Ok(vec![(
-            "Authorization".to_string(),
-            format!("Bearer {token}"),
-        )]);
-    }
-
-    if prompt_for_password && cli_username.is_some() {
-        cli_password = Some(prompt_password_reader()?);
-    }
-
-    let username = cli_username.or_else(|| env_value("GRAFANA_USERNAME"));
-    let password = cli_password.or_else(|| env_value("GRAFANA_PASSWORD"));
-    if let (Some(username), Some(password)) = (username.as_ref(), password.as_ref()) {
-        let encoded = STANDARD.encode(format!("{username}:{password}"));
-        return Ok(vec![(
-            "Authorization".to_string(),
-            format!("Basic {encoded}"),
-        )]);
-    }
-    if username.is_some() || password.is_some() {
-        return Err(validation(
-            "Basic auth requires both --basic-user and \
---basic-password or --prompt-password.",
-        ));
-    }
-
-    Err(validation(
-        "Authentication required. Set --token / --api-token / GRAFANA_API_TOKEN \
-or --prompt-token / --basic-user and --basic-password / --prompt-password / \
-GRAFANA_USERNAME and GRAFANA_PASSWORD.",
-    ))
-}
-
-/// Normalize user-provided strings into filesystem-safe path components.
-pub fn sanitize_path_component(value: &str) -> String {
-    let invalid = Regex::new(r"[^\w.\- ]+").expect("invalid hard-coded regex");
-    let spaces = Regex::new(r"\s+").expect("invalid hard-coded regex");
-    let duplicate_underscores = Regex::new(r"_+").expect("invalid hard-coded regex");
-
-    let normalized = invalid.replace_all(value.trim(), "_");
-    let normalized = spaces.replace_all(normalized.as_ref(), "_");
-    let normalized = duplicate_underscores.replace_all(normalized.as_ref(), "_");
-    let normalized = normalized.trim_matches(|character| character == '.' || character == '_');
-    if normalized.is_empty() {
-        "untitled".to_string()
-    } else {
-        normalized.to_string()
-    }
-}
-
 /// Require a JSON value to be an object and return a borrowed map view.
 pub fn value_as_object<'a>(
     value: &'a Value,
@@ -517,37 +113,6 @@ pub fn string_field(object: &Map<String, Value>, key: &str, default: &str) -> St
         .filter(|value| !value.is_empty())
         .unwrap_or(default)
         .to_string()
-}
-
-/// Load a JSON file and require the top-level value to be an object.
-pub fn load_json_object_file(path: &Path, object_label: &str) -> Result<Value> {
-    let raw = fs::read_to_string(path)?;
-    let value: Value = serde_json::from_str(&raw)?;
-    if !value.is_object() {
-        return Err(validation(format!(
-            "{object_label} file must contain a JSON object: {}",
-            path.display()
-        )));
-    }
-    Ok(value)
-}
-
-/// Write JSON to disk with an explicit overwrite gate.
-pub fn write_json_file(path: &Path, payload: &Value, overwrite: bool) -> Result<()> {
-    if path.exists() && !overwrite {
-        return Err(validation(format!(
-            "Refusing to overwrite existing file: {}. Use --overwrite.",
-            path.display()
-        )));
-    }
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)?;
-    }
-    fs::write(
-        path,
-        format!("{}\n", serde_json::to_string_pretty(payload)?),
-    )?;
-    Ok(())
 }
 
 #[cfg(test)]

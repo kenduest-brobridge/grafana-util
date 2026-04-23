@@ -1,11 +1,11 @@
 //! Common utility unit tests.
 //! Verifies path sanitization, shared error helpers, and authentication-header
 //! resolution logic for all Rust domains.
+use super::auth::resolve_auth_headers_with_prompt;
 use super::{
     editor, emit_plain_output, invalid_header_name, invalid_header_value, invalid_url, parse_error,
-    resolve_auth_headers, resolve_auth_headers_with_prompt, sanitize_path_component,
-    should_print_stdout, strip_ansi_codes, tui, validation, write_plain_output_file,
-    GrafanaCliError,
+    resolve_auth_headers, sanitize_path_component, should_print_stdout, strip_ansi_codes, tui,
+    validation, write_plain_output_file, GrafanaCliError,
 };
 use std::fs;
 use std::path::Path;

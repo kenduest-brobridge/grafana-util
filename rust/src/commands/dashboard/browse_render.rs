@@ -21,7 +21,7 @@ mod browse_render_rust_tests;
 
 use self::browse_render_detail::render_detail_panel;
 use self::browse_render_footer::control_lines;
-use self::browse_render_rows::build_tree_items;
+use self::browse_render_rows::{build_live_tree_items, build_local_export_tree_items};
 
 pub(crate) fn render_dashboard_browser_frame(frame: &mut ratatui::Frame, state: &mut BrowserState) {
     let outer = Layout::default()
@@ -40,7 +40,12 @@ pub(crate) fn render_dashboard_browser_frame(frame: &mut ratatui::Frame, state: 
     let header = tui_shell::build_header("Dashboard Browser", render_summary_lines(state));
     frame.render_widget(header, outer[0]);
 
-    let list = List::new(build_tree_items(&state.document.nodes))
+    let tree_items = if state.local_mode {
+        build_local_export_tree_items(&state.document.nodes)
+    } else {
+        build_live_tree_items(&state.document.nodes)
+    };
+    let list = List::new(tree_items)
         .block(
             pane_block(
                 "Tree",

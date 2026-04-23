@@ -87,20 +87,22 @@ as a focused commit group with narrow validation.
 
 - [x] Split only after the sync/API/dashboard cleanup above settles to avoid noisy import churn.
 - [x] Extract shared error/result definitions into `common/error.rs`.
-- [ ] Extract auth/header resolution into `common/auth.rs`.
-- [ ] Extract JSON render/color handling into `common/json_output.rs`.
-- [ ] Extract file output helpers into `common/io.rs`.
-- [ ] Extract string/path normalization helpers into `common/normalize.rs` if call sites stay readable.
-- [ ] Extract shared diff document helpers into `common/diff_document.rs`.
+- [x] Extract auth/header resolution into `common/auth.rs`.
+- [x] Extract JSON render/color handling into `common/json_output.rs`.
+- [x] Extract file output helpers into `common/io.rs`.
+- [x] Extract string/path normalization helpers into `common/normalize.rs` if call sites stay readable.
+- [x] Extract shared diff document helpers into `common/diff_document.rs`.
 - [x] Keep `common/mod.rs` as the facade and preserve existing imports where practical.
 - [x] Run `cargo test --manifest-path rust/Cargo.toml --quiet common --lib`.
-- [ ] Run CLI help/parser tests.
-- [ ] Run full Rust tests.
+- [x] Run CLI help/parser tests.
+- [x] Run full Rust tests.
 
-Task C first boundary complete: error/result definitions now live in
-`common/error.rs`; `common/mod.rs` remains the public facade. Auth, JSON,
-file output, normalization, diff-document, CLI help/parser, and full Rust test
-passes remain open.
+Task C common split boundaries complete: error/result definitions now live in
+`common/error.rs`; auth/header resolution lives in `common/auth.rs`; JSON
+render/color handling lives in `common/json_output.rs`; file output helpers live
+in `common/io.rs`; string/path normalization lives in `common/normalize.rs`;
+shared diff document helpers live in `common/diff_document.rs`; `common/mod.rs`
+remains the public facade. CLI parser and full Rust tests pass.
 
 Completed cleanup now closed:
 
@@ -179,9 +181,9 @@ place.
 ### Align Prompt Export With Grafana UI Semantics
 
 Status: classic prompt parity is covered for datasource variables, placeholder
-references, selected current datasource mapping, and live library-panel model
-export. Keep this item open for regression hardening and any future dashboard v2
-adapter work.
+references, selected current datasource mapping, live library-panel model export,
+and the current dashboard v2 resource/spec rejection boundary. Keep this item
+open for regression hardening and any future dashboard v2 adapter work.
 
 Problem:
 
@@ -202,14 +204,14 @@ Official source areas to keep using as behavior references:
 
 Action:
 
-- [ ] Keep concrete datasource references mapped to `__inputs` and `${DS_*}`.
-- [ ] Keep datasource variable definitions as variables; do not convert the variable `query` into a datasource input.
-- [ ] Preserve panel and target datasource references such as `$datasource`.
-- [ ] When a used datasource variable has a concrete current value and datasource type, add the corresponding `DS_*` input and set the variable `current.value` to `${DS_*}`.
-- [ ] Keep constant variables mapped through `VAR_*` inputs.
-- [ ] Keep expression datasource import handling (`__expr__`) out of user-mapped datasource inputs.
-- [ ] Reject dashboard v2 resource/spec input in raw-to-prompt until a dedicated adapter exists.
-- [ ] Keep library panel `__elements` live-model export covered by regression tests and add import input validation only when the import lane consumes those elements directly.
+- [x] Keep concrete datasource references mapped to `__inputs` and `${DS_*}`.
+- [x] Keep datasource variable definitions as variables; do not convert the variable `query` into a datasource input.
+- [x] Preserve panel and target datasource references such as `$datasource`.
+- [x] When a used datasource variable has a concrete current value and datasource type, add the corresponding `DS_*` input and set the variable `current.value` to `${DS_*}`.
+- [x] Keep constant variables mapped through `VAR_*` inputs.
+- [x] Keep expression datasource import handling (`__expr__`) out of user-mapped datasource inputs.
+- [x] Reject dashboard v2 resource/spec input in raw-to-prompt until a dedicated adapter exists.
+- [x] Keep library panel `__elements` live-model export covered by regression tests and add import input validation only when the import lane consumes those elements directly.
 
 ### Dashboard Source-Alignment Follow-ups
 
@@ -242,9 +244,10 @@ changes stay reviewable and do not blur lane boundaries.
 
 Validation:
 
-- [ ] Run `cargo test --manifest-path rust/Cargo.toml --quiet raw_to_prompt`.
-- [ ] Run `cargo test --manifest-path rust/Cargo.toml --quiet`.
-- [ ] Run `cargo fmt --manifest-path rust/Cargo.toml --all --check`.
+- [x] Run `cargo test --manifest-path rust/Cargo.toml --quiet raw_to_prompt --lib`.
+- [x] Run `cargo test --manifest-path rust/Cargo.toml --quiet dashboard_prompt --lib` (0 matching tests).
+- [x] Run `cargo test --manifest-path rust/Cargo.toml --quiet`.
+- [x] Run `cargo fmt --manifest-path rust/Cargo.toml --all --check`.
 
 ## P1 - TUI Boundary Cleanup
 
@@ -260,12 +263,12 @@ Action:
 - [x] Keep public behavior unchanged.
 - [x] Do not create all candidate modules in one pass unless each one removes a clearly mixed responsibility.
 
-Completion note: extracted `user_browse_key.rs` as the user-browse modal/key-routing boundary, leaving row loading in `user_browse_input.rs`. Verified `cargo test --manifest-path rust/Cargo.toml --quiet access --lib`; full-tree `cargo fmt --manifest-path rust/Cargo.toml --all --check` is currently blocked by unrelated dashboard formatting drift, while the touched access files pass `rustfmt --edition 2021 --check`.
+Completion note: extracted `user_browse_key.rs` as the user-browse modal/key-routing boundary, leaving row loading in `user_browse_input.rs`. Verified access tests and full-tree formatting.
 
 Validation:
 
-- [ ] Run `cargo test --manifest-path rust/Cargo.toml --quiet access`.
-- [ ] Run `cargo fmt --manifest-path rust/Cargo.toml --all --check`.
+- [x] Run `cargo test --manifest-path rust/Cargo.toml --quiet access`.
+- [x] Run `cargo fmt --manifest-path rust/Cargo.toml --all --check`.
 
 ### Continue Dashboard Browse Render Split
 
@@ -280,14 +283,16 @@ Hotspots:
 
 Action:
 
-- [ ] Keep detail-pane rendering, footer/action rendering, and live detail loading split.
-- [ ] Separate live-tree rendering from local-export-tree rendering where practical.
-- [ ] Keep the main render path readable from the current parent module; do not turn one render file into many single-widget files.
+- [x] Keep detail-pane rendering, footer/action rendering, and live detail loading split.
+- [x] Separate live-tree rendering from local-export-tree rendering where practical.
+- [x] Keep the main render path readable from the current parent module; do not turn one render file into many single-widget files.
+
+Completion note: split dashboard browse tree row rendering into explicit live and local-export builders inside `browse_render_rows.rs`, kept the parent render path as a simple mode dispatch, and added a narrow local-export row test.
 
 Validation:
 
-- [ ] Run `cargo test --manifest-path rust/Cargo.toml --quiet dashboard_browse`.
-- [ ] Run `cargo test --manifest-path rust/Cargo.toml --quiet dashboard_cli`.
+- [x] Run `cargo test --manifest-path rust/Cargo.toml --quiet dashboard_browse`.
+- [x] Run `cargo test --manifest-path rust/Cargo.toml --quiet dashboard_cli`.
 
 ## P1 - Status Producer Model
 
@@ -308,16 +313,18 @@ Relevant areas:
 
 Action:
 
-- [ ] Introduce a shared data shape before introducing a trait. Candidate names: `StatusProducer`, `StatusReading`, `StatusWarning`, `StatusBlockedReason`, `StatusRecordCount`.
-- [ ] Keep `status overview` as a consumer/reporting surface, not an orchestration owner.
+- [x] Introduce a shared data shape before introducing a trait. Candidate names: `StatusProducer`, `StatusReading`, `StatusWarning`, `StatusBlockedReason`, `StatusRecordCount`.
+- [x] Keep `status overview` as a consumer/reporting surface, not an orchestration owner.
 - [ ] Move domain-specific discovery and warnings into domain producers.
 - [ ] Delay a shared trait until at least dashboard, datasource, and access prove the same producer interface.
 
+Completion note: `StatusReading`/`StatusRecordCount` were already present, and dashboard staged, access staged, and datasource live producers now keep producer-local warnings/blockers in `StatusRecordCount` until the final project-status conversion. Future discovery cleanup and any shared trait remain open.
+
 Validation:
 
-- [ ] Run `cargo test --manifest-path rust/Cargo.toml --quiet status`.
-- [ ] Run `cargo test --manifest-path rust/Cargo.toml --quiet project_status`.
-- [ ] Run `make quality-architecture`.
+- [x] Run `cargo test --manifest-path rust/Cargo.toml --quiet status --lib`.
+- [x] Run `cargo test --manifest-path rust/Cargo.toml --quiet project_status`.
+- [x] Run `make quality-architecture`.
 
 ## P1 - HTTP Transport Efficiency
 

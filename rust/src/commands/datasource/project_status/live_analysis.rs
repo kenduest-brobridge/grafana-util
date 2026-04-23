@@ -2,9 +2,7 @@ use serde_json::{Map, Value};
 use std::collections::BTreeSet;
 
 use crate::common::string_field;
-use crate::project_status::{
-    status_finding, ProjectDomainStatus, PROJECT_STATUS_PARTIAL, PROJECT_STATUS_READY,
-};
+use crate::project_status::{ProjectDomainStatus, PROJECT_STATUS_PARTIAL, PROJECT_STATUS_READY};
 use crate::project_status_model::{StatusReading, StatusRecordCount};
 
 const DATASOURCE_DOMAIN_ID: &str = "datasource";
@@ -230,6 +228,12 @@ fn datasource_records<'a>(
     (&[], DATASOURCE_SOURCE_KIND_LIST)
 }
 
+fn push_warning(warnings: &mut Vec<StatusRecordCount>, kind: &str, count: usize, source: &str) {
+    if count > 0 {
+        warnings.push(StatusRecordCount::new(kind, count, source));
+    }
+}
+
 pub(crate) fn datasource_live_project_status_org_count(
     inputs: &DatasourceLiveProjectStatusInputs<'_>,
     records: &[Map<String, Value>],
@@ -344,60 +348,67 @@ pub(crate) fn build_datasource_live_project_status(
     let mut readiness_signal_found = false;
     if missing_uid_count > 0 {
         metadata_issue_found = true;
-        warnings.push(status_finding(
+        push_warning(
+            &mut warnings,
             DATASOURCE_WARNING_MISSING_UID,
             missing_uid_count,
             "live.uidCount",
-        ));
+        );
     }
     if missing_name_count > 0 {
         metadata_issue_found = true;
-        warnings.push(status_finding(
+        push_warning(
+            &mut warnings,
             DATASOURCE_WARNING_MISSING_NAME,
             missing_name_count,
             "live.nameCount",
-        ));
+        );
     }
     if missing_access_count > 0 {
         metadata_issue_found = true;
-        warnings.push(status_finding(
+        push_warning(
+            &mut warnings,
             DATASOURCE_WARNING_MISSING_ACCESS,
             missing_access_count,
             "live.accessCount",
-        ));
+        );
     }
     if datasource_count > 0 && uid_count + missing_uid_count < datasource_count {
         metadata_issue_found = true;
-        warnings.push(status_finding(
+        push_warning(
+            &mut warnings,
             DATASOURCE_WARNING_DUPLICATE_UID,
             datasource_count - uid_count - missing_uid_count,
             "live.uidCount",
-        ));
+        );
     }
     if missing_type_count > 0 {
         metadata_issue_found = true;
-        warnings.push(status_finding(
+        push_warning(
+            &mut warnings,
             DATASOURCE_WARNING_MISSING_TYPE,
             missing_type_count,
             "live.typeCount",
-        ));
+        );
     }
     if missing_org_id_count > 0 {
         metadata_issue_found = true;
-        warnings.push(status_finding(
+        push_warning(
+            &mut warnings,
             DATASOURCE_WARNING_MISSING_ORG_ID,
             missing_org_id_count,
             "live.orgIdCount",
-        ));
+        );
     }
     if inputs.current_org.is_some() && org_id_count > 1 {
         metadata_issue_found = true;
         org_scope_issue_found = true;
-        warnings.push(status_finding(
+        push_warning(
+            &mut warnings,
             DATASOURCE_WARNING_MIXED_ORG_IDS,
             org_id_count - 1,
             "live.orgIdCount",
-        ));
+        );
     }
     if let Some(current_org_id) = current_org_id.as_ref() {
         if org_id_count == 1 {
@@ -409,11 +420,12 @@ pub(crate) fn build_datasource_live_project_status(
             if !datasource_org_id.is_empty() && datasource_org_id != *current_org_id {
                 metadata_issue_found = true;
                 org_scope_issue_found = true;
-                warnings.push(status_finding(
+                push_warning(
+                    &mut warnings,
                     DATASOURCE_WARNING_ORG_SCOPE_MISMATCH,
                     1,
                     "live.orgIdCount",
-                ));
+                );
             }
         }
     }
@@ -427,100 +439,112 @@ pub(crate) fn build_datasource_live_project_status(
         if missing_org_ids > 0 {
             metadata_issue_found = true;
             org_scope_issue_found = true;
-            warnings.push(status_finding(
+            push_warning(
+                &mut warnings,
                 DATASOURCE_WARNING_ORG_LIST_MISMATCH,
                 missing_org_ids,
                 "live.orgCount",
-            ));
+            );
         }
     }
     if json_data_count > 0 {
         readiness_signal_found = true;
-        warnings.push(status_finding(
+        push_warning(
+            &mut warnings,
             DATASOURCE_WARNING_PROVIDER_JSON_DATA,
             json_data_count,
             "live.jsonDataCount",
-        ));
+        );
     }
     if basic_auth_count > 0 {
         readiness_signal_found = true;
-        warnings.push(status_finding(
+        push_warning(
+            &mut warnings,
             DATASOURCE_WARNING_BASIC_AUTH,
             basic_auth_count,
             "live.basicAuthCount",
-        ));
+        );
     }
     if basic_auth_password_count > 0 {
         readiness_signal_found = true;
-        warnings.push(status_finding(
+        push_warning(
+            &mut warnings,
             DATASOURCE_WARNING_BASIC_AUTH_PASSWORD,
             basic_auth_password_count,
             "live.basicAuthPasswordCount",
-        ));
+        );
     }
     if password_count > 0 {
         readiness_signal_found = true;
-        warnings.push(status_finding(
+        push_warning(
+            &mut warnings,
             DATASOURCE_WARNING_PASSWORD,
             password_count,
             "live.passwordCount",
-        ));
+        );
     }
     if http_header_value_count > 0 {
         readiness_signal_found = true;
-        warnings.push(status_finding(
+        push_warning(
+            &mut warnings,
             DATASOURCE_WARNING_HTTP_HEADER_VALUES,
             http_header_value_count,
             "live.httpHeaderValueCount",
-        ));
+        );
     }
     if with_credentials_count > 0 {
         readiness_signal_found = true;
-        warnings.push(status_finding(
+        push_warning(
+            &mut warnings,
             DATASOURCE_WARNING_WITH_CREDENTIALS,
             with_credentials_count,
             "live.withCredentialsCount",
-        ));
+        );
     }
     if secure_json_fields_count > 0 {
         readiness_signal_found = true;
-        warnings.push(status_finding(
+        push_warning(
+            &mut warnings,
             DATASOURCE_WARNING_SECURE_JSON_FIELDS,
             secure_json_fields_count,
             "live.secureJsonFieldsCount",
-        ));
+        );
     }
     if tls_auth_count > 0 {
         readiness_signal_found = true;
-        warnings.push(status_finding(
+        push_warning(
+            &mut warnings,
             DATASOURCE_WARNING_TLS_AUTH,
             tls_auth_count,
             "live.tlsAuthCount",
-        ));
+        );
     }
     if tls_skip_verify_count > 0 {
         readiness_signal_found = true;
-        warnings.push(status_finding(
+        push_warning(
+            &mut warnings,
             DATASOURCE_WARNING_TLS_SKIP_VERIFY,
             tls_skip_verify_count,
             "live.tlsSkipVerifyCount",
-        ));
+        );
     }
     if server_name_count > 0 {
         readiness_signal_found = true;
-        warnings.push(status_finding(
+        push_warning(
+            &mut warnings,
             DATASOURCE_WARNING_SERVER_NAME,
             server_name_count,
             "live.serverNameCount",
-        ));
+        );
     }
     if read_only_count > 0 {
         readiness_signal_found = true;
-        warnings.push(status_finding(
+        push_warning(
+            &mut warnings,
             DATASOURCE_WARNING_READ_ONLY,
             read_only_count,
             "live.readOnlyCount",
-        ));
+        );
     }
 
     let mut next_actions = if datasource_count == 0 {
@@ -529,21 +553,23 @@ pub(crate) fn build_datasource_live_project_status(
             .map(|item| (*item).to_string())
             .collect()
     } else if default_count == 0 {
-        warnings.push(status_finding(
+        push_warning(
+            &mut warnings,
             DATASOURCE_WARNING_MISSING_DEFAULT,
             1,
             "live.defaultCount",
-        ));
+        );
         DATASOURCE_MARK_DEFAULT_ACTIONS
             .iter()
             .map(|item| (*item).to_string())
             .collect()
     } else if default_count > 1 {
-        warnings.push(status_finding(
+        push_warning(
+            &mut warnings,
             DATASOURCE_WARNING_MULTIPLE_DEFAULTS,
             default_count - 1,
             "live.defaultCount",
-        ));
+        );
         DATASOURCE_KEEP_SINGLE_DEFAULT_ACTIONS
             .iter()
             .map(|item| (*item).to_string())
@@ -592,7 +618,7 @@ pub(crate) fn build_datasource_live_project_status(
                 .map(|item| (*item).to_string())
                 .collect(),
             blockers: Vec::new(),
-            warnings: warnings.into_iter().map(StatusRecordCount::from).collect(),
+            warnings,
             next_actions,
             freshness: Default::default(),
         }

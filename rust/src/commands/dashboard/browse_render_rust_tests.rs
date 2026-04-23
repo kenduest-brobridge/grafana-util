@@ -45,7 +45,7 @@ fn tree_rows_render_org_header_and_dashboard_metadata() {
             child_count: 0,
         },
     ];
-    let items = super::browse_render_rows::build_tree_items(&nodes);
+    let items = super::browse_render_rows::build_live_tree_items(&nodes);
     let debug = items
         .iter()
         .map(|item| format!("{item:?}"))
@@ -55,6 +55,50 @@ fn tree_rows_render_org_header_and_dashboard_metadata() {
     assert!(debug[0].contains("ORG"));
     assert!(debug[0].contains("Acme"));
     assert!(debug[0].contains("id=42"));
+    assert!(debug[1].contains("CPU Main"));
+    assert!(debug[1].contains("uid=cpu-main"));
+}
+
+#[test]
+fn local_export_tree_rows_render_file_tree_without_live_org_requirement() {
+    let nodes = vec![
+        super::super::browse_support::DashboardBrowseNode {
+            kind: super::super::browse_support::DashboardBrowseNodeKind::Folder,
+            title: "Platform".to_string(),
+            path: "Platform".to_string(),
+            uid: Some("platform".to_string()),
+            depth: 0,
+            meta: "0 folder(s) | 1 dashboard(s)".to_string(),
+            details: Vec::new(),
+            url: None,
+            org_name: "Local export".to_string(),
+            org_id: "1".to_string(),
+            child_count: 0,
+        },
+        super::super::browse_support::DashboardBrowseNode {
+            kind: super::super::browse_support::DashboardBrowseNodeKind::Dashboard,
+            title: "CPU Main".to_string(),
+            path: "Platform".to_string(),
+            uid: Some("cpu-main".to_string()),
+            depth: 1,
+            meta: "uid=cpu-main".to_string(),
+            details: vec!["Source file: dashboards/cpu-main.json".to_string()],
+            url: None,
+            org_name: "Local export".to_string(),
+            org_id: "1".to_string(),
+            child_count: 0,
+        },
+    ];
+    let items = super::browse_render_rows::build_local_export_tree_items(&nodes);
+    let debug = items
+        .iter()
+        .map(|item| format!("{item:?}"))
+        .collect::<Vec<_>>();
+
+    assert_eq!(items.len(), 2);
+    assert!(!debug.iter().any(|item| item.contains("ORG")));
+    assert!(debug[0].contains("Platform"));
+    assert!(debug[0].contains("0 folder(s) | 1 dashboard(s)"));
     assert!(debug[1].contains("CPU Main"));
     assert!(debug[1].contains("uid=cpu-main"));
 }

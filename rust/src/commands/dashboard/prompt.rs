@@ -205,6 +205,7 @@ pub(crate) fn build_external_export_document_with_library_panels(
                 continue;
             };
             collect_datasource_refs(model, &mut refs);
+            collect_datasource_variable_reference_names(model, &mut used_datasource_variable_names);
             library_panel_models.push(model.clone());
         }
     }

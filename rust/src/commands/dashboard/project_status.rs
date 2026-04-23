@@ -11,10 +11,9 @@
 use serde_json::Value;
 
 use crate::project_status::{
-    status_finding, ProjectDomainStatus, PROJECT_STATUS_BLOCKED, PROJECT_STATUS_PARTIAL,
-    PROJECT_STATUS_READY,
+    ProjectDomainStatus, PROJECT_STATUS_BLOCKED, PROJECT_STATUS_PARTIAL, PROJECT_STATUS_READY,
 };
-use crate::project_status_model::StatusReading;
+use crate::project_status_model::{StatusReading, StatusRecordCount};
 
 const DASHBOARD_DOMAIN_ID: &str = "dashboard";
 const DASHBOARD_SCOPE: &str = "staged";
@@ -67,14 +66,14 @@ fn top_level_array<'a>(document: &'a Value, key: &str) -> Option<&'a [Value]> {
 }
 
 fn push_warning(
-    warnings: &mut Vec<crate::project_status::ProjectStatusFinding>,
+    warnings: &mut Vec<StatusRecordCount>,
     signal_keys: &mut Vec<String>,
     kind: &str,
     count: usize,
     source: &str,
 ) {
     if count > 0 {
-        warnings.push(status_finding(kind, count, source));
+        warnings.push(StatusRecordCount::new(kind, count, source));
         signal_keys.push(source.to_string());
     }
 }
@@ -156,7 +155,7 @@ fn push_detail_signal_keys(
 
 #[allow(clippy::too_many_arguments)]
 fn push_detail_findings_with_count<F>(
-    findings: &mut Vec<crate::project_status::ProjectStatusFinding>,
+    findings: &mut Vec<StatusRecordCount>,
     signal_keys: &mut Vec<String>,
     kind: &str,
     document_key: &str,
@@ -178,7 +177,7 @@ fn push_detail_findings_with_count<F>(
                     continue;
                 }
                 let source = detail_source_key(document_key, item, index, fields);
-                findings.push(status_finding(kind, count, &source));
+                findings.push(StatusRecordCount::new(kind, count, &source));
                 push_signal_key(signal_keys, &source);
                 used_detail_rows = true;
             }
@@ -189,7 +188,11 @@ fn push_detail_findings_with_count<F>(
     }
 
     if fallback_count > 0 {
-        findings.push(status_finding(kind, fallback_count, fallback_source));
+        findings.push(StatusRecordCount::new(
+            kind,
+            fallback_count,
+            fallback_source,
+        ));
         push_signal_key(signal_keys, fallback_source);
     }
 }
@@ -208,7 +211,7 @@ fn detail_source_key(document_key: &str, item: &Value, index: usize, fields: &[&
 
 #[allow(clippy::too_many_arguments)]
 fn push_detail_findings(
-    findings: &mut Vec<crate::project_status::ProjectStatusFinding>,
+    findings: &mut Vec<StatusRecordCount>,
     signal_keys: &mut Vec<String>,
     kind: &str,
     document_key: &str,
@@ -222,7 +225,7 @@ fn push_detail_findings(
             push_signal_key(signal_keys, document_key);
             for (index, item) in items.iter().enumerate() {
                 let source = detail_source_key(document_key, item, index, fields);
-                findings.push(status_finding(kind, 1, &source));
+                findings.push(StatusRecordCount::new(kind, 1, &source));
                 push_signal_key(signal_keys, &source);
             }
             return;
@@ -230,7 +233,11 @@ fn push_detail_findings(
     }
 
     if fallback_count > 0 {
-        findings.push(status_finding(kind, fallback_count, fallback_source));
+        findings.push(StatusRecordCount::new(
+            kind,
+            fallback_count,
+            fallback_source,
+        ));
         push_signal_key(signal_keys, fallback_source);
     }
 }
@@ -329,7 +336,7 @@ pub(crate) fn build_dashboard_domain_status(
             count_import_ready_dashboard_dependencies(dashboard_dependency_items);
         let import_readiness_gap = dashboards.saturating_sub(import_ready_dependency_count);
         if import_readiness_gap > 0 {
-            warnings.push(status_finding(
+            warnings.push(StatusRecordCount::new(
                 DASHBOARD_WARNING_IMPORT_READINESS_GAPS,
                 import_readiness_gap,
                 DASHBOARD_DASHBOARD_DEPENDENCIES_KEY,
@@ -341,7 +348,7 @@ pub(crate) fn build_dashboard_domain_status(
         let import_readiness_detail_gap =
             import_ready_dependency_count.saturating_sub(import_ready_detail_count);
         if import_readiness_detail_gap > 0 {
-            warnings.push(status_finding(
+            warnings.push(StatusRecordCount::new(
                 DASHBOARD_WARNING_IMPORT_READINESS_DETAIL_GAPS,
                 import_readiness_detail_gap,
                 DASHBOARD_DASHBOARD_DEPENDENCIES_KEY,
@@ -397,8 +404,8 @@ pub(crate) fn build_dashboard_domain_status(
             .map(|item| (*item).to_string())
             .collect(),
         signal_keys,
-        blockers: blockers.into_iter().map(Into::into).collect(),
-        warnings: warnings.into_iter().map(Into::into).collect(),
+        blockers,
+        warnings,
         next_actions,
         freshness: Default::default(),
     };
