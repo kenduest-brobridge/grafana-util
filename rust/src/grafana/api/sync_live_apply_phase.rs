@@ -1,3 +1,9 @@
+//! Apply-phase sequencing for already ordered live apply intent operations.
+//!
+//! Dependency-aware ordering is owned by sync plan construction. This phase
+//! must preserve the reviewed apply intent order and only enforce live-apply
+//! guards that belong at execution time.
+
 use serde_json::Value;
 
 use crate::common::Result;
@@ -48,9 +54,15 @@ mod tests {
     }
 
     #[test]
-    fn phase_preserves_operation_order_and_results() {
-        let operations = vec![operation("dashboard", REVIEW_ACTION_WOULD_UPDATE, "dash-a")];
+    fn phase_preserves_apply_intent_order_without_reordering_by_dependency_rank() {
+        let operations = vec![
+            operation("dashboard", REVIEW_ACTION_WOULD_UPDATE, "dash-a"),
+            operation("folder", REVIEW_ACTION_WOULD_UPDATE, "folder-a"),
+            operation("alert", REVIEW_ACTION_WOULD_DELETE, "alert-a"),
+        ];
+        let mut visited = Vec::new();
         let result = execute_live_apply_phase(&operations, false, |op| {
+            visited.push(format!("{}:{}:{}", op.action, op.kind, op.identity));
             Ok(json!({
                 "kind": op.kind,
                 "identity": op.identity,
@@ -59,9 +71,21 @@ mod tests {
         .unwrap();
 
         assert_eq!(result["mode"], json!("live-apply"));
-        assert_eq!(result["appliedCount"], json!(1));
+        assert_eq!(result["appliedCount"], json!(3));
+        assert_eq!(
+            visited,
+            vec![
+                "would-update:dashboard:dash-a",
+                "would-update:folder:folder-a",
+                "would-delete:alert:alert-a",
+            ]
+        );
         assert_eq!(result["results"][0]["kind"], json!("dashboard"));
         assert_eq!(result["results"][0]["identity"], json!("dash-a"));
+        assert_eq!(result["results"][1]["kind"], json!("folder"));
+        assert_eq!(result["results"][1]["identity"], json!("folder-a"));
+        assert_eq!(result["results"][2]["kind"], json!("alert"));
+        assert_eq!(result["results"][2]["identity"], json!("alert-a"));
     }
 
     #[test]

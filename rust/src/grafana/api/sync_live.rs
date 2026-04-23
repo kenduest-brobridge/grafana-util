@@ -9,6 +9,8 @@ use crate::sync::{append_unique_strings, require_json_object};
 mod sync_live_apply;
 #[path = "sync_live_apply_alert.rs"]
 mod sync_live_apply_alert;
+#[path = "sync_live_apply_client.rs"]
+mod sync_live_apply_client;
 #[path = "sync_live_apply_dashboard.rs"]
 mod sync_live_apply_dashboard;
 #[path = "sync_live_apply_datasource.rs"]

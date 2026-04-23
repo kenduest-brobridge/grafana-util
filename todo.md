@@ -379,8 +379,8 @@ Problem:
 
 Action:
 
-- [ ] Split request builders into a phase-specific module.
-- [ ] Split dependency ordering into a phase-specific module.
+- [x] Split live apply client operation request wrappers into `sync_live_apply_client.rs`.
+- [x] Confirm dependency ordering boundary: sync plan construction owns dependency-aware sorting; live apply phase preserves reviewed apply-intent order without reordering.
 - [x] Split apply execution into a phase-specific module.
 - [x] Keep API behavior unchanged.
 - [x] Add focused tests around ordering and the next split boundary if missing.
@@ -388,9 +388,10 @@ Action:
 
 Validation:
 
-- [ ] Run `cargo test --manifest-path rust/Cargo.toml --quiet sync_live`.
-- [ ] Run `cargo test --manifest-path rust/Cargo.toml --quiet apply`.
-- [ ] Run `make quality-sync-rust`.
+- [x] Run `cargo test --manifest-path rust/Cargo.toml --quiet sync_live`.
+- [x] Run `cargo test --manifest-path rust/Cargo.toml --quiet apply`.
+- [x] Run `cargo fmt --manifest-path rust/Cargo.toml --all --check`.
+- [x] Run `make quality-sync-rust`.
 
 ### Standardize Mutation Review Envelopes
 

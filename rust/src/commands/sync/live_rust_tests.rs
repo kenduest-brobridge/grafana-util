@@ -352,6 +352,232 @@ fn execute_live_apply_with_request_supports_alert_create() {
 }
 
 #[test]
+fn execute_live_apply_with_request_supports_folder_create_update_delete_guards() {
+    let operations = load_apply_operations(vec![json!({
+        "kind": "folder",
+        "identity": "platform",
+        "action": "would-delete"
+    })]);
+    let blocked = execute_live_apply_with_request(
+        |_, _, _, _| {
+            Err(crate::common::message(
+                "request handler should not be called",
+            ))
+        },
+        &operations,
+        false,
+        false,
+    )
+    .unwrap_err()
+    .to_string();
+    assert!(blocked.contains("--allow-folder-delete"));
+
+    let mut calls = Vec::new();
+    let operations = load_apply_operations(vec![
+        json!({
+            "kind": "folder",
+            "identity": "platform",
+            "action": "would-create",
+            "desired": {"title": "Platform", "parentUid": "root"}
+        }),
+        json!({
+            "kind": "folder",
+            "identity": "platform",
+            "action": "would-update",
+            "desired": {"title": "Platform Renamed"}
+        }),
+        json!({
+            "kind": "folder",
+            "identity": "platform",
+            "action": "would-delete"
+        }),
+    ]);
+
+    let result = execute_live_apply_with_request(
+        |method, path, params, payload| {
+            calls.push((
+                method.clone(),
+                path.to_string(),
+                params.to_vec(),
+                payload.cloned(),
+            ));
+            match (method, path) {
+                (Method::POST, "/api/folders") => Ok(Some(json!({"uid": "platform"}))),
+                (Method::PUT, "/api/folders/platform") => Ok(Some(json!({"uid": "platform"}))),
+                (Method::DELETE, "/api/folders/platform") => Ok(None),
+                _ => Err(crate::common::message("unexpected request")),
+            }
+        },
+        &operations,
+        true,
+        false,
+    )
+    .unwrap();
+
+    assert_eq!(result["appliedCount"], json!(3));
+    assert_eq!(calls[0].0, Method::POST);
+    assert_eq!(calls[0].1, "/api/folders");
+    assert_eq!(
+        calls[0].3.as_ref().and_then(|value| value.get("title")),
+        Some(&json!("Platform"))
+    );
+    assert_eq!(
+        calls[0].3.as_ref().and_then(|value| value.get("parentUid")),
+        Some(&json!("root"))
+    );
+    assert_eq!(calls[1].0, Method::PUT);
+    assert_eq!(calls[1].1, "/api/folders/platform");
+    assert_eq!(calls[2].0, Method::DELETE);
+    assert_eq!(calls[2].1, "/api/folders/platform");
+    assert!(calls[2]
+        .2
+        .iter()
+        .any(|(key, value)| key == "forceDeleteRules" && value == "false"));
+}
+
+#[test]
+fn execute_live_apply_with_request_supports_dashboard_upsert_and_delete() {
+    let mut calls = Vec::new();
+    let operations = load_apply_operations(vec![
+        json!({
+            "kind": "dashboard",
+            "identity": "cpu-main",
+            "action": "would-create",
+            "desired": {
+                "id": 42,
+                "title": "CPU Main",
+                "folderUid": "platform",
+                "panels": []
+            }
+        }),
+        json!({
+            "kind": "dashboard",
+            "identity": "cpu-main",
+            "action": "would-update",
+            "desired": {
+                "title": "CPU Main Updated",
+                "folderUID": "platform",
+                "panels": []
+            }
+        }),
+        json!({
+            "kind": "dashboard",
+            "identity": "cpu-main",
+            "action": "would-delete"
+        }),
+    ]);
+
+    let result = execute_live_apply_with_request(
+        |method, path, _, payload| {
+            calls.push((method.clone(), path.to_string(), payload.cloned()));
+            match (method, path) {
+                (Method::POST, "/api/dashboards/db") => Ok(Some(json!({"status": "success"}))),
+                (Method::DELETE, "/api/dashboards/uid/cpu-main") => Ok(None),
+                _ => Err(crate::common::message("unexpected request")),
+            }
+        },
+        &operations,
+        false,
+        false,
+    )
+    .unwrap();
+
+    assert_eq!(result["appliedCount"], json!(3));
+    assert_eq!(calls[0].0, Method::POST);
+    assert_eq!(calls[0].1, "/api/dashboards/db");
+    let create_payload = calls[0].2.as_ref().unwrap();
+    assert_eq!(create_payload["overwrite"], json!(false));
+    assert_eq!(create_payload["folderUid"], json!("platform"));
+    assert_eq!(create_payload["dashboard"]["uid"], json!("cpu-main"));
+    assert!(create_payload["dashboard"].get("id").is_none());
+
+    let update_payload = calls[1].2.as_ref().unwrap();
+    assert_eq!(update_payload["overwrite"], json!(true));
+    assert_eq!(update_payload["folderUid"], json!("platform"));
+    assert_eq!(update_payload["dashboard"]["uid"], json!("cpu-main"));
+    assert_eq!(calls[2].0, Method::DELETE);
+    assert_eq!(calls[2].1, "/api/dashboards/uid/cpu-main");
+}
+
+#[test]
+fn execute_live_apply_with_request_supports_datasource_update_and_delete_uid_with_id_fallback() {
+    let mut calls = Vec::new();
+    let operations = load_apply_operations(vec![
+        json!({
+            "kind": "datasource",
+            "identity": "prom-main",
+            "action": "would-update",
+            "desired": {
+                "type": "prometheus",
+                "url": "http://prometheus:9090"
+            }
+        }),
+        json!({
+            "kind": "datasource",
+            "identity": "prom-main",
+            "action": "would-delete"
+        }),
+    ]);
+
+    let result = execute_live_apply_with_request(
+        |method, path, _, payload| {
+            calls.push((method.clone(), path.to_string(), payload.cloned()));
+            match (method, path) {
+                (Method::GET, "/api/datasources") => Ok(Some(json!([
+                    {"id": 7, "uid": "prom-main", "name": "Prometheus Main"}
+                ]))),
+                (Method::PUT, "/api/datasources/uid/prom-main") => {
+                    Err(crate::common::api_response(
+                        404,
+                        "http://grafana.local/api/datasources/uid/prom-main",
+                        "not found",
+                    ))
+                }
+                (Method::PUT, "/api/datasources/7") => {
+                    Ok(Some(json!({"uid": "prom-main", "status": "updated"})))
+                }
+                (Method::DELETE, "/api/datasources/uid/prom-main") => {
+                    Err(crate::common::api_response(
+                        404,
+                        "http://grafana.local/api/datasources/uid/prom-main",
+                        "not found",
+                    ))
+                }
+                (Method::DELETE, "/api/datasources/7") => Ok(None),
+                _ => Err(crate::common::message("unexpected request")),
+            }
+        },
+        &operations,
+        false,
+        false,
+    )
+    .unwrap();
+
+    assert_eq!(result["appliedCount"], json!(2));
+    assert!(calls.iter().any(|(method, path, payload)| {
+        *method == Method::PUT
+            && path == "/api/datasources/uid/prom-main"
+            && payload
+                .as_ref()
+                .and_then(|value| value.get("uid"))
+                .is_some_and(|value| value == "prom-main")
+            && payload
+                .as_ref()
+                .and_then(|value| value.get("name"))
+                .is_some_and(|value| value == "prom-main")
+    }));
+    assert!(calls
+        .iter()
+        .any(|(method, path, _)| *method == Method::PUT && path == "/api/datasources/7"));
+    assert!(calls.iter().any(|(method, path, _)| {
+        *method == Method::DELETE && path == "/api/datasources/uid/prom-main"
+    }));
+    assert!(calls
+        .iter()
+        .any(|(method, path, _)| *method == Method::DELETE && path == "/api/datasources/7"));
+}
+
+#[test]
 fn execute_live_apply_with_request_supports_non_rule_alert_resources() {
     let mut calls = Vec::new();
     let operations = load_apply_operations(vec![
