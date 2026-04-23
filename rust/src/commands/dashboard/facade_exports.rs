@@ -58,7 +58,8 @@ pub(crate) mod crate_exports {
     #[allow(unused_imports)]
     pub(crate) use super::super::facade_support::{
         build_datasource_inventory_record, build_folder_path, build_live_dashboard_domain_status,
-        build_live_dashboard_domain_status_from_inputs, collect_folder_inventory_with_request,
+        build_live_dashboard_domain_status_from_inputs,
+        build_live_dashboard_read_failed_domain_status, collect_folder_inventory_with_request,
         collect_live_dashboard_project_status_inputs_with_request,
         fetch_dashboard_if_exists_with_request, fetch_dashboard_permissions_with_request,
         fetch_dashboard_with_request, fetch_folder_if_exists_with_request,

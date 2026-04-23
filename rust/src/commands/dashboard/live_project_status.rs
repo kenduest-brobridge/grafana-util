@@ -20,7 +20,7 @@ use crate::project_status::{
     status_finding, ProjectDomainStatus, ProjectStatusFinding, PROJECT_STATUS_PARTIAL,
     PROJECT_STATUS_READY,
 };
-use crate::project_status_model::StatusReading;
+use crate::project_status_model::{StatusReading, StatusRecordCount};
 
 use super::DEFAULT_PAGE_SIZE;
 
@@ -30,6 +30,7 @@ const DASHBOARD_MODE: &str = "live-dashboard-read";
 const DASHBOARD_REASON_READY: &str = PROJECT_STATUS_READY;
 const DASHBOARD_REASON_PARTIAL_NO_DATA: &str = "partial-no-data";
 const DASHBOARD_REASON_PARTIAL_NO_DATASOURCES: &str = "partial-no-datasources";
+const DASHBOARD_REASON_LIVE_READ_FAILED: &str = "live-read-failed";
 
 const DASHBOARD_SOURCE_KINDS: &[&str] = &["live-dashboard-search", "live-datasource-list"];
 const DASHBOARD_SIGNAL_KEYS: &[&str] = &[
@@ -47,6 +48,7 @@ const DASHBOARD_ROOT_SCOPE_SIGNAL_KEY: &str = "live.rootDashboardCount";
 const DASHBOARD_TITLE_GAP_SIGNAL_KEY: &str = "live.dashboardTitleGapCount";
 const DASHBOARD_FOLDER_TITLE_GAP_SIGNAL_KEY: &str = "live.folderTitleGapCount";
 const DASHBOARD_IMPORT_READY_SIGNAL_KEY: &str = "live.importReadyDashboardCount";
+const DASHBOARD_PRIMARY_SIGNAL_KEY: &str = "live.dashboardCount";
 
 const DASHBOARD_READY_NEXT_ACTIONS: &[&str] =
     &["re-run live dashboard read after dashboard, folder, or datasource changes"];
@@ -337,6 +339,31 @@ pub(crate) fn build_live_dashboard_domain_status_from_inputs(
     build_live_dashboard_domain_status(&inputs.dashboard_summaries, &inputs.datasources)
 }
 
+pub(crate) fn build_live_dashboard_read_failed_domain_status(
+    source_kind: &str,
+    action: &str,
+) -> ProjectDomainStatus {
+    StatusReading {
+        id: DASHBOARD_DOMAIN_ID.to_string(),
+        scope: DASHBOARD_SCOPE.to_string(),
+        mode: DASHBOARD_MODE.to_string(),
+        status: PROJECT_STATUS_PARTIAL.to_string(),
+        reason_code: DASHBOARD_REASON_LIVE_READ_FAILED.to_string(),
+        primary_count: 0,
+        source_kinds: vec![source_kind.to_string()],
+        signal_keys: vec![DASHBOARD_PRIMARY_SIGNAL_KEY.to_string()],
+        blockers: vec![StatusRecordCount::new(
+            DASHBOARD_REASON_LIVE_READ_FAILED,
+            1,
+            DASHBOARD_PRIMARY_SIGNAL_KEY,
+        )],
+        warnings: Vec::new(),
+        next_actions: vec![action.to_string()],
+        freshness: Default::default(),
+    }
+    .into_project_domain_status()
+}
+
 #[allow(dead_code)]
 pub(crate) fn build_live_dashboard_domain_status_with_request<F>(
     request_json: F,
@@ -354,6 +381,7 @@ mod live_project_status_rust_tests {
     use super::build_live_dashboard_domain_status_with_request;
     use super::{
         build_live_dashboard_domain_status_from_inputs,
+        build_live_dashboard_read_failed_domain_status,
         collect_live_dashboard_project_status_inputs_with_request,
     };
     use crate::project_status::{status_finding, PROJECT_STATUS_PARTIAL, PROJECT_STATUS_READY};
@@ -455,6 +483,33 @@ mod live_project_status_rust_tests {
                 "review live dashboard governance and import-readiness warnings before re-running live dashboard read"
                     .to_string(),
             ]
+        );
+    }
+
+    #[test]
+    fn build_live_dashboard_read_failed_domain_status_preserves_dashboard_contract() {
+        let domain = build_live_dashboard_read_failed_domain_status(
+            "live-dashboard-search",
+            "restore dashboard search access, then re-run live status",
+        );
+
+        assert_eq!(domain.id, "dashboard");
+        assert_eq!(domain.scope, "live");
+        assert_eq!(domain.mode, "live-dashboard-read");
+        assert_eq!(domain.status, PROJECT_STATUS_PARTIAL);
+        assert_eq!(domain.reason_code, "live-read-failed");
+        assert_eq!(domain.primary_count, 0);
+        assert_eq!(domain.blocker_count, 1);
+        assert_eq!(domain.warning_count, 0);
+        assert_eq!(domain.source_kinds, vec!["live-dashboard-search"]);
+        assert_eq!(domain.signal_keys, vec!["live.dashboardCount"]);
+        assert_eq!(
+            domain.blockers,
+            vec![status_finding("live-read-failed", 1, "live.dashboardCount")]
+        );
+        assert_eq!(
+            domain.next_actions,
+            vec!["restore dashboard search access, then re-run live status".to_string()]
         );
     }
 

@@ -315,10 +315,10 @@ Action:
 
 - [x] Introduce a shared data shape before introducing a trait. Candidate names: `StatusProducer`, `StatusReading`, `StatusWarning`, `StatusBlockedReason`, `StatusRecordCount`.
 - [x] Keep `status overview` as a consumer/reporting surface, not an orchestration owner.
-- [ ] Move domain-specific discovery and warnings into domain producers.
+- [x] Move domain-specific discovery and warnings into domain producers.
 - [ ] Delay a shared trait until at least dashboard, datasource, and access prove the same producer interface.
 
-Completion note: `StatusReading`/`StatusRecordCount` were already present, and dashboard staged, access staged, and datasource live producers now keep producer-local warnings/blockers in `StatusRecordCount` until the final project-status conversion. Future discovery cleanup and any shared trait remain open.
+Completion note: `StatusReading`/`StatusRecordCount` were already present, and dashboard staged, access staged, and datasource live producers now keep producer-local warnings/blockers in `StatusRecordCount` until the final project-status conversion. Obvious live read-failure domain documents now come from dashboard, datasource, alert, and access producer helpers, so `status live` stays an orchestration/reporting consumer instead of owning those domain IDs, modes, and primary signal keys. A shared trait remains open because dashboard, datasource, and access still differ in input collection, optional producer output, freshness stamping, and multi-org transport boundaries.
 
 Validation:
 
@@ -351,9 +351,9 @@ Relevant areas:
 
 Action:
 
-- [ ] In `request_json`, avoid converting successful response bodies to `String`; keep error response text for diagnostics only.
-- [ ] Re-evaluate `Accept-Encoding: identity`; prefer reqwest-managed gzip, brotli, and deflate unless a Grafana compatibility case proves this unsafe.
-- [ ] Re-evaluate `.http1_only()` and allow HTTP/2 when the server/proxy supports it.
+- [x] In `request_json`, avoid converting successful response bodies to `String`; keep error response text for diagnostics only.
+- [x] Re-evaluate `Accept-Encoding: identity`; prefer reqwest-managed gzip, brotli, and deflate unless a Grafana compatibility case proves this unsafe.
+- [x] Re-evaluate `.http1_only()` and allow HTTP/2 when the server/proxy supports it.
 - [ ] Add bounded concurrency for dashboard detail fetches after `/api/search`.
 - [ ] Add bounded concurrency for alert template detail fetches.
 - [ ] Add bounded concurrency for dashboard/folder permission export fetches.
@@ -381,10 +381,10 @@ Action:
 
 - [ ] Split request builders into a phase-specific module.
 - [ ] Split dependency ordering into a phase-specific module.
-- [ ] Split apply execution into a phase-specific module.
-- [ ] Keep API behavior unchanged.
-- [ ] Add focused tests around ordering and the next split boundary if missing.
-- [ ] Start with one phase boundary, then reassess. Do not split every phase in a single pass if the parent control flow becomes harder to follow.
+- [x] Split apply execution into a phase-specific module.
+- [x] Keep API behavior unchanged.
+- [x] Add focused tests around ordering and the next split boundary if missing.
+- [x] Start with one phase boundary, then reassess. Do not split every phase in a single pass if the parent control flow becomes harder to follow.
 
 Validation:
 

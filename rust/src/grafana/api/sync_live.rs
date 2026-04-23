@@ -15,6 +15,8 @@ mod sync_live_apply_dashboard;
 mod sync_live_apply_datasource;
 #[path = "sync_live_apply_error.rs"]
 mod sync_live_apply_error;
+#[path = "sync_live_apply_execution.rs"]
+mod sync_live_apply_execution;
 #[path = "sync_live_apply_folder.rs"]
 mod sync_live_apply_folder;
 #[path = "sync_live_apply_phase.rs"]

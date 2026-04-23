@@ -1,10 +1,12 @@
 use super::{
     build_datasource_live_project_status, build_datasource_live_project_status_from_inputs,
+    build_live_datasource_read_failed_domain_status,
     collect_live_datasource_project_status_inputs_with_request,
     datasource_live_project_status_org_count, datasource_live_project_status_source_kinds,
     DatasourceLiveProjectStatusInputs, LiveDatasourceProjectStatusInputs,
 };
 use crate::common::message;
+use crate::project_status::{status_finding, PROJECT_STATUS_PARTIAL};
 use serde_json::json;
 use serde_json::{Map, Value};
 
@@ -107,6 +109,37 @@ fn datasource_live_project_status_org_count_prefers_explicit_org_surfaces() {
             &records,
         ),
         2
+    );
+}
+
+#[test]
+fn build_live_datasource_read_failed_domain_status_preserves_datasource_contract() {
+    let domain = build_live_datasource_read_failed_domain_status(
+        "live-datasource-list",
+        "restore datasource inventory access, then re-run live status",
+    );
+
+    assert_eq!(domain.id, "datasource");
+    assert_eq!(domain.scope, "live");
+    assert_eq!(domain.mode, "live-inventory");
+    assert_eq!(domain.status, PROJECT_STATUS_PARTIAL);
+    assert_eq!(domain.reason_code, "live-read-failed");
+    assert_eq!(domain.primary_count, 0);
+    assert_eq!(domain.blocker_count, 1);
+    assert_eq!(domain.warning_count, 0);
+    assert_eq!(domain.source_kinds, vec!["live-datasource-list"]);
+    assert_eq!(domain.signal_keys, vec!["live.datasourceCount"]);
+    assert_eq!(
+        domain.blockers,
+        vec![status_finding(
+            "live-read-failed",
+            1,
+            "live.datasourceCount"
+        )]
+    );
+    assert_eq!(
+        domain.next_actions,
+        vec!["restore datasource inventory access, then re-run live status".to_string()]
     );
 }
 

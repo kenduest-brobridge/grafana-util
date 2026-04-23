@@ -78,6 +78,7 @@ pub use cli_defs::{
 #[allow(unused_imports)]
 pub(crate) use facade_support::{
     build_access_live_domain_status, build_access_live_domain_status_with_request,
+    build_access_live_read_failed_domain_status,
 };
 pub use pending_delete::{
     GroupCommandStage, ServiceAccountDeleteArgs, ServiceAccountTokenDeleteArgs, TeamDeleteArgs,

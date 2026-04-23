@@ -75,7 +75,8 @@ pub(crate) use alert_linkage_support::get_rule_linkage;
 #[cfg(test)]
 pub(crate) use alert_list::serialize_rule_list_rows;
 pub use alert_live_project_status::{
-    build_alert_live_project_status_domain, AlertLiveProjectStatusInputs,
+    build_alert_live_project_status_domain, build_alert_live_read_failed_domain_status,
+    AlertLiveProjectStatusInputs,
 };
 #[cfg(test)]
 pub(crate) use alert_output::render_alert_action_text;

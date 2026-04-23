@@ -354,6 +354,26 @@ fn sync_live_client_applies_alert_create_with_shared_transport() {
 }
 
 #[test]
+fn sync_live_client_rejects_unsupported_apply_kind_before_transport() {
+    let api = build_test_api("http://127.0.0.1:9".to_string());
+    let client = SyncLiveClient::new(&api);
+    let operations = vec![SyncApplyOperation {
+        kind: "library-panel".to_string(),
+        identity: "panel-a".to_string(),
+        action: "would-update".to_string(),
+        desired: serde_json::Map::new(),
+    }];
+
+    let error = execute_sync_live_apply_with_client(&client, &operations, false, false)
+        .expect_err("unsupported kind should be rejected before transport");
+
+    assert_eq!(
+        error.to_string(),
+        "Unsupported sync resource kind library-panel."
+    );
+}
+
+#[test]
 fn dashboard_resource_client_builds_expected_dashboard_requests() {
     let responses = vec![
         http_response(

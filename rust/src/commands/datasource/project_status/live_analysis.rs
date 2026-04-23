@@ -10,11 +10,13 @@ const DATASOURCE_SCOPE: &str = "live";
 const DATASOURCE_MODE: &str = "live-inventory";
 const DATASOURCE_REASON_READY: &str = PROJECT_STATUS_READY;
 const DATASOURCE_REASON_PARTIAL_NO_DATA: &str = "partial-no-data";
+const DATASOURCE_REASON_LIVE_READ_FAILED: &str = "live-read-failed";
 
 const DATASOURCE_SOURCE_KIND_LIST: &str = "live-datasource-list";
 const DATASOURCE_SOURCE_KIND_READ: &str = "live-datasource-read";
 const DATASOURCE_SOURCE_KIND_ORG_LIST: &str = "live-org-list";
 const DATASOURCE_SOURCE_KIND_ORG_READ: &str = "live-org-read";
+const DATASOURCE_PRIMARY_SIGNAL_KEY: &str = "live.datasourceCount";
 
 pub(crate) const DATASOURCE_SIGNAL_KEYS: &[&str] = &[
     "live.datasourceCount",
@@ -624,4 +626,29 @@ pub(crate) fn build_datasource_live_project_status(
         }
         .into_project_domain_status(),
     )
+}
+
+pub(crate) fn build_live_datasource_read_failed_domain_status(
+    source_kind: &str,
+    action: &str,
+) -> ProjectDomainStatus {
+    StatusReading {
+        id: DATASOURCE_DOMAIN_ID.to_string(),
+        scope: DATASOURCE_SCOPE.to_string(),
+        mode: DATASOURCE_MODE.to_string(),
+        status: PROJECT_STATUS_PARTIAL.to_string(),
+        reason_code: DATASOURCE_REASON_LIVE_READ_FAILED.to_string(),
+        primary_count: 0,
+        source_kinds: vec![source_kind.to_string()],
+        signal_keys: vec![DATASOURCE_PRIMARY_SIGNAL_KEY.to_string()],
+        blockers: vec![StatusRecordCount::new(
+            DATASOURCE_REASON_LIVE_READ_FAILED,
+            1,
+            DATASOURCE_PRIMARY_SIGNAL_KEY,
+        )],
+        warnings: Vec::new(),
+        next_actions: vec![action.to_string()],
+        freshness: Default::default(),
+    }
+    .into_project_domain_status()
 }

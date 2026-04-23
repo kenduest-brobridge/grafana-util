@@ -17,7 +17,7 @@ use super::value_to_string;
 use crate::project_status::{
     status_finding, ProjectDomainStatus, PROJECT_STATUS_PARTIAL, PROJECT_STATUS_READY,
 };
-use crate::project_status_model::StatusReading;
+use crate::project_status_model::{StatusReading, StatusRecordCount};
 
 const ALERT_DOMAIN_ID: &str = "alert";
 const ALERT_SCOPE: &str = "live";
@@ -25,6 +25,7 @@ const ALERT_MODE: &str = "live-alert-surfaces";
 const ALERT_REASON_READY: &str = PROJECT_STATUS_READY;
 const ALERT_REASON_PARTIAL_NO_DATA: &str = "partial-no-data";
 const ALERT_REASON_BLOCKED_BY_BLOCKERS: &str = "blocked-by-blockers";
+const ALERT_REASON_LIVE_READ_FAILED: &str = "live-read-failed";
 
 const ALERT_SOURCE_KINDS: &[&str] = &[
     "alert",
@@ -43,6 +44,7 @@ const ALERT_SIGNAL_KEYS: &[&str] = &[
     "live.policyCount",
     "live.templateCount",
 ];
+const ALERT_PRIMARY_SIGNAL_KEY: &str = "live.alertRuleCount";
 
 const ALERT_EXPORT_AT_LEAST_ONE_ACTIONS: &[&str] = &["capture at least one live alert resource"];
 const ALERT_LINK_AT_LEAST_ONE_RULE_ACTIONS: &[&str] = &[
@@ -331,11 +333,39 @@ pub fn build_alert_live_project_status_domain(
     )
 }
 
+pub fn build_alert_live_read_failed_domain_status(
+    source_kind: &str,
+    action: &str,
+) -> ProjectDomainStatus {
+    StatusReading {
+        id: ALERT_DOMAIN_ID.to_string(),
+        scope: ALERT_SCOPE.to_string(),
+        mode: ALERT_MODE.to_string(),
+        status: PROJECT_STATUS_PARTIAL.to_string(),
+        reason_code: ALERT_REASON_LIVE_READ_FAILED.to_string(),
+        primary_count: 0,
+        source_kinds: vec![source_kind.to_string()],
+        signal_keys: vec![ALERT_PRIMARY_SIGNAL_KEY.to_string()],
+        blockers: vec![StatusRecordCount::new(
+            ALERT_REASON_LIVE_READ_FAILED,
+            1,
+            ALERT_PRIMARY_SIGNAL_KEY,
+        )],
+        warnings: Vec::new(),
+        next_actions: vec![action.to_string()],
+        freshness: Default::default(),
+    }
+    .into_project_domain_status()
+}
+
 #[cfg(test)]
 mod alert_live_project_status_rust_tests {
-    use super::{build_alert_live_project_status_domain, AlertLiveProjectStatusInputs};
+    use super::{
+        build_alert_live_project_status_domain, build_alert_live_read_failed_domain_status,
+        AlertLiveProjectStatusInputs,
+    };
     use crate::project_status::{
-        PROJECT_STATUS_BLOCKED, PROJECT_STATUS_PARTIAL, PROJECT_STATUS_READY,
+        status_finding, PROJECT_STATUS_BLOCKED, PROJECT_STATUS_PARTIAL, PROJECT_STATUS_READY,
     };
     use serde_json::json;
 
@@ -344,6 +374,33 @@ mod alert_live_project_status_rust_tests {
         assert!(
             build_alert_live_project_status_domain(AlertLiveProjectStatusInputs::default())
                 .is_none()
+        );
+    }
+
+    #[test]
+    fn build_alert_live_read_failed_domain_status_preserves_alert_contract() {
+        let domain = build_alert_live_read_failed_domain_status(
+            "alert",
+            "restore alert read access, then re-run live status",
+        );
+
+        assert_eq!(domain.id, "alert");
+        assert_eq!(domain.scope, "live");
+        assert_eq!(domain.mode, "live-alert-surfaces");
+        assert_eq!(domain.status, PROJECT_STATUS_PARTIAL);
+        assert_eq!(domain.reason_code, "live-read-failed");
+        assert_eq!(domain.primary_count, 0);
+        assert_eq!(domain.blocker_count, 1);
+        assert_eq!(domain.warning_count, 0);
+        assert_eq!(domain.source_kinds, vec!["alert"]);
+        assert_eq!(domain.signal_keys, vec!["live.alertRuleCount"]);
+        assert_eq!(
+            domain.blockers,
+            vec![status_finding("live-read-failed", 1, "live.alertRuleCount")]
+        );
+        assert_eq!(
+            domain.next_actions,
+            vec!["restore alert read access, then re-run live status".to_string()]
         );
     }
 

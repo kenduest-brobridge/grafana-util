@@ -18,8 +18,9 @@ mod analysis;
 #[allow(unused_imports)]
 pub(crate) use analysis::{
     build_datasource_live_project_status, build_datasource_live_project_status_from_inputs,
-    datasource_live_project_status_org_count, datasource_live_project_status_source_kinds,
-    DatasourceLiveProjectStatusInputs, LiveDatasourceProjectStatusInputs,
+    build_live_datasource_read_failed_domain_status, datasource_live_project_status_org_count,
+    datasource_live_project_status_source_kinds, DatasourceLiveProjectStatusInputs,
+    LiveDatasourceProjectStatusInputs,
 };
 
 pub(crate) fn collect_live_datasource_project_status_inputs_with_request<F>(

@@ -3,7 +3,7 @@
 use std::fs;
 
 use reqwest::blocking::Client;
-use reqwest::header::{HeaderMap, HeaderName, HeaderValue, ACCEPT, ACCEPT_ENCODING, CONTENT_TYPE};
+use reqwest::header::{HeaderMap, HeaderName, HeaderValue, ACCEPT, CONTENT_TYPE};
 use reqwest::{Certificate, Method, StatusCode, Url};
 use serde_json::Value;
 
@@ -36,7 +36,6 @@ impl JsonHttpClient {
     ) -> Result<Self> {
         let mut headers = HeaderMap::new();
         headers.insert(ACCEPT, HeaderValue::from_static("application/json"));
-        headers.insert(ACCEPT_ENCODING, HeaderValue::from_static("identity"));
         for (name, value) in config.headers {
             let header_name =
                 HeaderName::from_bytes(name.as_bytes()).map_err(|_| invalid_header_name(&name))?;
@@ -48,8 +47,7 @@ impl JsonHttpClient {
         let mut builder = Client::builder()
             .default_headers(headers)
             .timeout(std::time::Duration::from_secs(config.timeout_secs))
-            .danger_accept_invalid_certs(!config.verify_ssl)
-            .http1_only();
+            .danger_accept_invalid_certs(!config.verify_ssl);
         if let Some(ca_cert_path) = ca_cert {
             let pem_bundle = fs::read(ca_cert_path)?;
             for cert in Certificate::from_pem_bundle(&pem_bundle)? {
@@ -85,13 +83,13 @@ impl JsonHttpClient {
         let response = request.send()?;
         let status = response.status();
         let body = response.bytes()?;
-        let body_text = String::from_utf8_lossy(&body).to_string();
 
         if status.is_client_error() || status.is_server_error() {
+            let body_text = String::from_utf8_lossy(&body).to_string();
             return Err(api_response(status.as_u16(), url.to_string(), body_text));
         }
 
-        if body_text.trim().is_empty() || status == StatusCode::NO_CONTENT {
+        if status == StatusCode::NO_CONTENT || body.iter().all(u8::is_ascii_whitespace) {
             return Ok(None);
         }
 

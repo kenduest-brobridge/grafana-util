@@ -19,17 +19,19 @@ use serde_json::Value;
 use std::fs::Metadata;
 use std::path::PathBuf;
 
+use crate::access::build_access_live_read_failed_domain_status;
+use crate::alert::build_alert_live_read_failed_domain_status;
 use crate::common::{load_json_object_file, message, Result};
+use crate::dashboard::build_live_dashboard_read_failed_domain_status;
+use crate::datasource_live_project_status::build_live_datasource_read_failed_domain_status;
 use crate::project_status::{
     build_project_status, ProjectDomainStatus, ProjectStatus, ProjectStatusFreshness,
-    PROJECT_STATUS_PARTIAL,
 };
 use crate::project_status_command::{ProjectStatusLiveArgs, PROJECT_STATUS_DOMAIN_COUNT};
 use crate::project_status_freshness::{
     build_live_project_status_freshness_from_parts, project_status_freshness_parts_from_ages,
     project_status_freshness_parts_from_samples, ProjectStatusFreshnessSample,
 };
-use crate::project_status_model::{StatusReading, StatusRecordCount};
 use crate::project_status_support::{build_live_project_status_api_client, project_status_live};
 
 use self::live_discovery::build_live_status_discovery;
@@ -41,37 +43,8 @@ use self::live_multi_org::build_live_multi_org_domain_status;
 
 const PROJECT_STATUS_LIVE_SCOPE: &str = "live";
 const PROJECT_STATUS_LIVE_ALL_ORGS_MODE_SUFFIX: &str = "-all-orgs";
-const PROJECT_STATUS_LIVE_READ_FAILED: &str = "live-read-failed";
 const PROJECT_STATUS_LIVE_ALL_ORGS_AGGREGATE: &str = "multi-org-aggregate";
 const PROJECT_STATUS_LIVE_INSTANCE_SOURCE: &str = "api-health";
-
-fn build_live_read_failed_domain_status(
-    id: &str,
-    mode: &str,
-    source_kind: &str,
-    signal_key: &str,
-    action: &str,
-) -> ProjectDomainStatus {
-    StatusReading {
-        id: id.to_string(),
-        scope: PROJECT_STATUS_LIVE_SCOPE.to_string(),
-        mode: mode.to_string(),
-        status: PROJECT_STATUS_PARTIAL.to_string(),
-        reason_code: PROJECT_STATUS_LIVE_READ_FAILED.to_string(),
-        primary_count: 0,
-        source_kinds: vec![source_kind.to_string()],
-        signal_keys: vec![signal_key.to_string()],
-        blockers: vec![StatusRecordCount::new(
-            PROJECT_STATUS_LIVE_READ_FAILED,
-            1,
-            signal_key,
-        )],
-        warnings: Vec::new(),
-        next_actions: vec![action.to_string()],
-        freshness: ProjectStatusFreshness::default(),
-    }
-    .into_project_domain_status()
-}
 
 fn load_optional_project_status_document_with_metadata(
     path: Option<&PathBuf>,
@@ -150,21 +123,15 @@ pub(crate) fn build_live_project_status(args: &ProjectStatusLiveArgs) -> Result<
             Ok(orgs) if !orgs.is_empty() => {
                 build_live_multi_org_domain_status(&api, orgs, build_live_dashboard_status)
                     .unwrap_or_else(|_| {
-                        build_live_read_failed_domain_status(
-                            "dashboard",
-                            "live-dashboard-read",
+                        build_live_dashboard_read_failed_domain_status(
                             "live-dashboard-search",
-                            "live.dashboardCount",
                             "restore dashboard/org read access, then re-run live status --all-orgs",
                         )
                     })
             }
             Ok(_) => build_live_dashboard_status(&client),
-            Err(_) => build_live_read_failed_domain_status(
-                "dashboard",
-                "live-dashboard-read",
+            Err(_) => build_live_dashboard_read_failed_domain_status(
                 "live-org-list",
-                "live.dashboardCount",
                 "restore org list access, then re-run live status --all-orgs",
             ),
         }
@@ -176,21 +143,15 @@ pub(crate) fn build_live_project_status(args: &ProjectStatusLiveArgs) -> Result<
             Ok(orgs) if !orgs.is_empty() => {
                 build_live_multi_org_domain_status(&api, orgs, build_live_datasource_status)
                     .unwrap_or_else(|_| {
-                        build_live_read_failed_domain_status(
-                    "datasource",
-                    "live-inventory",
+                        build_live_datasource_read_failed_domain_status(
                     "live-datasource-list",
-                    "live.datasourceCount",
                     "restore datasource/org read access, then re-run live status --all-orgs",
                 )
                     })
             }
             Ok(_) => build_live_datasource_status(&client),
-            Err(_) => build_live_read_failed_domain_status(
-                "datasource",
-                "live-inventory",
+            Err(_) => build_live_datasource_read_failed_domain_status(
                 "live-org-list",
-                "live.datasourceCount",
                 "restore org list access, then re-run live status --all-orgs",
             ),
         }
@@ -202,21 +163,15 @@ pub(crate) fn build_live_project_status(args: &ProjectStatusLiveArgs) -> Result<
             Ok(orgs) if !orgs.is_empty() => {
                 build_live_multi_org_domain_status(&api, orgs, build_live_alert_status)
                     .unwrap_or_else(|_| {
-                        build_live_read_failed_domain_status(
+                        build_alert_live_read_failed_domain_status(
                             "alert",
-                            "live-alert-surfaces",
-                            "alert",
-                            "live.alertRuleCount",
                             "restore alert/org read access, then re-run live status --all-orgs",
                         )
                     })
             }
             Ok(_) => build_live_alert_status(&client),
-            Err(_) => build_live_read_failed_domain_status(
-                "alert",
-                "live-alert-surfaces",
+            Err(_) => build_alert_live_read_failed_domain_status(
                 "live-org-list",
-                "live.alertRuleCount",
                 "restore org list access, then re-run live status --all-orgs",
             ),
         }
@@ -228,21 +183,15 @@ pub(crate) fn build_live_project_status(args: &ProjectStatusLiveArgs) -> Result<
             Ok(orgs) if !orgs.is_empty() => {
                 build_live_multi_org_domain_status(&api, orgs, build_live_access_status)
                     .unwrap_or_else(|_| {
-                        build_live_read_failed_domain_status(
-                            "access",
-                            "live-list-surfaces",
+                        build_access_live_read_failed_domain_status(
                             "grafana-utils-access-live-org-users",
-                            "live.users.count",
                             "restore access/org read access, then re-run live status --all-orgs",
                         )
                     })
             }
             Ok(_) => build_live_access_status(&client),
-            Err(_) => build_live_read_failed_domain_status(
-                "access",
-                "live-list-surfaces",
+            Err(_) => build_access_live_read_failed_domain_status(
                 "live-org-list",
-                "live.users.count",
                 "restore org list access, then re-run live status --all-orgs",
             ),
         }

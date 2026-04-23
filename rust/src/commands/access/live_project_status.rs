@@ -15,8 +15,10 @@ use crate::common::Result;
 use crate::grafana_api::AccessResourceClient;
 use crate::http::JsonHttpClient;
 use crate::project_status::{
-    status_finding, ProjectDomainStatus, ProjectStatusFinding, PROJECT_STATUS_READY,
+    status_finding, ProjectDomainStatus, ProjectStatusFinding, PROJECT_STATUS_PARTIAL,
+    PROJECT_STATUS_READY,
 };
+use crate::project_status_model::{StatusReading, StatusRecordCount};
 
 use super::render::{normalize_org_role, scalar_text, value_bool};
 use super::{request_object_list_field, DEFAULT_PAGE_SIZE};
@@ -42,6 +44,7 @@ const ACCESS_MODE: &str = "live-list-surfaces";
 const ACCESS_REASON_READY: &str = PROJECT_STATUS_READY;
 const ACCESS_REASON_PARTIAL_NO_DATA: &str = "partial-no-data";
 const ACCESS_REASON_PARTIAL_LIVE_SCOPES: &str = "partial-live-scopes";
+const ACCESS_REASON_LIVE_READ_FAILED: &str = "live-read-failed";
 
 const ACCESS_SIGNAL_KEYS: &[&str] = &[
     "live.users.count",
@@ -56,6 +59,7 @@ const ACCESS_SIGNAL_KEYS: &[&str] = &[
     "live.serviceAccounts.disabledCount",
     "live.serviceAccounts.tokenlessCount",
 ];
+const ACCESS_PRIMARY_SIGNAL_KEY: &str = "live.users.count";
 
 const ACCESS_SOURCE_KIND_LIVE_ORG_USERS: &str = "grafana-utils-access-live-org-users";
 const ACCESS_SOURCE_KIND_LIVE_GLOBAL_USERS: &str = "grafana-utils-access-live-global-users";
@@ -210,11 +214,38 @@ pub(crate) fn build_access_live_domain_status(
     live_project_status_build::build_access_live_domain_status_from_readings(&readings)
 }
 
+pub(crate) fn build_access_live_read_failed_domain_status(
+    source_kind: &str,
+    action: &str,
+) -> ProjectDomainStatus {
+    StatusReading {
+        id: ACCESS_DOMAIN_ID.to_string(),
+        scope: ACCESS_SCOPE.to_string(),
+        mode: ACCESS_MODE.to_string(),
+        status: PROJECT_STATUS_PARTIAL.to_string(),
+        reason_code: ACCESS_REASON_LIVE_READ_FAILED.to_string(),
+        primary_count: 0,
+        source_kinds: vec![source_kind.to_string()],
+        signal_keys: vec![ACCESS_PRIMARY_SIGNAL_KEY.to_string()],
+        blockers: vec![StatusRecordCount::new(
+            ACCESS_REASON_LIVE_READ_FAILED,
+            1,
+            ACCESS_PRIMARY_SIGNAL_KEY,
+        )],
+        warnings: Vec::new(),
+        next_actions: vec![action.to_string()],
+        freshness: Default::default(),
+    }
+    .into_project_domain_status()
+}
+
 #[cfg(test)]
 mod tests {
-    use super::build_access_live_domain_status_with_request;
+    use super::{
+        build_access_live_domain_status_with_request, build_access_live_read_failed_domain_status,
+    };
     use crate::common::message;
-    use crate::project_status::{PROJECT_STATUS_PARTIAL, PROJECT_STATUS_READY};
+    use crate::project_status::{status_finding, PROJECT_STATUS_PARTIAL, PROJECT_STATUS_READY};
     use reqwest::Method;
     use serde_json::json;
 
@@ -306,6 +337,36 @@ mod tests {
         assert_eq!(domain.warnings[3].kind, "live-service-accounts-count");
         assert_eq!(domain.warnings[3].count, 4);
         assert_eq!(domain.warnings[3].source, "live.serviceAccounts.count");
+    }
+
+    #[test]
+    fn build_access_live_read_failed_domain_status_preserves_access_contract() {
+        let domain = build_access_live_read_failed_domain_status(
+            "grafana-utils-access-live-org-users",
+            "restore access read scopes, then re-run live status",
+        );
+
+        assert_eq!(domain.id, "access");
+        assert_eq!(domain.scope, "live");
+        assert_eq!(domain.mode, "live-list-surfaces");
+        assert_eq!(domain.status, PROJECT_STATUS_PARTIAL);
+        assert_eq!(domain.reason_code, "live-read-failed");
+        assert_eq!(domain.primary_count, 0);
+        assert_eq!(domain.blocker_count, 1);
+        assert_eq!(domain.warning_count, 0);
+        assert_eq!(
+            domain.source_kinds,
+            vec!["grafana-utils-access-live-org-users"]
+        );
+        assert_eq!(domain.signal_keys, vec!["live.users.count"]);
+        assert_eq!(
+            domain.blockers,
+            vec![status_finding("live-read-failed", 1, "live.users.count")]
+        );
+        assert_eq!(
+            domain.next_actions,
+            vec!["restore access read scopes, then re-run live status".to_string()]
+        );
     }
 
     #[test]

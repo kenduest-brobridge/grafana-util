@@ -1,11 +1,18 @@
 use serde_json::Value;
 use std::fs::Metadata;
 
-use crate::access::build_access_live_domain_status;
-use crate::alert::{build_alert_live_project_status_domain, AlertLiveProjectStatusInputs};
-use crate::dashboard::{build_live_dashboard_domain_status_from_inputs, DEFAULT_PAGE_SIZE};
+use crate::access::{build_access_live_domain_status, build_access_live_read_failed_domain_status};
+use crate::alert::{
+    build_alert_live_project_status_domain, build_alert_live_read_failed_domain_status,
+    AlertLiveProjectStatusInputs,
+};
+use crate::dashboard::{
+    build_live_dashboard_domain_status_from_inputs, build_live_dashboard_read_failed_domain_status,
+    DEFAULT_PAGE_SIZE,
+};
 use crate::datasource_live_project_status::{
     build_datasource_live_project_status_from_inputs,
+    build_live_datasource_read_failed_domain_status,
     collect_live_datasource_project_status_inputs_with_request,
 };
 use crate::http::JsonHttpClient;
@@ -18,7 +25,7 @@ use crate::sync::{
     LivePromotionProjectStatusInputs, SyncLiveProjectStatusInputs,
 };
 
-use super::{build_live_read_failed_domain_status, stamp_live_domain_freshness};
+use super::stamp_live_domain_freshness;
 
 pub(super) fn build_live_dashboard_status(client: &JsonHttpClient) -> ProjectDomainStatus {
     match project_status_live::collect_live_dashboard_project_status_inputs(
@@ -45,11 +52,8 @@ pub(super) fn build_live_dashboard_status(client: &JsonHttpClient) -> ProjectDom
             }
             stamp_live_domain_freshness(status, &freshness_samples)
         }
-        Err(_) => build_live_read_failed_domain_status(
-            "dashboard",
-            "live-dashboard-read",
+        Err(_) => build_live_dashboard_read_failed_domain_status(
             "live-dashboard-search",
-            "live.dashboardCount",
             "restore dashboard search access, then re-run live status",
         ),
     }
@@ -61,20 +65,14 @@ pub(super) fn build_live_datasource_status(client: &JsonHttpClient) -> ProjectDo
     ) {
         Ok(inputs) => {
             build_datasource_live_project_status_from_inputs(&inputs).unwrap_or_else(|| {
-                build_live_read_failed_domain_status(
-                    "datasource",
-                    "live-inventory",
+                build_live_datasource_read_failed_domain_status(
                     "live-datasource-list",
-                    "live.datasourceCount",
                     "restore datasource inventory access, then re-run live status",
                 )
             })
         }
-        Err(_) => build_live_read_failed_domain_status(
-            "datasource",
-            "live-inventory",
+        Err(_) => build_live_datasource_read_failed_domain_status(
             "live-datasource-list",
-            "live.datasourceCount",
             "restore datasource inventory access, then re-run live status",
         ),
     };
@@ -91,11 +89,8 @@ pub(super) fn build_live_alert_status(client: &JsonHttpClient) -> ProjectDomainS
         templates_document: documents.templates.as_ref(),
     })
     .unwrap_or_else(|| {
-        build_live_read_failed_domain_status(
+        build_alert_live_read_failed_domain_status(
             "alert",
-            "live-alert-surfaces",
-            "alert",
-            "live.alertRuleCount",
             "restore alert read access, then re-run live status",
         )
     });
@@ -105,11 +100,8 @@ pub(super) fn build_live_alert_status(client: &JsonHttpClient) -> ProjectDomainS
 
 pub(super) fn build_live_access_status(client: &JsonHttpClient) -> ProjectDomainStatus {
     let status = build_access_live_domain_status(client).unwrap_or_else(|| {
-        build_live_read_failed_domain_status(
-            "access",
-            "live-list-surfaces",
+        build_access_live_read_failed_domain_status(
             "grafana-utils-access-live-org-users",
-            "live.users.count",
             "restore access read scopes, then re-run live status",
         )
     });

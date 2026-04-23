@@ -19,5 +19,6 @@ pub(crate) use super::live::{
 #[allow(unused_imports)]
 pub(crate) use super::live_project_status::{
     build_live_dashboard_domain_status, build_live_dashboard_domain_status_from_inputs,
+    build_live_dashboard_read_failed_domain_status,
     collect_live_dashboard_project_status_inputs_with_request, LiveDashboardProjectStatusInputs,
 };
