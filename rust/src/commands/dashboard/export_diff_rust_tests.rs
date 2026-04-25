@@ -293,7 +293,7 @@ fn diff_dashboards_with_client_supports_provisioning_dashboards_dir() {
 
 fn load_shared_diff_golden_fixture(domain: &str) -> Value {
     serde_json::from_str::<Vec<Value>>(include_str!(
-        "../../../../fixtures/shared_diff_golden_cases.json"
+        "../../../../tests/fixtures/shared_diff_golden_cases.json"
     ))
     .unwrap()
     .into_iter()

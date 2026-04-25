@@ -10,6 +10,7 @@
 
 - Start Rust work in `rust/src/`, with crate settings in `rust/Cargo.toml`.
 - If Python context is required, start in `python/grafana_utils/`, `python/tests/`, and `python/pyproject.toml`.
+- Shared Rust/Python/schema contract fixtures live in `tests/fixtures/`.
 - Maintainer routing and AI workflow guidance live in `docs/internal/maintainer-quickstart.md`, `docs/internal/ai-workflow-note.md`, and `docs/internal/task-brief-template.md`.
 - Put operator-facing content in `README.md`, `README.zh-TW.md`, `docs/user-guide/`, and `docs/commands/`; put maintainer-only behavior and implementation tradeoffs in `docs/DEVELOPER.md`.
 - Treat `docs/user-guide/{en,zh-TW}/` as handbook source, `docs/commands/{en,zh-TW}/` as command-reference source, and `docs/man/*.1` plus `docs/html/` as generated output.

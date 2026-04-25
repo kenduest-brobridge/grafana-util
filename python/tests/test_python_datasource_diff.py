@@ -7,7 +7,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PYTHON_ROOT = REPO_ROOT / "python"
-FIXTURE_PATH = REPO_ROOT / "fixtures" / "datasource_contract_cases.json"
+FIXTURE_PATH = REPO_ROOT / "tests" / "fixtures" / "datasource_contract_cases.json"
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(PYTHON_ROOT))
 datasource_diff = importlib.import_module("grafana_utils.datasource_diff")

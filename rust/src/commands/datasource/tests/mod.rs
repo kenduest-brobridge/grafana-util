@@ -33,28 +33,28 @@ fn live_datasource(
 
 fn load_contract_cases() -> Vec<Value> {
     serde_json::from_str(include_str!(
-        "../../../../../fixtures/datasource_contract_cases.json"
+        "../../../../../tests/fixtures/datasource_contract_cases.json"
     ))
     .unwrap()
 }
 
 fn load_nested_json_data_merge_cases() -> Vec<Value> {
     serde_json::from_str(include_str!(
-        "../../../../../fixtures/datasource_nested_json_data_merge_cases.json"
+        "../../../../../tests/fixtures/datasource_nested_json_data_merge_cases.json"
     ))
     .unwrap()
 }
 
 fn load_secure_json_merge_cases() -> Vec<Value> {
     serde_json::from_str(include_str!(
-        "../../../../../fixtures/datasource_secure_json_merge_cases.json"
+        "../../../../../tests/fixtures/datasource_secure_json_merge_cases.json"
     ))
     .unwrap()
 }
 
 fn load_preset_profile_add_payload_cases() -> Vec<Value> {
     let document: Value = serde_json::from_str(include_str!(
-        "../../../../../fixtures/datasource_preset_profile_add_payload_cases.json"
+        "../../../../../tests/fixtures/datasource_preset_profile_add_payload_cases.json"
     ))
     .unwrap();
     document["cases"].as_array().cloned().unwrap()
@@ -62,7 +62,7 @@ fn load_preset_profile_add_payload_cases() -> Vec<Value> {
 
 fn load_supported_types_catalog_fixture() -> Value {
     serde_json::from_str(include_str!(
-        "../../../../../fixtures/datasource_supported_types_catalog.json"
+        "../../../../../tests/fixtures/datasource_supported_types_catalog.json"
     ))
     .unwrap()
 }

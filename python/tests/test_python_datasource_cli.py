@@ -14,18 +14,18 @@ PYTHON_ROOT = REPO_ROOT / "python"
 MODULE_PATH = PYTHON_ROOT / "grafana_utils" / "datasource_cli.py"
 PARSER_MODULE_PATH = PYTHON_ROOT / "grafana_utils" / "datasource" / "parser.py"
 WORKFLOWS_MODULE_PATH = PYTHON_ROOT / "grafana_utils" / "datasource" / "workflows.py"
-FIXTURE_PATH = REPO_ROOT / "fixtures" / "datasource_contract_cases.json"
+FIXTURE_PATH = REPO_ROOT / "tests" / "fixtures" / "datasource_contract_cases.json"
 SUPPORTED_DATASOURCE_TYPES_FIXTURE_PATH = (
-    REPO_ROOT / "fixtures" / "datasource_supported_types_catalog.json"
+    REPO_ROOT / "tests" / "fixtures" / "datasource_supported_types_catalog.json"
 )
 PRESET_PROFILE_PAYLOAD_FIXTURE_PATH = (
-    REPO_ROOT / "fixtures" / "datasource_preset_profile_add_payload_cases.json"
+    REPO_ROOT / "tests" / "fixtures" / "datasource_preset_profile_add_payload_cases.json"
 )
 NESTED_JSONDATA_MERGE_FIXTURE_PATH = (
-    REPO_ROOT / "fixtures" / "datasource_nested_json_data_merge_cases.json"
+    REPO_ROOT / "tests" / "fixtures" / "datasource_nested_json_data_merge_cases.json"
 )
 SECURE_JSON_MERGE_FIXTURE_PATH = (
-    REPO_ROOT / "fixtures" / "datasource_secure_json_merge_cases.json"
+    REPO_ROOT / "tests" / "fixtures" / "datasource_secure_json_merge_cases.json"
 )
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(PYTHON_ROOT))

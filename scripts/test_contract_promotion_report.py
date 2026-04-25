@@ -40,12 +40,12 @@ class ContractPromotionReportTest(unittest.TestCase):
                         {
                             "contractId": "sync-plan",
                             "title": "Sync plan",
-                            "goldenSample": "fixtures/machine_schema_golden_cases.json#sync-plan",
+                            "goldenSample": "tests/fixtures/machine_schema_golden_cases.json#sync-plan",
                         },
                         {
                             "contractId": "sync-preflight",
                             "title": "Sync preflight",
-                            "goldenSample": "fixtures/machine_schema_golden_cases.json#sync-preflight",
+                            "goldenSample": "tests/fixtures/machine_schema_golden_cases.json#sync-preflight",
                         },
                     ]
                 ),
@@ -57,7 +57,7 @@ class ContractPromotionReportTest(unittest.TestCase):
                         {
                             "contractId": "project-status",
                             "title": "Project status",
-                            "goldenSample": "fixtures/machine_schema_golden_cases.json#project-status",
+                            "goldenSample": "tests/fixtures/machine_schema_golden_cases.json#project-status",
                         }
                     ]
                 ),
@@ -143,7 +143,7 @@ class ContractPromotionReportTest(unittest.TestCase):
                 ManifestContract(
                     family="beta",
                     contract_id="schema-gap",
-                    golden_sample="fixtures/schema-gap.json",
+                    golden_sample="tests/fixtures/schema-gap.json",
                     title="Schema gap",
                     kind=None,
                     schema_version=None,
@@ -152,7 +152,7 @@ class ContractPromotionReportTest(unittest.TestCase):
                 ManifestContract(
                     family="alpha",
                     contract_id="runtime-backed",
-                    golden_sample="fixtures/runtime-backed.json",
+                    golden_sample="tests/fixtures/runtime-backed.json",
                     title="Runtime backed",
                     kind="grafana-utils-runtime-backed",
                     schema_version="1",
@@ -161,7 +161,7 @@ class ContractPromotionReportTest(unittest.TestCase):
                 ManifestContract(
                     family="alpha",
                     contract_id="public-missing-doc",
-                    golden_sample="fixtures/public-missing-doc.json",
+                    golden_sample="tests/fixtures/public-missing-doc.json",
                     title="Public route missing generated doc",
                     kind=None,
                     schema_version=None,
@@ -269,7 +269,7 @@ class ContractPromotionReportTest(unittest.TestCase):
                         {
                             "contractId": "schema-only",
                             "title": "Schema only",
-                            "goldenSample": "fixtures/schema-only.json",
+                            "goldenSample": "tests/fixtures/schema-only.json",
                         }
                     ]
                 ),

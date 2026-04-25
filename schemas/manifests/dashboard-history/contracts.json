@@ -4,7 +4,7 @@
     "title": "Dashboard history list JSON schema",
     "kind": "grafana-util-dashboard-history-list",
     "schemaVersion": 1,
-    "goldenSample": "fixtures/machine_schema_golden_cases.json#dashboard-history-list",
+    "goldenSample": "tests/fixtures/machine_schema_golden_cases.json#dashboard-history-list",
     "topLevelKeys": [
       "kind",
       "schemaVersion",
@@ -25,7 +25,7 @@
     "title": "Dashboard history inventory JSON schema",
     "kind": "grafana-util-dashboard-history-inventory",
     "schemaVersion": 1,
-    "goldenSample": "fixtures/machine_schema_golden_cases.json#dashboard-history-inventory",
+    "goldenSample": "tests/fixtures/machine_schema_golden_cases.json#dashboard-history-inventory",
     "topLevelKeys": [
       "kind",
       "schemaVersion",
@@ -45,7 +45,7 @@
     "title": "Dashboard history restore JSON schema",
     "kind": "grafana-util-dashboard-history-restore",
     "schemaVersion": 1,
-    "goldenSample": "fixtures/machine_schema_golden_cases.json#dashboard-history-restore",
+    "goldenSample": "tests/fixtures/machine_schema_golden_cases.json#dashboard-history-restore",
     "topLevelKeys": [
       "kind",
       "schemaVersion",
@@ -66,7 +66,7 @@
     "title": "Dashboard history export JSON schema",
     "kind": "grafana-util-dashboard-history-export",
     "schemaVersion": 1,
-    "goldenSample": "fixtures/machine_schema_golden_cases.json#dashboard-history-export",
+    "goldenSample": "tests/fixtures/machine_schema_golden_cases.json#dashboard-history-export",
     "topLevelKeys": [
       "kind",
       "schemaVersion",
@@ -89,7 +89,7 @@
     "title": "Dashboard history diff JSON schema",
     "kind": "grafana-util-dashboard-history-diff",
     "schemaVersion": 1,
-    "goldenSample": "fixtures/machine_schema_golden_cases.json#dashboard-history-diff",
+    "goldenSample": "tests/fixtures/machine_schema_golden_cases.json#dashboard-history-diff",
     "topLevelKeys": [
       "kind",
       "schemaVersion",

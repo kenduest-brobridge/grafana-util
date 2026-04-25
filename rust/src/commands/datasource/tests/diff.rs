@@ -11,7 +11,7 @@ use serde_json::{json, Value};
 
 fn load_contract_cases() -> Vec<Value> {
     serde_json::from_str(include_str!(
-        "../../../../../fixtures/datasource_contract_cases.json"
+        "../../../../../tests/fixtures/datasource_contract_cases.json"
     ))
     .unwrap()
 }

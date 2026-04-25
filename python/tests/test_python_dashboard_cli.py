@@ -97,7 +97,7 @@ TRANSFORMER_MODULE_PATH = (
     PYTHON_ROOT / "grafana_utils" / "dashboards" / "transformer.py"
 )
 PROMPT_EXPORT_CASES_FIXTURE_PATH = (
-    REPO_ROOT / "fixtures" / "dashboard_prompt_export_cases.json"
+    REPO_ROOT / "tests" / "fixtures" / "dashboard_prompt_export_cases.json"
 )
 MODULE_ENTRYPOINT_PATH = PYTHON_ROOT / "grafana_utils" / "__main__.py"
 if str(REPO_ROOT) not in sys.path:

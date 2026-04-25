@@ -70,21 +70,21 @@ fn render_alert_subcommand_help(path: &[&str]) -> String {
 
 fn load_alert_export_contract_fixture() -> Value {
     serde_json::from_str(include_str!(
-        "../../../../../fixtures/alert_export_contract_cases.json"
+        "../../../../../tests/fixtures/alert_export_contract_cases.json"
     ))
     .unwrap()
 }
 
 fn load_alert_recreate_contract_fixture() -> Value {
     serde_json::from_str(include_str!(
-        "../../../../../fixtures/alert_recreate_contract_cases.json"
+        "../../../../../tests/fixtures/alert_recreate_contract_cases.json"
     ))
     .unwrap()
 }
 
 fn load_shared_diff_golden_fixture(domain: &str) -> Value {
     serde_json::from_str::<Vec<Value>>(include_str!(
-        "../../../../../fixtures/shared_diff_golden_cases.json"
+        "../../../../../tests/fixtures/shared_diff_golden_cases.json"
     ))
     .unwrap()
     .into_iter()

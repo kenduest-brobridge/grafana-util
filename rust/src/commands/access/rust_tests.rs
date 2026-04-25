@@ -149,7 +149,7 @@ fn read_json_file(path: &std::path::Path) -> Value {
 
 fn load_access_bundle_contract_cases() -> Vec<Value> {
     serde_json::from_str::<Value>(include_str!(
-        "../../../../fixtures/access_bundle_contract_cases.json"
+        "../../../../tests/fixtures/access_bundle_contract_cases.json"
     ))
     .unwrap()
     .get("cases")

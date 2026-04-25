@@ -39,14 +39,14 @@ pub(in crate::dashboard) fn make_basic_common_args(base_url: String) -> CommonCl
 #[allow(dead_code)]
 pub(in crate::dashboard) fn load_prompt_export_cases() -> Vec<Value> {
     serde_json::from_str(include_str!(
-        "../../../../fixtures/dashboard_prompt_export_cases.json"
+        "../../../../tests/fixtures/dashboard_prompt_export_cases.json"
     ))
     .unwrap()
 }
 
 pub(in crate::dashboard) fn load_inspection_analyzer_cases() -> Vec<Value> {
     serde_json::from_str(include_str!(
-        "../../../../fixtures/dashboard_inspection_analyzer_cases.json"
+        "../../../../tests/fixtures/dashboard_inspection_analyzer_cases.json"
     ))
     .unwrap()
 }

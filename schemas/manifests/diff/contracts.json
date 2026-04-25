@@ -4,7 +4,7 @@
     "title": "Dashboard diff JSON schema",
     "kind": "grafana-util-dashboard-diff",
     "schemaVersion": 1,
-    "goldenSample": "fixtures/shared_diff_golden_cases.json#dashboard",
+    "goldenSample": "tests/fixtures/shared_diff_golden_cases.json#dashboard",
     "topLevelKeys": ["kind", "schemaVersion", "toolVersion", "summary", "rows"],
     "nestedSections": [
       {
@@ -114,7 +114,7 @@
     "title": "Alert diff JSON schema",
     "kind": "grafana-util-alert-diff",
     "schemaVersion": 1,
-    "goldenSample": "fixtures/shared_diff_golden_cases.json#alert",
+    "goldenSample": "tests/fixtures/shared_diff_golden_cases.json#alert",
     "topLevelKeys": ["kind", "schemaVersion", "toolVersion", "summary", "rows"],
     "nestedSections": [
       {
@@ -206,7 +206,7 @@
     "title": "Datasource diff JSON schema",
     "kind": "grafana-util-datasource-diff",
     "schemaVersion": 1,
-    "goldenSample": "fixtures/shared_diff_golden_cases.json#datasource",
+    "goldenSample": "tests/fixtures/shared_diff_golden_cases.json#datasource",
     "topLevelKeys": ["kind", "schemaVersion", "toolVersion", "summary", "rows"],
     "nestedSections": [
       {

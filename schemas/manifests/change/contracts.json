@@ -4,7 +4,7 @@
     "title": "Change summary JSON schema",
     "kind": "grafana-utils-sync-summary",
     "schemaVersion": 1,
-    "goldenSample": "fixtures/machine_schema_golden_cases.json#sync-summary",
+    "goldenSample": "tests/fixtures/machine_schema_golden_cases.json#sync-summary",
     "topLevelKeys": ["kind", "schemaVersion", "toolVersion", "summary", "resources"],
     "nestedSections": [
       {
@@ -22,7 +22,7 @@
     "title": "Change plan JSON schema",
     "kind": "grafana-utils-sync-plan",
     "schemaVersion": 1,
-    "goldenSample": "fixtures/machine_schema_golden_cases.json#sync-plan",
+    "goldenSample": "tests/fixtures/machine_schema_golden_cases.json#sync-plan",
     "topLevelKeys": [
       "kind",
       "schemaVersion",
@@ -55,7 +55,7 @@
     "title": "Change review JSON schema",
     "kind": "grafana-utils-sync-plan",
     "schemaVersion": 1,
-    "goldenSample": "fixtures/machine_schema_golden_cases.json#sync-plan-reviewed",
+    "goldenSample": "tests/fixtures/machine_schema_golden_cases.json#sync-plan-reviewed",
     "topLevelKeys": [
       "kind",
       "schemaVersion",
@@ -91,7 +91,7 @@
     "title": "Change apply JSON schema",
     "kind": "grafana-utils-sync-apply-intent",
     "schemaVersion": 1,
-    "goldenSample": "fixtures/machine_schema_golden_cases.json#sync-apply-intent",
+    "goldenSample": "tests/fixtures/machine_schema_golden_cases.json#sync-apply-intent",
     "topLevelKeys": [
       "kind",
       "schemaVersion",
@@ -129,7 +129,7 @@
   {
     "contractId": "sync-apply-live-result",
     "title": "Change apply live result JSON schema",
-    "goldenSample": "fixtures/machine_schema_golden_cases.json#sync-apply-live-result",
+    "goldenSample": "tests/fixtures/machine_schema_golden_cases.json#sync-apply-live-result",
     "topLevelKeys": ["mode", "appliedCount", "results"],
     "nestedSections": [
       {
@@ -143,7 +143,7 @@
     "title": "Change audit JSON schema",
     "kind": "grafana-utils-sync-audit",
     "schemaVersion": 1,
-    "goldenSample": "fixtures/machine_schema_golden_cases.json#sync-audit",
+    "goldenSample": "tests/fixtures/machine_schema_golden_cases.json#sync-audit",
     "topLevelKeys": [
       "kind",
       "schemaVersion",
@@ -169,7 +169,7 @@
     "title": "Change preflight JSON schema",
     "kind": "grafana-utils-sync-preflight",
     "schemaVersion": 1,
-    "goldenSample": "fixtures/machine_schema_golden_cases.json#sync-preflight",
+    "goldenSample": "tests/fixtures/machine_schema_golden_cases.json#sync-preflight",
     "topLevelKeys": ["kind", "schemaVersion", "toolVersion", "summary", "checks"],
     "nestedSections": [
       {
@@ -187,7 +187,7 @@
     "title": "Change assess-alerts JSON schema",
     "kind": "grafana-utils-alert-sync-plan",
     "schemaVersion": 1,
-    "goldenSample": "fixtures/machine_schema_golden_cases.json#alert-sync-plan",
+    "goldenSample": "tests/fixtures/machine_schema_golden_cases.json#alert-sync-plan",
     "topLevelKeys": ["kind", "schemaVersion", "toolVersion", "summary", "alerts"],
     "nestedSections": [
       {
@@ -205,7 +205,7 @@
     "title": "Change bundle-preflight JSON schema",
     "kind": "grafana-utils-sync-bundle-preflight",
     "schemaVersion": 1,
-    "goldenSample": "fixtures/machine_schema_golden_cases.json#sync-bundle-preflight",
+    "goldenSample": "tests/fixtures/machine_schema_golden_cases.json#sync-bundle-preflight",
     "topLevelKeys": [
       "kind",
       "schemaVersion",
@@ -221,7 +221,7 @@
     "title": "Change promotion-preflight JSON schema",
     "kind": "grafana-utils-sync-promotion-preflight",
     "schemaVersion": 1,
-    "goldenSample": "fixtures/machine_schema_golden_cases.json#sync-promotion-preflight",
+    "goldenSample": "tests/fixtures/machine_schema_golden_cases.json#sync-promotion-preflight",
     "topLevelKeys": [
       "kind",
       "schemaVersion",
@@ -256,7 +256,7 @@
     "title": "Change bundle JSON schema",
     "kind": "grafana-utils-sync-source-bundle",
     "schemaVersion": 1,
-    "goldenSample": "fixtures/machine_schema_golden_cases.json#sync-source-bundle",
+    "goldenSample": "tests/fixtures/machine_schema_golden_cases.json#sync-source-bundle",
     "topLevelKeys": [
       "kind",
       "schemaVersion",

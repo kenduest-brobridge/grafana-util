@@ -8,14 +8,14 @@ use serde_json::{json, Value};
 
 fn load_alert_export_contract_fixture() -> Value {
     serde_json::from_str(include_str!(
-        "../../../../fixtures/alert_export_contract_cases.json"
+        "../../../../tests/fixtures/alert_export_contract_cases.json"
     ))
     .unwrap()
 }
 
 fn load_sync_source_bundle_contract_fixture() -> Value {
     serde_json::from_str(include_str!(
-        "../../../../fixtures/sync_source_bundle_contract_cases.json"
+        "../../../../tests/fixtures/sync_source_bundle_contract_cases.json"
     ))
     .unwrap()
 }

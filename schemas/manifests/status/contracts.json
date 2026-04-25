@@ -4,7 +4,7 @@
     "title": "Project status JSON schema",
     "kind": "grafana-util-project-status",
     "schemaVersion": 1,
-    "goldenSample": "fixtures/machine_schema_golden_cases.json#project-status",
+    "goldenSample": "tests/fixtures/machine_schema_golden_cases.json#project-status",
     "topLevelKeys": [
       "kind",
       "schemaVersion",

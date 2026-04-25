@@ -49,7 +49,7 @@ fn make_token_common() -> CommonCliArgs {
 
 fn load_access_bundle_contract_cases() -> Vec<Value> {
     serde_json::from_str::<Value>(include_str!(
-        "../../../../fixtures/access_bundle_contract_cases.json"
+        "../../../../tests/fixtures/access_bundle_contract_cases.json"
     ))
     .unwrap()
     .get("cases")
