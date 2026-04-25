@@ -5,8 +5,9 @@ use super::super::DatasourceImportRecord;
 use super::builder::{build_datasource_plan, build_datasource_plan_json};
 use super::model::{
     DatasourcePlanInput, DatasourcePlanOrgInput, DatasourcePlanReport,
-    PLAN_ACTION_BLOCKED_READ_ONLY, PLAN_ACTION_WOULD_DELETE, PLAN_ACTION_WOULD_UPDATE,
-    PLAN_REASON_TARGET_READ_ONLY, PLAN_STATUS_READY,
+    PLAN_ACTION_BLOCKED_READ_ONLY, PLAN_ACTION_EXTRA_REMOTE, PLAN_ACTION_WOULD_DELETE,
+    PLAN_ACTION_WOULD_UPDATE, PLAN_HINT_REQUIRES_SECRET_VALUES, PLAN_REASON_TARGET_READ_ONLY,
+    PLAN_STATUS_BLOCKED, PLAN_STATUS_READY, PLAN_STATUS_WARNING,
 };
 
 fn record(uid: &str, name: &str, datasource_type: &str) -> DatasourceImportRecord {
@@ -144,4 +145,75 @@ fn datasource_plan_json_keeps_tui_stable_action_id() {
         value["actions"][0]["actionId"],
         json!("org:1/datasource:uid:prom")
     );
+    assert!(value.get("review").is_none());
+}
+
+#[test]
+fn datasource_plan_builds_review_projection_with_blocking_hints_and_org_identity() {
+    let mut changed = record("prom", "Prometheus", "prometheus");
+    changed.url = "http://new-prometheus:9090".to_string();
+    changed.secure_json_data_placeholders = Some(Map::from_iter([(
+        "password".to_string(),
+        Value::String("configured".to_string()),
+    )]));
+    let mut live_record = live("prom", "Prometheus", "prometheus");
+    live_record.insert("readOnly".to_string(), Value::Bool(true));
+    let report = report(vec![changed], vec![live_record], false);
+
+    let projection = report.build_review_projection();
+
+    assert_eq!(projection.domains, vec!["datasource"]);
+    assert_eq!(projection.actions.len(), 1);
+    let action = &projection.actions[0];
+    assert_eq!(action.action_id, "org:1/datasource:uid:prom");
+    assert_eq!(action.domain, "datasource");
+    assert_eq!(action.resource_kind, "datasource");
+    assert_eq!(action.identity, "prom");
+    assert_eq!(action.action, PLAN_ACTION_BLOCKED_READ_ONLY);
+    assert_eq!(action.status, PLAN_STATUS_BLOCKED);
+    assert_eq!(
+        action.blocked_reason.as_deref(),
+        Some(PLAN_REASON_TARGET_READ_ONLY)
+    );
+    assert_eq!(
+        action.details.as_deref(),
+        Some("fields=url,secureJsonDataPlaceholders")
+    );
+    assert_eq!(action.review_hints, vec![PLAN_HINT_REQUIRES_SECRET_VALUES]);
+    assert_eq!(action.raw["sourceOrgId"], json!("1"));
+    assert_eq!(action.raw["targetOrgId"], json!("1"));
+    assert_eq!(action.raw["requiresSecretValues"], json!(true));
+}
+
+#[test]
+fn datasource_plan_builds_review_envelope_with_datasource_domain_summary() {
+    let report = report(
+        vec![record("prom", "Prometheus", "prometheus")],
+        vec![
+            live("prom", "Prometheus", "prometheus"),
+            live("remote", "Remote Only", "loki"),
+        ],
+        false,
+    );
+
+    let envelope = report.build_review_envelope();
+
+    assert_eq!(envelope.summary.action_count, 2);
+    assert_eq!(envelope.summary.domain_count, 1);
+    assert_eq!(envelope.summary.same_count, 1);
+    assert_eq!(envelope.summary.warning_count, 1);
+    assert_eq!(envelope.summary.blocked_count, 0);
+    assert_eq!(envelope.domains.len(), 1);
+    assert_eq!(envelope.domains[0].id, "datasource");
+    assert_eq!(envelope.domains[0].checked, 2);
+    assert_eq!(envelope.domains[0].same, 1);
+    assert_eq!(envelope.domains[0].warning, 1);
+    let remote = envelope
+        .actions
+        .iter()
+        .find(|action| action.identity == "remote")
+        .unwrap();
+    assert_eq!(remote.action, PLAN_ACTION_EXTRA_REMOTE);
+    assert_eq!(remote.status, PLAN_STATUS_WARNING);
+    assert_eq!(remote.raw["targetOrgId"], json!("1"));
 }

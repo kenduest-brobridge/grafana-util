@@ -26,6 +26,21 @@ fn run_sync_cli_bundle_writes_source_bundle_artifact() {
     )
     .unwrap();
     fs::write(
+        dashboard_export_dir.join("index.json"),
+        serde_json::to_string_pretty(&json!([{
+            "uid": "cpu-main",
+            "title": "CPU Main",
+            "path": "cpu.json",
+            "ownership": "git-sync-managed",
+            "provenance": [
+                "ownership=git-sync-managed",
+                "managedRepository{kind=git,id=repo-main}"
+            ]
+        }]))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
         dashboard_export_dir.join("folders.json"),
         serde_json::to_string_pretty(&json!([
             {"uid": "ops", "title": "Operations", "path": "Operations"}
@@ -149,6 +164,17 @@ fn run_sync_cli_bundle_writes_source_bundle_artifact() {
     assert_eq!(
         bundle["metadata"]["alertExportDir"],
         json!(alert_export_dir.display().to_string())
+    );
+    assert_eq!(
+        bundle["dashboards"][0]["ownership"],
+        json!("git-sync-managed")
+    );
+    assert_eq!(
+        bundle["dashboards"][0]["provenance"],
+        json!([
+            "ownership=git-sync-managed",
+            "managedRepository{kind=git,id=repo-main}"
+        ])
     );
 }
 

@@ -13,13 +13,119 @@ use crate::dashboard::{
     RAW_EXPORT_SUBDIR,
 };
 use serde_json::{Map, Value};
+use std::collections::BTreeMap;
 use std::path::Path;
 
 pub(crate) type DashboardBundleSections = (Vec<Value>, Vec<Value>, Vec<Value>, Map<String, Value>);
 
-pub(crate) fn normalize_dashboard_bundle_item(
+#[derive(Debug, Clone, Default)]
+struct DashboardOwnershipSource {
+    ownership: String,
+    provenance: Vec<String>,
+}
+
+#[derive(Debug, Clone, Default)]
+struct DashboardOwnershipIndex {
+    by_path: BTreeMap<String, DashboardOwnershipSource>,
+    by_uid: BTreeMap<String, DashboardOwnershipSource>,
+}
+
+fn normalize_text(value: Option<&Value>) -> String {
+    value
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|text| !text.is_empty())
+        .unwrap_or_default()
+        .to_string()
+}
+
+fn normalize_string_list(value: Option<&Value>) -> Vec<String> {
+    value
+        .and_then(Value::as_array)
+        .map(|items| {
+            items
+                .iter()
+                .filter_map(Value::as_str)
+                .map(str::trim)
+                .filter(|text| !text.is_empty())
+                .map(str::to_string)
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+fn dashboard_ownership_source_from_object(
+    object: &Map<String, Value>,
+) -> Option<DashboardOwnershipSource> {
+    let ownership = normalize_text(object.get("ownership"));
+    let provenance = normalize_string_list(object.get("provenance"));
+    if ownership.is_empty() && provenance.is_empty() {
+        None
+    } else {
+        Some(DashboardOwnershipSource {
+            ownership,
+            provenance,
+        })
+    }
+}
+
+fn load_dashboard_ownership_index(dashboard_source_dir: &Path) -> DashboardOwnershipIndex {
+    let index_path = dashboard_source_dir.join("index.json");
+    let Ok(entries) = load_json_array_file(&index_path, "Dashboard export index") else {
+        return DashboardOwnershipIndex::default();
+    };
+    let mut index = DashboardOwnershipIndex::default();
+    for entry in entries {
+        let Some(object) = entry.as_object() else {
+            continue;
+        };
+        let Some(ownership) = dashboard_ownership_source_from_object(object) else {
+            continue;
+        };
+        let path = normalize_text(object.get("path"));
+        if !path.is_empty() {
+            index.by_path.insert(path, ownership.clone());
+        }
+        let uid = normalize_text(object.get("uid"));
+        if !uid.is_empty() {
+            index.by_uid.insert(uid, ownership);
+        }
+    }
+    index
+}
+
+fn attach_dashboard_ownership(
+    item: &mut Map<String, Value>,
+    ownership: Option<&DashboardOwnershipSource>,
+) {
+    let Some(ownership) = ownership else {
+        return;
+    };
+    if !ownership.ownership.is_empty() {
+        item.insert(
+            "ownership".to_string(),
+            Value::String(ownership.ownership.clone()),
+        );
+    }
+    if !ownership.provenance.is_empty() {
+        item.insert(
+            "provenance".to_string(),
+            Value::Array(
+                ownership
+                    .provenance
+                    .iter()
+                    .cloned()
+                    .map(Value::String)
+                    .collect(),
+            ),
+        );
+    }
+}
+
+fn normalize_dashboard_bundle_item(
     document: &Value,
     source_path: &str,
+    ownership: Option<&DashboardOwnershipSource>,
 ) -> Result<Value> {
     let mut body = if let Some(body) = document.get("dashboard").and_then(Value::as_object) {
         body.clone()
@@ -43,13 +149,17 @@ pub(crate) fn normalize_dashboard_bundle_item(
         .map(str::trim)
         .filter(|value| !value.is_empty())
         .unwrap_or(uid);
-    Ok(serde_json::json!({
-        "kind": "dashboard",
-        "uid": uid,
-        "title": title,
-        "body": body,
-        "sourcePath": source_path,
-    }))
+    let mut item = Map::new();
+    item.insert("kind".to_string(), Value::String("dashboard".to_string()));
+    item.insert("uid".to_string(), Value::String(uid.to_string()));
+    item.insert("title".to_string(), Value::String(title.to_string()));
+    item.insert("body".to_string(), Value::Object(body));
+    item.insert(
+        "sourcePath".to_string(),
+        Value::String(source_path.to_string()),
+    );
+    attach_dashboard_ownership(&mut item, ownership);
+    Ok(Value::Object(item))
 }
 
 pub(crate) fn normalize_folder_bundle_item(document: &Value) -> Result<Value> {
@@ -105,6 +215,7 @@ pub(crate) fn load_dashboard_bundle_sections(
         resolve_dashboard_workspace_variant_dir(dashboard_dir, RAW_EXPORT_SUBDIR)
             .unwrap_or_else(|| dashboard_dir.to_path_buf());
     let mut dashboards = Vec::new();
+    let ownership_index = load_dashboard_ownership_index(&dashboard_source_dir);
     for path in discover_json_files(
         &dashboard_source_dir,
         &[
@@ -120,9 +231,22 @@ pub(crate) fn load_dashboard_bundle_sections(
             .unwrap_or(&path)
             .to_string_lossy()
             .replace('\\', "/");
+        let document = load_json_value(&path, "Dashboard export document")?;
+        let uid = document
+            .get("dashboard")
+            .and_then(|dashboard| dashboard.get("uid"))
+            .or_else(|| document.get("uid"))
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|value| !value.is_empty());
+        let ownership = ownership_index
+            .by_path
+            .get(&source_path)
+            .or_else(|| uid.and_then(|uid| ownership_index.by_uid.get(uid)));
         dashboards.push(normalize_dashboard_bundle_item(
-            &load_json_value(&path, "Dashboard export document")?,
+            &document,
             &source_path,
+            ownership,
         )?);
     }
     let folders_path = metadata_dir.join("folders.json");

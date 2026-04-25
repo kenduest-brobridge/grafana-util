@@ -29,7 +29,9 @@ fn build_workspace_review_view_normalizes_actions_domains_and_blockers() {
                 "resourceKind": "dashboard",
                 "identity": "blocked-main",
                 "status": "blocked",
-                "reason": "target-read-only"
+                "reason": "target-read-only",
+                "ownership": "git-sync-managed",
+                "provenance": ["ownership=git-sync-managed"]
             }
         ]
     });
@@ -41,6 +43,11 @@ fn build_workspace_review_view_normalizes_actions_domains_and_blockers() {
     assert_eq!(view.actions[0].resource_kind, "folder");
     assert_eq!(view.actions[0].status, "ready");
     assert_eq!(view.actions[1].status, "blocked");
+    assert_eq!(view.actions[1].raw["ownership"], json!("git-sync-managed"));
+    assert_eq!(
+        view.actions[1].raw["provenance"],
+        json!(["ownership=git-sync-managed"])
+    );
     assert_eq!(view.blocked_reasons, vec!["target-read-only"]);
     assert!(view.domains.iter().any(|domain| domain.id == "dashboard"));
     assert!(view.domains.iter().any(|domain| domain.id == "folder"));

@@ -109,6 +109,8 @@ pub fn normalize_resource_spec(raw_spec: &Value) -> Result<SyncResourceSpec> {
         body: extract_body(spec)?,
         managed_fields,
         source_path: normalize_text(spec.get("sourcePath")),
+        ownership: normalize_text(spec.get("ownership")),
+        provenance: normalize_string_list(spec.get("provenance"), "provenance")?,
     })
 }
 
@@ -138,6 +140,46 @@ pub fn summarize_resource_specs(specs: &[SyncResourceSpec]) -> SyncSummary {
 pub fn build_sync_summary_document(raw_specs: &[Value]) -> Result<Value> {
     let specs = normalize_resource_specs(raw_specs)?;
     let summary = summarize_resource_specs(&specs);
+    let resources = specs
+        .iter()
+        .map(|item| {
+            let mut resource = Map::new();
+            resource.insert("kind".to_string(), Value::String(item.kind.clone()));
+            resource.insert("identity".to_string(), Value::String(item.identity.clone()));
+            resource.insert("title".to_string(), Value::String(item.title.clone()));
+            resource.insert(
+                "managedFields".to_string(),
+                Value::Array(
+                    item.managed_fields
+                        .iter()
+                        .cloned()
+                        .map(Value::String)
+                        .collect(),
+                ),
+            );
+            resource.insert(
+                "bodyFieldCount".to_string(),
+                Value::Number(item.body.len().into()),
+            );
+            resource.insert(
+                "sourcePath".to_string(),
+                Value::String(item.source_path.clone()),
+            );
+            if !item.ownership.is_empty() {
+                resource.insert(
+                    "ownership".to_string(),
+                    Value::String(item.ownership.clone()),
+                );
+            }
+            if !item.provenance.is_empty() {
+                resource.insert(
+                    "provenance".to_string(),
+                    Value::Array(item.provenance.iter().cloned().map(Value::String).collect()),
+                );
+            }
+            Value::Object(resource)
+        })
+        .collect::<Vec<_>>();
     Ok(serde_json::json!({
         "kind": SYNC_SUMMARY_KIND,
         "schemaVersion": SYNC_SUMMARY_SCHEMA_VERSION,
@@ -149,15 +191,6 @@ pub fn build_sync_summary_document(raw_specs: &[Value]) -> Result<Value> {
             "folderCount": summary.folder_count,
             "alertCount": summary.alert_count,
         },
-        "resources": specs.iter().map(|item| {
-            serde_json::json!({
-                "kind": item.kind,
-                "identity": item.identity,
-                "title": item.title,
-                "managedFields": item.managed_fields,
-                "bodyFieldCount": item.body.len(),
-                "sourcePath": item.source_path,
-            })
-        }).collect::<Vec<_>>(),
+        "resources": resources,
     }))
 }

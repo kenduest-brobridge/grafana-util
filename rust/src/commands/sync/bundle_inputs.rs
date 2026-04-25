@@ -9,7 +9,7 @@ pub(crate) use super::bundle_inputs_alert_specs::{
 };
 pub(crate) use super::bundle_inputs_dashboard::{
     load_dashboard_bundle_sections, load_dashboard_provisioning_bundle_sections,
-    normalize_dashboard_bundle_item, normalize_folder_bundle_item, DashboardBundleSections,
+    normalize_folder_bundle_item, DashboardBundleSections,
 };
 pub(crate) use super::bundle_inputs_datasource::{
     load_datasource_provisioning_records, normalize_datasource_bundle_item,

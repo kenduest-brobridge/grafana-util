@@ -170,6 +170,24 @@ fn build_index(specs: &[SyncResourceSpec]) -> Result<BTreeMap<(String, String), 
     Ok(index)
 }
 
+fn attach_ownership_fields(operation: &mut Value, spec: &SyncResourceSpec) {
+    let Some(object) = operation.as_object_mut() else {
+        return;
+    };
+    if !spec.ownership.is_empty() {
+        object.insert(
+            "ownership".to_string(),
+            Value::String(spec.ownership.clone()),
+        );
+    }
+    if !spec.provenance.is_empty() {
+        object.insert(
+            "provenance".to_string(),
+            Value::Array(spec.provenance.iter().cloned().map(Value::String).collect()),
+        );
+    }
+}
+
 fn compare_body(desired: &SyncResourceSpec, live: &SyncResourceSpec) -> Vec<String> {
     let mut fields = BTreeSet::new();
     for key in desired.body.keys() {
@@ -453,7 +471,7 @@ pub fn build_sync_plan_document(
             } else {
                 REVIEW_ACTION_WOULD_UPDATE
             };
-            operations.push(serde_json::json!({
+            let mut operation = serde_json::json!({
                 "kind": desired_spec.kind,
                 "identity": desired_spec.identity,
                 "title": desired_spec.title,
@@ -464,9 +482,11 @@ pub fn build_sync_plan_document(
                 "desired": desired_spec.body,
                 "live": live_spec.body,
                 "sourcePath": desired_spec.source_path,
-            }));
+            });
+            attach_ownership_fields(&mut operation, desired_spec);
+            operations.push(operation);
         } else {
-            operations.push(serde_json::json!({
+            let mut operation = serde_json::json!({
                 "kind": desired_spec.kind,
                 "identity": desired_spec.identity,
                 "title": desired_spec.title,
@@ -477,7 +497,9 @@ pub fn build_sync_plan_document(
                 "desired": desired_spec.body,
                 "live": Value::Null,
                 "sourcePath": desired_spec.source_path,
-            }));
+            });
+            attach_ownership_fields(&mut operation, desired_spec);
+            operations.push(operation);
         }
     }
 
@@ -493,7 +515,7 @@ pub fn build_sync_plan_document(
         } else {
             REVIEW_ACTION_UNMANAGED
         };
-        operations.push(serde_json::json!({
+        let mut operation = serde_json::json!({
             "kind": live_spec.kind,
             "identity": live_spec.identity,
             "title": live_spec.title,
@@ -510,7 +532,9 @@ pub fn build_sync_plan_document(
             "desired": Value::Null,
             "live": live_spec.body,
             "sourcePath": live_spec.source_path,
-        }));
+        });
+        attach_ownership_fields(&mut operation, live_spec);
+        operations.push(operation);
     }
 
     annotate_and_sort_operations(&mut operations);

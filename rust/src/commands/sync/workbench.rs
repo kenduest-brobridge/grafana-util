@@ -38,6 +38,10 @@ pub struct SyncResourceSpec {
     pub body: Map<String, Value>,
     pub managed_fields: Vec<String>,
     pub source_path: String,
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub ownership: String,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub provenance: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]

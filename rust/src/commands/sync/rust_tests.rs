@@ -51,7 +51,9 @@ fn build_sync_summary_document_counts_normalized_resource_kinds() {
             "uid": "cpu-main",
             "title": "CPU Main",
             "body": {"datasourceUids": ["prom-main"]},
-            "sourcePath": "dashboards/cpu-main.json"
+            "sourcePath": "dashboards/cpu-main.json",
+            "ownership": "git-sync-managed",
+            "provenance": ["ownership=git-sync-managed"]
         }),
         json!({
             "kind": "alert",
@@ -75,6 +77,42 @@ fn build_sync_summary_document_counts_normalized_resource_kinds() {
     assert_eq!(
         document["resources"][3]["managedFields"],
         json!(["condition", "contactPoints"])
+    );
+    assert_eq!(
+        document["resources"][2]["ownership"],
+        json!("git-sync-managed")
+    );
+    assert_eq!(
+        document["resources"][2]["provenance"],
+        json!(["ownership=git-sync-managed"])
+    );
+}
+
+#[test]
+fn build_sync_plan_document_preserves_dashboard_ownership_provenance() {
+    let plan = build_sync_plan_document(
+        &[json!({
+            "kind": "dashboard",
+            "uid": "cpu-main",
+            "title": "CPU Main",
+            "body": {"title": "CPU Main"},
+            "sourcePath": "dashboards/cpu-main.json",
+            "ownership": "git-sync-managed",
+            "provenance": ["ownership=git-sync-managed"]
+        })],
+        &[],
+        false,
+    )
+    .unwrap();
+
+    assert_eq!(plan["operations"][0]["identity"], json!("cpu-main"));
+    assert_eq!(
+        plan["operations"][0]["ownership"],
+        json!("git-sync-managed")
+    );
+    assert_eq!(
+        plan["operations"][0]["provenance"],
+        json!(["ownership=git-sync-managed"])
     );
 }
 

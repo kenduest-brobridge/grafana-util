@@ -3,6 +3,10 @@ use serde_json::Value;
 use std::path::PathBuf;
 
 use super::super::DatasourceImportRecord;
+use crate::review_contract::{
+    build_review_mutation_envelope, review_action_rank, ReviewBlockedReason, ReviewMutationAction,
+    ReviewMutationActionInput, ReviewMutationEnvelope,
+};
 pub(crate) use crate::review_contract::{
     REVIEW_ACTION_BLOCKED_AMBIGUOUS as PLAN_ACTION_BLOCKED_AMBIGUOUS,
     REVIEW_ACTION_BLOCKED_MISSING_ORG as PLAN_ACTION_BLOCKED_MISSING_ORG,
@@ -123,4 +127,78 @@ pub(crate) struct DatasourcePlanReport {
     pub(crate) summary: DatasourcePlanSummary,
     pub(crate) orgs: Vec<DatasourcePlanOrgSummary>,
     pub(crate) actions: Vec<DatasourcePlanAction>,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(not(test), allow(dead_code))]
+pub(crate) struct DatasourcePlanReviewProjection {
+    pub(crate) domains: Vec<&'static str>,
+    pub(crate) actions: Vec<ReviewMutationAction>,
+}
+
+impl DatasourcePlanAction {
+    #[cfg_attr(not(test), allow(dead_code))]
+    fn review_identity(&self) -> String {
+        if !self.uid.trim().is_empty() {
+            self.uid.clone()
+        } else if !self.name.trim().is_empty() {
+            self.name.clone()
+        } else {
+            self.action_id.clone()
+        }
+    }
+
+    #[cfg_attr(not(test), allow(dead_code))]
+    fn to_review_projection(&self) -> ReviewMutationAction {
+        let raw = match serde_json::to_value(self) {
+            Ok(Value::Object(object)) => Value::Object(object),
+            Ok(other) => other,
+            Err(_) => Value::Null,
+        };
+        ReviewMutationActionInput {
+            action_id: self.action_id.clone(),
+            action: self.action.clone(),
+            domain: self.domain.clone(),
+            resource_kind: self.resource_kind.clone(),
+            identity: self.review_identity(),
+            status: self.status.clone(),
+            blocked_reason: ReviewBlockedReason::from_optional_text(self.blocked_reason.as_deref())
+                .map(ReviewBlockedReason::into_string),
+            details: (!self.changed_fields.is_empty())
+                .then(|| format!("fields={}", self.changed_fields.join(","))),
+            review_hints: self.review_hints.clone(),
+            raw,
+        }
+        .into()
+    }
+}
+
+impl DatasourcePlanReport {
+    #[cfg_attr(not(test), allow(dead_code))]
+    pub(crate) fn build_review_projection(&self) -> DatasourcePlanReviewProjection {
+        let mut actions = self
+            .actions
+            .iter()
+            .map(DatasourcePlanAction::to_review_projection)
+            .collect::<Vec<_>>();
+        actions.sort_by(|left, right| {
+            left.kind_order
+                .cmp(&right.kind_order)
+                .then_with(|| {
+                    review_action_rank(&left.action).cmp(&review_action_rank(&right.action))
+                })
+                .then_with(|| left.identity.cmp(&right.identity))
+                .then_with(|| left.action_id.cmp(&right.action_id))
+        });
+        DatasourcePlanReviewProjection {
+            domains: vec!["datasource"],
+            actions,
+        }
+    }
+
+    #[cfg_attr(not(test), allow(dead_code))]
+    pub(crate) fn build_review_envelope(&self) -> ReviewMutationEnvelope {
+        let projection = self.build_review_projection();
+        build_review_mutation_envelope(projection.actions, &projection.domains)
+    }
 }
