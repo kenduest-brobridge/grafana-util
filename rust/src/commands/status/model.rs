@@ -3,7 +3,8 @@
 //! Maintainer note:
 //! - This module owns the small reusable data shape that sits between raw
 //!   producer inputs and the existing project-status contract.
-//! - Keep it boring: data shape first, no trait layer yet, no orchestration.
+//! - Keep it boring: data shape first, with only a tiny producer adapter and
+//!   no orchestration.
 
 use serde::Serialize;
 
@@ -37,6 +38,18 @@ pub struct StatusReading {
     pub warnings: Vec<StatusWarning>,
     pub next_actions: Vec<String>,
     pub freshness: ProjectStatusFreshness,
+}
+
+pub(crate) trait StatusProducer {
+    fn status_reading(self) -> Option<StatusReading>;
+
+    fn project_domain_status(self) -> Option<ProjectDomainStatus>
+    where
+        Self: Sized,
+    {
+        self.status_reading()
+            .map(StatusReading::into_project_domain_status)
+    }
 }
 
 impl StatusRecordCount {

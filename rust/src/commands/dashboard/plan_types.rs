@@ -7,7 +7,7 @@ use std::path::PathBuf;
 
 use super::FolderInventoryItem;
 use crate::review_contract::{
-    build_review_mutation_envelope, review_action_rank, ReviewMutationAction,
+    build_review_mutation_envelope, review_action_rank, ReviewBlockedReason, ReviewMutationAction,
     ReviewMutationActionInput,
 };
 
@@ -143,7 +143,8 @@ impl DashboardPlanAction {
             resource_kind: self.resource_kind.clone(),
             identity: self.review_identity(),
             status: self.status.clone(),
-            blocked_reason: self.blocked_reason.clone(),
+            blocked_reason: ReviewBlockedReason::from_optional_text(self.blocked_reason.as_deref())
+                .map(ReviewBlockedReason::into_string),
             details: (!self.changed_fields.is_empty())
                 .then(|| format!("fields={}", self.changed_fields.join(","))),
             review_hints: self.review_hints.clone(),

@@ -116,6 +116,44 @@ pub(crate) struct ReviewMutationAction {
     pub raw: Value,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub(crate) struct ReviewBlockedReason(String);
+
+impl ReviewBlockedReason {
+    pub(crate) fn from_optional_text(reason: Option<&str>) -> Option<Self> {
+        reason.and_then(Self::from_text)
+    }
+
+    pub(crate) fn from_text(reason: &str) -> Option<Self> {
+        let normalized = reason.trim();
+        if normalized.is_empty() {
+            None
+        } else {
+            Some(Self(normalized.to_string()))
+        }
+    }
+
+    pub(crate) fn from_action_fields(
+        status: &str,
+        action: &str,
+        blocked_reason: Option<&str>,
+        raw: &Value,
+    ) -> Option<Self> {
+        if status != REVIEW_STATUS_BLOCKED && !is_review_blocked_action(action) {
+            return None;
+        }
+        Self::from_optional_text(blocked_reason).or_else(|| {
+            raw.get("reason")
+                .and_then(Value::as_str)
+                .and_then(Self::from_text)
+        })
+    }
+
+    pub(crate) fn into_string(self) -> String {
+        self.0
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct ReviewMutationActionInput {
     pub action_id: String,
@@ -185,18 +223,13 @@ pub(crate) struct ReviewMutationEnvelope {
 fn collect_blocked_reasons(actions: &[ReviewMutationAction]) -> Vec<String> {
     let mut reasons = BTreeSet::new();
     for action in actions {
-        if action.status != REVIEW_STATUS_BLOCKED && !is_review_blocked_action(&action.action) {
-            continue;
-        }
-        if let Some(reason) = action
-            .blocked_reason
-            .as_deref()
-            .or_else(|| action.raw.get("reason").and_then(Value::as_str))
-        {
-            let reason = reason.trim();
-            if !reason.is_empty() {
-                reasons.insert(reason.to_string());
-            }
+        if let Some(reason) = ReviewBlockedReason::from_action_fields(
+            &action.status,
+            &action.action,
+            action.blocked_reason.as_deref(),
+            &action.raw,
+        ) {
+            reasons.insert(reason.into_string());
         }
     }
     reasons.into_iter().take(5).collect()

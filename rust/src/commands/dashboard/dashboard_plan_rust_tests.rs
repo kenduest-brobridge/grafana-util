@@ -418,6 +418,10 @@ fn dashboard_plan_text_includes_review_narrative() {
     assert!(text
         .iter()
         .any(|line| line.contains("Blocked reason: target-org-missing")));
+    assert_eq!(
+        report.review["blockedReasons"],
+        json!(["target-org-missing"])
+    );
 }
 
 #[test]

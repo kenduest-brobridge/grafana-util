@@ -341,6 +341,10 @@ fn access_plan_review_envelope_projects_access_actions() {
     assert_eq!(review.actions[0].order_group, "create-update");
     assert_eq!(review.actions[0].kind_order, 4);
     assert_eq!(review.actions[0].details.as_deref(), Some("fields=orgRole"));
+    assert_eq!(
+        review.actions[1].blocked_reason.as_deref(),
+        Some("externally synced user")
+    );
 }
 
 #[test]

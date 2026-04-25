@@ -1,8 +1,8 @@
 //! Access plan output contract types shared by CLI renderers and future TUI callers.
 
 use crate::review_contract::{
-    build_review_mutation_envelope, ReviewMutationAction, ReviewMutationActionInput,
-    ReviewMutationEnvelope,
+    build_review_mutation_envelope, ReviewBlockedReason, ReviewMutationAction,
+    ReviewMutationActionInput, ReviewMutationEnvelope,
 };
 use serde::Serialize;
 use serde_json::{Map, Value};
@@ -102,7 +102,8 @@ impl AccessPlanAction {
             resource_kind: self.resource_kind.clone(),
             identity: self.identity.clone(),
             status: self.status.clone(),
-            blocked_reason: self.blocked_reason.clone(),
+            blocked_reason: ReviewBlockedReason::from_optional_text(self.blocked_reason.as_deref())
+                .map(ReviewBlockedReason::into_string),
             details: (!self.changed_fields.is_empty())
                 .then(|| format!("fields={}", self.changed_fields.join(","))),
             review_hints: self.review_hints.clone(),

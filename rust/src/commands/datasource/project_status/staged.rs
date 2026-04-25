@@ -6,7 +6,8 @@
 
 use serde_json::Value;
 
-use crate::project_status::{ProjectDomainStatus, ProjectDomainStatusReading};
+use crate::project_status::ProjectDomainStatus;
+use crate::project_status_model::StatusProducer;
 
 #[path = "staged_reading.rs"]
 mod reading;
@@ -14,6 +15,5 @@ mod reading;
 pub(crate) fn build_datasource_domain_status(
     summary_document: Option<&Value>,
 ) -> Option<ProjectDomainStatus> {
-    reading::build_datasource_domain_status(summary_document)
-        .map(ProjectDomainStatusReading::into_domain_status)
+    reading::DatasourceDomainStatusInputs { summary_document }.project_domain_status()
 }

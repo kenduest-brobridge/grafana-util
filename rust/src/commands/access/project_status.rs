@@ -9,7 +9,7 @@
 use serde_json::Value;
 
 use crate::project_status::{ProjectDomainStatus, PROJECT_STATUS_PARTIAL, PROJECT_STATUS_READY};
-use crate::project_status_model::{StatusReading, StatusRecordCount};
+use crate::project_status_model::{StatusProducer, StatusReading, StatusRecordCount};
 
 use super::{
     ACCESS_EXPORT_KIND_ORGS, ACCESS_EXPORT_KIND_SERVICE_ACCOUNTS, ACCESS_EXPORT_KIND_TEAMS,
@@ -106,83 +106,89 @@ fn access_bundle_document<'a>(
 pub(crate) fn build_access_domain_status(
     inputs: AccessDomainStatusInputs<'_>,
 ) -> Option<ProjectDomainStatus> {
-    let mut source_kinds = Vec::new();
-    let mut warnings = Vec::new();
-    let mut total_records = 0usize;
-    let mut missing_labels = Vec::new();
+    inputs.project_domain_status()
+}
 
-    for spec in ACCESS_BUNDLE_SPECS {
-        if let Some(document) = access_bundle_document(&inputs, *spec) {
-            source_kinds.push(spec.kind.to_string());
-            total_records += summary_number(document, "recordCount");
-        } else {
-            missing_labels.push(spec.label);
-            warnings.push(StatusRecordCount::new(
-                ACCESS_MISSING_BUNDLE_KIND,
-                1,
-                spec.signal_key,
-            ));
+impl<'a> StatusProducer for AccessDomainStatusInputs<'a> {
+    fn status_reading(self) -> Option<StatusReading> {
+        let mut source_kinds = Vec::new();
+        let mut warnings = Vec::new();
+        let mut total_records = 0usize;
+        let mut missing_labels = Vec::new();
+
+        for spec in ACCESS_BUNDLE_SPECS {
+            if let Some(document) = access_bundle_document(&self, *spec) {
+                source_kinds.push(spec.kind.to_string());
+                total_records += summary_number(document, "recordCount");
+            } else {
+                missing_labels.push(spec.label);
+                warnings.push(StatusRecordCount::new(
+                    ACCESS_MISSING_BUNDLE_KIND,
+                    1,
+                    spec.signal_key,
+                ));
+            }
         }
-    }
 
-    if source_kinds.is_empty() {
-        return None;
-    }
+        if source_kinds.is_empty() {
+            return None;
+        }
 
-    let (status, reason_code, next_actions) = if !missing_labels.is_empty() {
-        let mut next_actions = vec![format!(
-            "export the missing access bundle kinds: {}",
-            missing_labels.join(", ")
-        )];
-        next_actions.extend(
-            ACCESS_MIXED_WORKSPACE_REVIEW_ACTIONS
+        let (status, reason_code, next_actions) = if !missing_labels.is_empty() {
+            let mut next_actions = vec![format!(
+                "export the missing access bundle kinds: {}",
+                missing_labels.join(", ")
+            )];
+            next_actions.extend(
+                ACCESS_MIXED_WORKSPACE_REVIEW_ACTIONS
+                    .iter()
+                    .map(|item| (*item).to_string()),
+            );
+            (
+                PROJECT_STATUS_PARTIAL,
+                ACCESS_REASON_PARTIAL_MISSING_BUNDLES,
+                next_actions,
+            )
+        } else if total_records == 0 {
+            (
+                PROJECT_STATUS_PARTIAL,
+                ACCESS_REASON_PARTIAL_NO_DATA,
+                ACCESS_NO_DATA_NEXT_ACTIONS
+                    .iter()
+                    .map(|item| (*item).to_string())
+                    .collect(),
+            )
+        } else {
+            (
+                PROJECT_STATUS_READY,
+                ACCESS_REASON_READY,
+                ACCESS_READY_NEXT_ACTIONS
+                    .iter()
+                    .map(|item| (*item).to_string())
+                    .collect(),
+            )
+        };
+
+        let reading = StatusReading {
+            id: ACCESS_DOMAIN_ID.to_string(),
+            scope: ACCESS_SCOPE.to_string(),
+            mode: ACCESS_MODE.to_string(),
+            status: status.to_string(),
+            reason_code: reason_code.to_string(),
+            primary_count: total_records,
+            source_kinds,
+            signal_keys: ACCESS_SIGNAL_KEYS
                 .iter()
-                .map(|item| (*item).to_string()),
-        );
-        (
-            PROJECT_STATUS_PARTIAL,
-            ACCESS_REASON_PARTIAL_MISSING_BUNDLES,
+                .map(|item| (*item).to_string())
+                .collect(),
+            blockers: Vec::<StatusRecordCount>::new(),
+            warnings,
             next_actions,
-        )
-    } else if total_records == 0 {
-        (
-            PROJECT_STATUS_PARTIAL,
-            ACCESS_REASON_PARTIAL_NO_DATA,
-            ACCESS_NO_DATA_NEXT_ACTIONS
-                .iter()
-                .map(|item| (*item).to_string())
-                .collect(),
-        )
-    } else {
-        (
-            PROJECT_STATUS_READY,
-            ACCESS_REASON_READY,
-            ACCESS_READY_NEXT_ACTIONS
-                .iter()
-                .map(|item| (*item).to_string())
-                .collect(),
-        )
-    };
+            freshness: Default::default(),
+        };
 
-    let reading = StatusReading {
-        id: ACCESS_DOMAIN_ID.to_string(),
-        scope: ACCESS_SCOPE.to_string(),
-        mode: ACCESS_MODE.to_string(),
-        status: status.to_string(),
-        reason_code: reason_code.to_string(),
-        primary_count: total_records,
-        source_kinds,
-        signal_keys: ACCESS_SIGNAL_KEYS
-            .iter()
-            .map(|item| (*item).to_string())
-            .collect(),
-        blockers: Vec::<StatusRecordCount>::new(),
-        warnings,
-        next_actions,
-        freshness: Default::default(),
-    };
-
-    Some(reading.into_project_domain_status())
+        Some(reading)
+    }
 }
 
 #[cfg(test)]
