@@ -5,17 +5,17 @@ use std::path::PathBuf;
 
 use crate::common::CliColorChoice;
 
-pub(crate) const PROJECT_STATUS_HELP_TEXT: &str = "Examples:\n\n  Render staged project status as a summary table from raw dashboard artifacts:\n    grafana-util status staged --dashboard-export-dir ./dashboards/raw --desired-file ./desired.json --output-format table\n\n  Render staged project status from dashboard provisioning artifacts:\n    grafana-util status staged --dashboard-provisioning-dir ./dashboards/provisioning --output-format csv\n\n  Render staged project status from datasource provisioning YAML:\n    grafana-util status staged --datasource-provisioning-file ./datasources/provisioning/datasources.yaml --output-format yaml\n\n  Render live project status with staged workspace context:\n    grafana-util status live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --sync-summary-file ./sync-summary.json --package-test-file ./workspace-package-test.json --output-format json\n\nSchema guide:\n  grafana-util status --help-schema\n  grafana-util status staged --help-schema\n  grafana-util status live --help-schema";
-pub(crate) const PROJECT_STATUS_STAGED_HELP_TEXT: &str = "Examples:\n\n  Render staged project status as a summary table from raw dashboard artifacts:\n    grafana-util status staged --dashboard-export-dir ./dashboards/raw --desired-file ./desired.json --output-format table\n\n  Render staged project status from dashboard provisioning artifacts in the interactive workbench:\n    grafana-util status staged --dashboard-provisioning-dir ./dashboards/provisioning --alert-export-dir ./alerts --output-format interactive\n\n  Render staged project status from datasource provisioning YAML:\n    grafana-util status staged --datasource-provisioning-file ./datasources/provisioning/datasources.yaml --output-format yaml\n\nSchema guide:\n  grafana-util status staged --help-schema";
-pub(crate) const PROJECT_STATUS_LIVE_HELP_TEXT: &str = "Examples:\n\n  Render live project status as YAML:\n    grafana-util status live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --output-format yaml\n\n  Render live status across visible orgs while layering staged sync context:\n    grafana-util status live --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --sync-summary-file ./sync-summary.json --output-format interactive\n\nSchema guide:\n  grafana-util status live --help-schema";
+pub(crate) const PROJECT_STATUS_HELP_TEXT: &str = "Examples:\n\n  Render staged artifact readiness as a summary table from raw dashboard artifacts:\n    grafana-util status staged --dashboard-export-dir ./dashboards/raw --desired-file ./desired.json --output-format table\n\n  Render staged artifact readiness from dashboard provisioning artifacts:\n    grafana-util status staged --dashboard-provisioning-dir ./dashboards/provisioning --output-format csv\n\n  Render staged artifact readiness from datasource provisioning YAML:\n    grafana-util status staged --datasource-provisioning-file ./datasources/provisioning/datasources.yaml --output-format yaml\n\n  Render live Grafana aggregation status with optional staged desired-vs-live context:\n    grafana-util status live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --sync-summary-file ./sync-summary.json --package-test-file ./workspace-package-test.json --output-format json\n\nSchema guide:\n  grafana-util status --help-schema\n  grafana-util status staged --help-schema\n  grafana-util status live --help-schema";
+pub(crate) const PROJECT_STATUS_STAGED_HELP_TEXT: &str = "Examples:\n\n  Render staged artifact readiness as a summary table from raw dashboard artifacts:\n    grafana-util status staged --dashboard-export-dir ./dashboards/raw --desired-file ./desired.json --output-format table\n\n  Render staged artifact readiness from dashboard provisioning artifacts in the interactive workbench:\n    grafana-util status staged --dashboard-provisioning-dir ./dashboards/provisioning --alert-export-dir ./alerts --output-format interactive\n\n  Render staged artifact readiness from datasource provisioning YAML:\n    grafana-util status staged --datasource-provisioning-file ./datasources/provisioning/datasources.yaml --output-format yaml\n\nSchema guide:\n  grafana-util status staged --help-schema";
+pub(crate) const PROJECT_STATUS_LIVE_HELP_TEXT: &str = "Examples:\n\n  Render live Grafana aggregation status as YAML:\n    grafana-util status live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --output-format yaml\n\n  Render live Grafana aggregation across visible orgs while layering staged desired-vs-live context:\n    grafana-util status live --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --sync-summary-file ./sync-summary.json --output-format interactive\n\nSchema guide:\n  grafana-util status live --help-schema";
 
 #[cfg(feature = "tui")]
 const PROJECT_STATUS_OUTPUT_HELP: &str =
-    "Render project status as table, csv, text, json, yaml, or interactive output.";
+    "Render staged or live status as table, csv, text, json, yaml, or interactive output.";
 
 #[cfg(not(feature = "tui"))]
 const PROJECT_STATUS_OUTPUT_HELP: &str =
-    "Render project status as table, csv, text, json, or yaml output.";
+    "Render staged or live status as table, csv, text, json, or yaml output.";
 
 #[derive(Debug, Clone, Copy, ValueEnum, PartialEq, Eq)]
 pub enum ProjectStatusOutputFormat {
@@ -224,12 +224,12 @@ pub struct ProjectStatusLiveArgs {
 #[derive(Debug, Clone, Subcommand)]
 pub enum ProjectStatusSubcommand {
     #[command(
-        about = "Render project status from staged artifacts. Use exported project inputs.",
+        about = "Render staged workspace readiness from exported artifacts.",
         after_help = PROJECT_STATUS_STAGED_HELP_TEXT
     )]
     Staged(ProjectStatusStagedArgs),
     #[command(
-        about = "Render project status from live Grafana read surfaces. Use current Grafana state plus optional staged context files.",
+        about = "Render live Grafana aggregation/read status. Optional staged files only add desired-vs-live context.",
         after_help = PROJECT_STATUS_LIVE_HELP_TEXT
     )]
     Live(ProjectStatusLiveArgs),
@@ -238,7 +238,7 @@ pub enum ProjectStatusSubcommand {
 #[derive(Debug, Clone, Parser)]
 #[command(
     name = "grafana-util status",
-    about = "Render project-wide staged or live status through a shared status contract. Staged subcommands read exports; live subcommands query Grafana.",
+    about = "Render staged workspace readiness or live Grafana status. Staged reads local artifacts; live queries Grafana.",
     after_help = PROJECT_STATUS_HELP_TEXT
 )]
 pub struct ProjectStatusCliArgs {

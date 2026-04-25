@@ -77,7 +77,7 @@ Dashboards   ok       32/32 Accessible
 Datasources  ok       Secret recovery verified
 Alerts       ok       No dangling rules
 ```
-Use `status live` when you want the shared status path to tell you whether Grafana is safe to read from or apply into. The extra staged sync files deepen the live view without changing the command shape.
+Use `status live` when you need the live Grafana aggregation/read path. Optional staged sync and package-test files add desired-vs-live context to that read; they do not turn it into workspace preview or apply.
 
 ### 2. Staged Readiness Check
 Use this as a mandatory CI/CD gate before running `apply`.
@@ -195,10 +195,10 @@ If the same mixed workspace root needs to become a handoff package, run `workspa
 
 ## Interactive Mode (TUI) Semantics
 
-`status overview live --output-format interactive` opens the live project overview through the shared status overview path.
+`status overview live --output-format interactive` opens the live Grafana overview through the shared status live read path.
 
 ```bash
-# status overview live --output-format interactive opens the live project overview through the shared status overview path.
+# status overview live --output-format interactive opens the live Grafana overview through the shared status live read path.
 grafana-util status overview live --url http://localhost:3000 --basic-user admin --basic-password admin --output-format interactive
 ```
 
@@ -207,7 +207,7 @@ The TUI uses the following visual language:
 - **🟡 Yellow**: The component is functional but has warnings, such as missing metadata.
 - **🔴 Red**: The component is blocked and needs action before deployment.
 
-Use `status overview` without `live` for staged artifact review, and use `status live` when you need the same live gate in machine-readable form.
+Use `status overview` without `live` for staged artifact review, and use `status live` when you need live Grafana aggregation in machine-readable form.
 
 ## Snapshot: Evidence, Not A Preview Replacement
 

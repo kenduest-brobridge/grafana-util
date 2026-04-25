@@ -1079,7 +1079,7 @@ profile:
 <pre><code># 先看 status live 支援哪些唯讀檢查選項。
 grafana-util status live -h</code></pre>
 <p><strong>預期輸出：</strong></p>
-<pre><code>Render project status from live Grafana read surfaces. Use current Grafana state plus optional staged context files.
+<pre><code>Render live Grafana aggregation/read status. Optional staged files only add desired-vs-live context.
 
 Usage: grafana-util status live [OPTIONS]
 
@@ -1098,7 +1098,7 @@ grafana-util status overview -h</code></pre>
 Examples:
   grafana-util status overview live --url http://localhost:3000 --basic-user admin --basic-password admin --output-format interactive
   grafana-util status overview live --url http://localhost:3000 --basic-user admin --basic-password admin --output-format yaml</code></pre>
-<p><code>status overview live</code> 是共用 status live 路徑的人類導向包裝。要看可讀摘要可用 <code>--output-format yaml</code>，想進互動式工作台就用 <code>--output-format interactive</code>。</p>
+<p><code>status overview live</code> 是共用 status live 讀取路徑的人類導向包裝。要看 live 摘要可用 <code>--output-format yaml</code>，想進互動式工作台就用 <code>--output-format interactive</code>。</p>
 <h3 id="3-用兩種常見驗證方式跑同一個唯讀檢查">3. 用兩種常見驗證方式跑同一個唯讀檢查</h3>
 <pre><code># 日常工作用 profile 跑 overview。
 grafana-util status overview live --profile prod --output-format yaml</code></pre>

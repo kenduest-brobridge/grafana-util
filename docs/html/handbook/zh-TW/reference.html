@@ -1173,15 +1173,15 @@ grafana-util status live -h</code></pre>
 <pre><code># 檢查 overview live 入口的輸出格式。
 grafana-util status overview live -h</code></pre>
 <p><strong>預期輸出：</strong></p>
-<pre><code>Render project status from live Grafana read surfaces. Use current Grafana state plus optional staged context files.
+<pre><code>Render live Grafana aggregation/read status. Optional staged files only add desired-vs-live context.
 ...
 --output-format &lt;OUTPUT_FORMAT&gt;
-    Render project status as table, csv, text, json, yaml, or interactive output.
+    Render staged or live status as table, csv, text, json, yaml, or interactive output.
 
 Render a live overview by delegating to the shared status live path.
 ...
 --output-format &lt;OUTPUT_FORMAT&gt;
-    Render project status as table, csv, text, json, yaml, or interactive output.</code></pre>
+    Render staged or live status as table, csv, text, json, yaml, or interactive output.</code></pre>
 <p>這兩個 live 入口現在都用 <code>--output-format</code>。</p>
 <h2 id="dashboard-路徑">Dashboard 路徑</h2>
 <ul><li><code>raw/</code> 是給 API replay/import 使用的路徑。</li><li><code>prompt/</code> 是給 Grafana UI 匯入使用的路徑。</li><li><code>dashboard export</code> 會直接產生 prompt 路徑。</li><li><code>dashboard convert raw-to-prompt</code> 可以把一般或 raw 的 dashboard JSON 轉成 prompt JSON，方便修補或遷移成 Grafana UI 匯入格式。</li><li><code>dashboard import</code> 只吃 <code>raw/</code> 或 <code>provisioning/</code> 輸入，不吃 <code>prompt/</code>。</li></ul>

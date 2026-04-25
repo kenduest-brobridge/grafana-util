@@ -296,14 +296,14 @@ Use `config profile` when you want to override the default-selection rules, and 
 
 Once a profile file exists, use read-only commands to confirm the current command shape before you touch live data.
 
-### 1. Project Status Entry Point
+### 1. Live Status Entry Point
 ```bash
 # Check which read-only options status live supports.
 grafana-util status live -h
 ```
 **Expected Output:**
 ```text
-Render project status from live Grafana read surfaces. Use current Grafana state plus optional staged context files.
+Render live Grafana aggregation/read status. Optional staged files only add desired-vs-live context.
 
 Usage: grafana-util status live [OPTIONS]
 
@@ -328,7 +328,7 @@ Examples:
   grafana-util status overview live --url http://localhost:3000 --basic-user admin --basic-password admin --output-format interactive
   grafana-util status overview live --url http://localhost:3000 --basic-user admin --basic-password admin --output-format yaml
 ```
-`status overview live` is a thin wrapper over shared status overview. Use `--output-format yaml` for a readable summary and `--output-format interactive` for the TUI workbench.
+`status overview live` is the human-oriented wrapper over the shared status live read path. Use `--output-format yaml` for a readable live summary and `--output-format interactive` for the TUI workbench.
 
 ### 3. Run the same read-only check in both common auth styles
 ```bash

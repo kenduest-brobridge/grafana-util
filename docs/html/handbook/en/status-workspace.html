@@ -967,7 +967,7 @@ COMPONENT    HEALTH   REASON
 Dashboards   ok       32/32 Accessible
 Datasources  ok       Secret recovery verified
 Alerts       ok       No dangling rules</code></pre>
-<p>Use <code>status live</code> when you want the shared status path to tell you whether Grafana is safe to read from or apply into. The extra staged sync files deepen the live view without changing the command shape.</p>
+<p>Use <code>status live</code> when you need the live Grafana aggregation/read path. Optional staged sync and package-test files add desired-vs-live context to that read; they do not turn it into workspace preview or apply.</p>
 <h3 id="2-staged-readiness-check">2. Staged Readiness Check</h3>
 <p>Use this as a mandatory CI/CD gate before running <code>apply</code>.</p>
 <pre><code># Gate one desired file before an apply job can continue.
@@ -1030,12 +1030,12 @@ grafana-util workspace preview --desired-file ./desired.json --live-file ./live.
 <p>Preview is the task-first replacement for the common <code>plan</code> step. It still emits the same reviewable staged contract underneath, but the operator entrypoint is now “preview what would change” instead of “build a plan document.” That preview contract is also where ordering lives: <code>ordering.mode</code>, <code>operations[].orderIndex</code> / <code>orderGroup</code> / <code>kindOrder</code>, and <code>summary.blocked_reasons</code> tell reviewers how the preview is sequenced and which operations remain blocked before apply.</p>
 <p>If the same mixed workspace root needs to become a handoff package, run <code>workspace package ./grafana-oac-repo --output-file ./workspace-package.json</code>, then keep the resulting <code>workspace-package.json</code> as the portable review artifact.</p>
 <h2 id="interactive-mode-tui-semantics">Interactive Mode (TUI) Semantics</h2>
-<p><code>status overview live --output-format interactive</code> opens the live project overview through the shared status overview path.</p>
-<pre><code># status overview live --output-format interactive opens the live project overview through the shared status overview path.
+<p><code>status overview live --output-format interactive</code> opens the live Grafana overview through the shared status live read path.</p>
+<pre><code># status overview live --output-format interactive opens the live Grafana overview through the shared status live read path.
 grafana-util status overview live --url http://localhost:3000 --basic-user admin --basic-password admin --output-format interactive</code></pre>
 <p>The TUI uses the following visual language:</p>
 <ul><li><strong>🟢 Green</strong>: The component is healthy and fully reachable.</li><li><strong>🟡 Yellow</strong>: The component is functional but has warnings, such as missing metadata.</li><li><strong>🔴 Red</strong>: The component is blocked and needs action before deployment.</li></ul>
-<p>Use <code>status overview</code> without <code>live</code> for staged artifact review, and use <code>status live</code> when you need the same live gate in machine-readable form.</p>
+<p>Use <code>status overview</code> without <code>live</code> for staged artifact review, and use <code>status live</code> when you need live Grafana aggregation in machine-readable form.</p>
 <h2 id="snapshot-evidence-not-a-preview-replacement">Snapshot: Evidence, Not A Preview Replacement</h2>
 <p>Snapshot commands are for incidents, PRs, and audits that need evidence. They preserve a reviewable summary of live or staged state so someone else can inspect what was true at that moment. They do not replace workspace preview, because preview is still the main answer to &quot;what will apply do?&quot;</p>
 <p>If you are deciding whether to apply, start with <code>workspace scan/test/preview</code>. If you need to hand current state to another reviewer or preserve before/after evidence, use <code>status snapshot</code>, <code>snapshot export</code>, or <code>snapshot review</code>.</p>

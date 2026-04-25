@@ -239,7 +239,7 @@ By role:
 
 ---
 
-## Project Status
+## Development Status
 
 This project is under active development. CLI paths, help output, examples, and documentation structure may change between releases. Always prefer the command reference and `--help` output over examples from older issues or prior revisions.
 

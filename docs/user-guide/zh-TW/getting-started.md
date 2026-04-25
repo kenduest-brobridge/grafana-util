@@ -304,7 +304,7 @@ grafana-util status live -h
 ```
 **預期輸出：**
 ```text
-Render project status from live Grafana read surfaces. Use current Grafana state plus optional staged context files.
+Render live Grafana aggregation/read status. Optional staged files only add desired-vs-live context.
 
 Usage: grafana-util status live [OPTIONS]
 
@@ -329,7 +329,7 @@ Examples:
   grafana-util status overview live --url http://localhost:3000 --basic-user admin --basic-password admin --output-format interactive
   grafana-util status overview live --url http://localhost:3000 --basic-user admin --basic-password admin --output-format yaml
 ```
-`status overview live` 是共用 status live 路徑的人類導向包裝。要看可讀摘要可用 `--output-format yaml`，想進互動式工作台就用 `--output-format interactive`。
+`status overview live` 是共用 status live 讀取路徑的人類導向包裝。要看 live 摘要可用 `--output-format yaml`，想進互動式工作台就用 `--output-format interactive`。
 
 ### 3. 用兩種常見驗證方式跑同一個唯讀檢查
 ```bash

@@ -7,6 +7,8 @@ use super::live_multi_org::{
     build_live_multi_org_domain_status_pair, build_live_multi_org_domain_status_with_clients,
     build_live_multi_org_domain_status_with_orgs, scoped_live_org_client_for_test,
 };
+use super::{build_status_with_optional_all_org_scope, AllOrgScopedClients};
+use crate::dashboard::build_live_dashboard_read_failed_domain_status;
 use crate::http::{JsonHttpClient, JsonHttpClientConfig};
 use crate::project_status::{
     status_finding, ProjectDomainStatus, ProjectStatusFreshness, PROJECT_STATUS_BLOCKED,
@@ -437,6 +439,58 @@ fn build_live_dashboard_and_datasource_statuses_reuses_datasource_read() {
     assert!(requests
         .iter()
         .any(|line| line.starts_with("GET /api/org ")));
+}
+
+#[test]
+fn build_live_dashboard_and_datasource_statuses_preserves_datasource_read_error() {
+    let responses = vec![
+        http_response(
+            "200 OK",
+            r#"[{"uid":"cpu-main","title":"CPU Main","type":"dash-db"}]"#,
+        ),
+        http_response("403 Forbidden", r#"{"message":"datasource denied"}"#),
+    ];
+    let (client, _requests, handle) = build_sequence_test_client(responses);
+
+    let (dashboard, datasource) = build_live_dashboard_and_datasource_statuses(&client);
+    handle.join().unwrap();
+
+    assert_eq!(dashboard.status, PROJECT_STATUS_PARTIAL);
+    assert_eq!(dashboard.reason_code, "live-read-failed");
+    assert_eq!(datasource.status, PROJECT_STATUS_PARTIAL);
+    assert_eq!(datasource.reason_code, "live-read-failed");
+    assert!(dashboard.next_actions.iter().any(|action| {
+        action.starts_with("last live read error:")
+            && action.contains("403")
+            && action.contains("datasource denied")
+    }));
+    assert!(datasource.next_actions.iter().any(|action| {
+        action.starts_with("last live read error:")
+            && action.contains("403")
+            && action.contains("datasource denied")
+    }));
+}
+
+#[test]
+fn build_status_with_optional_all_org_scope_preserves_org_list_error() {
+    let client = test_http_client();
+    let org_scope =
+        AllOrgScopedClients::OrgListFailed("GET /api/orgs failed with 403 Forbidden".to_string());
+
+    let status = build_status_with_optional_all_org_scope(
+        &client,
+        Some(&org_scope),
+        |_client| panic!("org-list failure must use read-failed fallback"),
+        build_live_dashboard_read_failed_domain_status,
+        "live-dashboard-search",
+        "restore dashboard/org read access, then re-run live status --all-orgs",
+    );
+
+    assert_eq!(status.reason_code, "live-read-failed");
+    assert_eq!(status.source_kinds, vec!["live-org-list".to_string()]);
+    assert!(status.next_actions.iter().any(|action| {
+        action.starts_with("last live read error:") && action.contains("403 Forbidden")
+    }));
 }
 
 fn test_http_client() -> JsonHttpClient {

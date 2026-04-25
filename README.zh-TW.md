@@ -241,7 +241,7 @@ grafana-util config profile --help
 
 ---
 
-## 專案狀態
+## 開發狀態
 
 此專案仍在積極開發中。CLI 路徑、help 輸出、範例與文件結構可能會有異動。指令介面請以 command reference 和 `--help` 輸出為準。
 

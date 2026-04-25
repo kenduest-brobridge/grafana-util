@@ -499,15 +499,15 @@ grafana-util status overview live -h
 ```
 **預期輸出：**
 ```text
-Render project status from live Grafana read surfaces. Use current Grafana state plus optional staged context files.
+Render live Grafana aggregation/read status. Optional staged files only add desired-vs-live context.
 ...
 --output-format <OUTPUT_FORMAT>
-    Render project status as table, csv, text, json, yaml, or interactive output.
+    Render staged or live status as table, csv, text, json, yaml, or interactive output.
 
 Render a live overview by delegating to the shared status live path.
 ...
 --output-format <OUTPUT_FORMAT>
-    Render project status as table, csv, text, json, yaml, or interactive output.
+    Render staged or live status as table, csv, text, json, yaml, or interactive output.
 ```
 這兩個 live 入口現在都用 `--output-format`。
 

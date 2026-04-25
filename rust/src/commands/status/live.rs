@@ -36,7 +36,7 @@ use crate::project_status_support::{build_live_project_status_api_client, projec
 
 use self::live_discovery::build_live_status_discovery;
 use self::live_domains::{
-    build_live_access_status, build_live_alert_status,
+    append_live_read_error_next_action, build_live_access_status, build_live_alert_status,
     build_live_dashboard_and_datasource_statuses, build_live_promotion_status,
     build_live_sync_status,
 };
@@ -51,7 +51,7 @@ const PROJECT_STATUS_LIVE_ALL_ORGS_AGGREGATE: &str = "multi-org-aggregate";
 const PROJECT_STATUS_LIVE_INSTANCE_SOURCE: &str = "api-health";
 
 enum AllOrgScopedClients {
-    OrgListFailed,
+    OrgListFailed(String),
     Scoped(Result<Vec<ScopedLiveOrgClient>>),
 }
 
@@ -69,16 +69,24 @@ where
 {
     match all_org_scope {
         Some(AllOrgScopedClients::Scoped(Ok(clients))) if !clients.is_empty() => {
-            build_live_multi_org_domain_status(clients, build_status)
-                .unwrap_or_else(|_| build_read_failed(domain_source, domain_action))
+            build_live_multi_org_domain_status(clients, build_status).unwrap_or_else(|error| {
+                append_live_read_error_next_action(
+                    build_read_failed(domain_source, domain_action),
+                    error,
+                )
+            })
         }
         Some(AllOrgScopedClients::Scoped(Ok(_))) | None => build_status(root_client),
-        Some(AllOrgScopedClients::Scoped(Err(_))) => {
-            build_read_failed(domain_source, domain_action)
-        }
-        Some(AllOrgScopedClients::OrgListFailed) => build_read_failed(
-            "live-org-list",
-            "restore org list access, then re-run live status --all-orgs",
+        Some(AllOrgScopedClients::Scoped(Err(error))) => append_live_read_error_next_action(
+            build_read_failed(domain_source, domain_action),
+            error,
+        ),
+        Some(AllOrgScopedClients::OrgListFailed(error)) => append_live_read_error_next_action(
+            build_read_failed(
+                "live-org-list",
+                "restore org list access, then re-run live status --all-orgs",
+            ),
+            error,
         ),
     }
 }
@@ -154,7 +162,7 @@ pub(crate) fn build_live_project_status(args: &ProjectStatusLiveArgs) -> Result<
         Some(match project_status_live::list_visible_orgs(&client) {
             Ok(orgs) if orgs.is_empty() => AllOrgScopedClients::Scoped(Ok(Vec::new())),
             Ok(orgs) => AllOrgScopedClients::Scoped(build_scoped_live_org_clients(&api, &orgs)),
-            Err(_) => AllOrgScopedClients::OrgListFailed,
+            Err(error) => AllOrgScopedClients::OrgListFailed(error.to_string()),
         })
     } else {
         None
@@ -165,15 +173,21 @@ pub(crate) fn build_live_project_status(args: &ProjectStatusLiveArgs) -> Result<
                 clients,
                 build_live_dashboard_and_datasource_statuses,
             )
-            .unwrap_or_else(|_| {
+            .unwrap_or_else(|error| {
                 (
-                    build_live_dashboard_read_failed_domain_status(
-                        "live-dashboard-search",
-                        "restore dashboard/org read access, then re-run live status --all-orgs",
+                    append_live_read_error_next_action(
+                        build_live_dashboard_read_failed_domain_status(
+                            "live-dashboard-search",
+                            "restore dashboard/org read access, then re-run live status --all-orgs",
+                        ),
+                        &error,
                     ),
-                    build_live_datasource_read_failed_domain_status(
-                        "live-datasource-list",
-                        "restore datasource/org read access, then re-run live status --all-orgs",
+                    append_live_read_error_next_action(
+                        build_live_datasource_read_failed_domain_status(
+                            "live-datasource-list",
+                            "restore datasource/org read access, then re-run live status --all-orgs",
+                        ),
+                        &error,
                     ),
                 )
             })
@@ -181,24 +195,36 @@ pub(crate) fn build_live_project_status(args: &ProjectStatusLiveArgs) -> Result<
         Some(AllOrgScopedClients::Scoped(Ok(_))) | None => {
             build_live_dashboard_and_datasource_statuses(&client)
         }
-        Some(AllOrgScopedClients::Scoped(Err(_))) => (
-            build_live_dashboard_read_failed_domain_status(
-                "live-dashboard-search",
-                "restore dashboard/org read access, then re-run live status --all-orgs",
+        Some(AllOrgScopedClients::Scoped(Err(error))) => (
+            append_live_read_error_next_action(
+                build_live_dashboard_read_failed_domain_status(
+                    "live-dashboard-search",
+                    "restore dashboard/org read access, then re-run live status --all-orgs",
+                ),
+                error,
             ),
-            build_live_datasource_read_failed_domain_status(
-                "live-datasource-list",
-                "restore datasource/org read access, then re-run live status --all-orgs",
+            append_live_read_error_next_action(
+                build_live_datasource_read_failed_domain_status(
+                    "live-datasource-list",
+                    "restore datasource/org read access, then re-run live status --all-orgs",
+                ),
+                error,
             ),
         ),
-        Some(AllOrgScopedClients::OrgListFailed) => (
-            build_live_dashboard_read_failed_domain_status(
-                "live-org-list",
-                "restore org list access, then re-run live status --all-orgs",
+        Some(AllOrgScopedClients::OrgListFailed(error)) => (
+            append_live_read_error_next_action(
+                build_live_dashboard_read_failed_domain_status(
+                    "live-org-list",
+                    "restore org list access, then re-run live status --all-orgs",
+                ),
+                error,
             ),
-            build_live_datasource_read_failed_domain_status(
-                "live-org-list",
-                "restore org list access, then re-run live status --all-orgs",
+            append_live_read_error_next_action(
+                build_live_datasource_read_failed_domain_status(
+                    "live-org-list",
+                    "restore org list access, then re-run live status --all-orgs",
+                ),
+                error,
             ),
         ),
     };

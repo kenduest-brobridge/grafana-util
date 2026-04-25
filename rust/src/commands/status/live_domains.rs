@@ -36,6 +36,34 @@ struct LiveDashboardDatasourceReadPass {
     datasource_current_org: Option<Map<String, Value>>,
 }
 
+pub(super) fn append_live_read_error_next_action(
+    mut status: ProjectDomainStatus,
+    error: impl std::fmt::Display,
+) -> ProjectDomainStatus {
+    let diagnostic = format!(
+        "last live read error: {}",
+        compact_live_read_error(&error.to_string())
+    );
+    if !status
+        .next_actions
+        .iter()
+        .any(|action| action == &diagnostic)
+    {
+        status.next_actions.push(diagnostic);
+    }
+    status
+}
+
+fn compact_live_read_error(error: &str) -> String {
+    let compacted = error.split_whitespace().collect::<Vec<_>>().join(" ");
+    let compacted = compacted.trim();
+    if compacted.chars().count() <= 500 {
+        compacted.to_string()
+    } else {
+        format!("{}...", compacted.chars().take(500).collect::<String>())
+    }
+}
+
 fn collect_live_dashboard_datasource_read_pass(
     client: &JsonHttpClient,
 ) -> LiveDashboardDatasourceReadPass {
@@ -94,9 +122,19 @@ fn build_live_dashboard_status_from_read_pass(
             }
             stamp_live_domain_freshness(status, &freshness_samples)
         }
-        _ => build_live_dashboard_read_failed_domain_status(
-            "live-dashboard-search",
-            "restore dashboard search access, then re-run live status",
+        (Err(error), _) => append_live_read_error_next_action(
+            build_live_dashboard_read_failed_domain_status(
+                "live-dashboard-search",
+                "restore dashboard search access, then re-run live status",
+            ),
+            error,
+        ),
+        (_, Err(error)) => append_live_read_error_next_action(
+            build_live_dashboard_read_failed_domain_status(
+                "live-datasource-list",
+                "restore datasource inventory access, then re-run live status",
+            ),
+            error,
         ),
     }
 }
@@ -118,9 +156,12 @@ fn build_live_datasource_status_from_read_pass(
                 )
             })
         }
-        Err(_) => build_live_datasource_read_failed_domain_status(
-            "live-datasource-list",
-            "restore datasource inventory access, then re-run live status",
+        Err(error) => append_live_read_error_next_action(
+            build_live_datasource_read_failed_domain_status(
+                "live-datasource-list",
+                "restore datasource inventory access, then re-run live status",
+            ),
+            error,
         ),
     };
     stamp_live_domain_freshness(status, &[])

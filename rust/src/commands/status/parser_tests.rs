@@ -14,7 +14,7 @@ fn project_status_cli_help_and_parse_support_datasource_provisioning_file() {
     let help = subcommand.render_long_help().to_string();
     assert!(help.contains("--dashboard-provisioning-dir"));
     assert!(help.contains("--datasource-provisioning-file"));
-    assert!(help.contains("Render project status as table, csv, text, json, yaml"));
+    assert!(help.contains("Render staged or live status as table, csv, text, json, yaml"));
     assert!(PROJECT_STATUS_STAGED_HELP_TEXT
         .contains("grafana-util status staged --dashboard-export-dir ./dashboards/raw"));
     assert!(PROJECT_STATUS_LIVE_HELP_TEXT

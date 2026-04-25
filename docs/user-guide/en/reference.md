@@ -502,7 +502,7 @@ grafana-util status overview live -h
 ```
 **Expected Output:**
 ```text
-Render live Grafana read surfaces. Use current Grafana state plus optional staged context files.
+Render live Grafana aggregation/read status. Optional staged files only add desired-vs-live context.
 ...
 --output-format <OUTPUT_FORMAT>
     Render live output as table, csv, text, json, yaml, or interactive output.

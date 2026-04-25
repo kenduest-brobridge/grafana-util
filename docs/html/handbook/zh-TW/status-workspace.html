@@ -966,7 +966,7 @@ COMPONENT    HEALTH   REASON
 Dashboards   ok       32/32 可存取
 Datasources  ok       秘密資訊恢復驗證通過
 Alerts       ok       無孤立規則</code></pre>
-<p><code>status live</code> 走的是共用的 live 狀態檢查流程。若同時帶入 staged sync 檔案，就能在不改變指令用法的前提下，讓 live 視圖多出更多對照資訊。</p>
+<p><code>status live</code> 走的是 live Grafana 聚合 / 讀取路徑。若同時帶入 staged sync 或 package-test 檔案，只是在這個讀取結果中補上 desired-vs-live 對照脈絡；它不會變成 workspace preview 或 apply。</p>
 <h3 id="2-暫存整備度檢查-staged-check">2. 暫存整備度檢查 (Staged Check)</h3>
 <p>在執行 <code>apply</code> 之前，這一步很適合拿來當 CI/CD 的強制檢查。</p>
 <pre><code># 在 CI 裡檢查 desired file 是否能繼續往 apply 走。
@@ -1029,12 +1029,12 @@ grafana-util workspace preview --desired-file ./desired.json --live-file ./live.
 <p>preview 對應底層 plan contract。對使用者來說，先想「這次會改到什麼」比先想「我要 build 哪種 plan 文件」更自然。 這份 preview contract 也是排序契約的公開面：<code>ordering.mode</code>、每筆 operation 的 <code>orderIndex</code> / <code>orderGroup</code> / <code>kindOrder</code>，以及 <code>summary.blocked_reasons</code> 會讓審查者看出 plan 的執行順序與尚未解除的受阻工作。</p>
 <p>如果同一個 mixed workspace root 最後要交接成 bundle，直接跑 <code>workspace package ./grafana-oac-repo --output-file ./workspace-package.json</code>，保留產生的 <code>workspace-package.json</code> 作為可攜式的 review artifact。</p>
 <h2 id="互動模式-tui-語意">互動模式 (TUI) 語意</h2>
-<p><code>status overview live --output-format interactive</code> 會透過共用的 status live 路徑顯示 live project overview。</p>
-<pre><code># status overview live --output-format interactive 會透過共用的 status live 路徑顯示 live project overview。
+<p><code>status overview live --output-format interactive</code> 會透過共用的 status live 讀取路徑顯示 live Grafana overview。</p>
+<pre><code># status overview live --output-format interactive 會透過共用的 status live 讀取路徑顯示 live Grafana overview。
 grafana-util status overview live --url http://localhost:3000 --basic-user admin --basic-password admin --output-format interactive</code></pre>
 <p>TUI 使用以下視覺語言：</p>
 <ul><li><strong>🟢 綠色</strong>：組件健康且完全可達。</li><li><strong>🟡 黃色</strong>：組件可用，但有警告，例如缺少中繼資料。</li><li><strong>🔴 紅色</strong>：組件受阻，在進行任何部署前都需要處理。</li></ul>
-<p>如果要看 staged 產物的人工審查畫面，用不帶 <code>live</code> 的 <code>status overview</code>；如果要拿結構化輸出做 live 檢查，改用 <code>status live</code>。</p>
+<p>如果要看 staged 產物的人工審查畫面，用不帶 <code>live</code> 的 <code>status overview</code>；如果要拿結構化輸出做 live Grafana 聚合，改用 <code>status live</code>。</p>
 <h2 id="snapshot用來留下證據不是取代-preview">Snapshot：用來留下證據，不是取代 preview</h2>
 <p>Snapshot 相關命令適合在 incident、PR 或 audit 需要證據時使用。它可以保存目前 live 或 staged state 的摘要，讓後續 review 有一份可以引用的 artifact。它不是 workspace preview 的替代品，因為 preview 仍然是回答「apply 會做什麼」的主要入口。</p>
 <p>如果你要判斷能不能 apply，先用 <code>workspace scan/test/preview</code>。如果你要把當下狀態交給別人 review，或要把變更前後狀態放進紀錄，才使用 <code>status snapshot</code>、<code>snapshot export</code> 或 <code>snapshot review</code>。</p>

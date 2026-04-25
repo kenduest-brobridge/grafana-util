@@ -966,7 +966,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <p><strong>After</strong>: Missing datasource dependencies are visible before import, while there is still time to fix mapping or target inventory.</p>
 <p><strong>Solution</strong>: Run a <strong>pre-import inspection</strong>.</p>
 <pre><code># Generate a report of all required datasources in your export tree
-grafana-util dashboard dependencies --input-dir ./backups/raw --input-format raw --output-format dependency</code></pre>
+grafana-util dashboard dependencies --input-dir ./backups/raw --input-format raw --output-format text</code></pre>
 <p><strong>What to check</strong>: Ensure every datasource listed in the dependency report exists in your target Grafana&#x27;s <code>datasource list</code>.</p>
 <p><strong>Use this when</strong>: you are preparing an import, validating a promotion bundle, or checking whether a dashboard export is portable enough for another environment.</p>
 <p><strong>Success looks like</strong>:</p>
