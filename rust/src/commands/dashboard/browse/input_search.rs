@@ -5,7 +5,7 @@ use serde_json::Value;
 
 use crate::common::{message, Result};
 
-use crate::dashboard::browse_state::{BrowserState, SearchState};
+use super::super::browse_state::{BrowserState, SearchState};
 use crate::dashboard::BrowseArgs;
 
 pub(super) fn handle_search_dialog_key(state: &mut BrowserState, key: &KeyEvent) -> Result<()> {

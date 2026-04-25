@@ -3,7 +3,7 @@ use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::ListItem;
 
-use crate::dashboard::browse_support::{DashboardBrowseNode, DashboardBrowseNodeKind};
+use super::super::browse_support::{DashboardBrowseNode, DashboardBrowseNodeKind};
 
 pub(super) fn build_live_tree_items(nodes: &[DashboardBrowseNode]) -> Vec<ListItem<'_>> {
     let mut rendered = Vec::new();

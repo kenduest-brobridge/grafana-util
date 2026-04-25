@@ -5,11 +5,11 @@ use serde_json::{Map, Value};
 
 use crate::common::{message, string_field, Result};
 
-use super::delete_support::normalize_folder_path;
-use super::{DEFAULT_DASHBOARD_TITLE, DEFAULT_FOLDER_TITLE};
+use super::super::delete_support::normalize_folder_path;
+use super::super::{DEFAULT_DASHBOARD_TITLE, DEFAULT_FOLDER_TITLE};
 
-pub(crate) use super::browse_live_detail::fetch_dashboard_view_lines_with_request;
-pub(crate) use super::browse_load::load_dashboard_browse_document_for_args;
+pub(crate) use super::live_detail::fetch_dashboard_view_lines_with_request;
+pub(crate) use super::load::load_dashboard_browse_document_for_args;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct DashboardBrowseSummary {
@@ -59,15 +59,15 @@ struct FolderNodeRecord {
 #[allow(dead_code)]
 pub(crate) fn build_dashboard_browse_document(
     summaries: &[Map<String, Value>],
-    folder_inventory: &[super::FolderInventoryItem],
+    folder_inventory: &[super::super::FolderInventoryItem],
     root_path: Option<&str>,
 ) -> Result<DashboardBrowseDocument> {
     build_dashboard_browse_document_for_org(
         summaries,
         folder_inventory,
         root_path,
-        super::DEFAULT_ORG_NAME,
-        super::DEFAULT_ORG_ID,
+        super::super::DEFAULT_ORG_NAME,
+        super::super::DEFAULT_ORG_ID,
         false,
         false,
     )
@@ -75,7 +75,7 @@ pub(crate) fn build_dashboard_browse_document(
 
 pub(super) fn build_dashboard_browse_document_for_org(
     summaries: &[Map<String, Value>],
-    folder_inventory: &[super::FolderInventoryItem],
+    folder_inventory: &[super::super::FolderInventoryItem],
     root_path: Option<&str>,
     org_name: &str,
     org_id: &str,
@@ -416,6 +416,5 @@ fn folder_depth(path: &str, root_path: Option<&str>) -> usize {
 }
 
 #[cfg(test)]
-#[cfg(test)]
-#[path = "browse_support_rust_tests.rs"]
+#[path = "support_rust_tests.rs"]
 mod tests;

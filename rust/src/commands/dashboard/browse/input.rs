@@ -5,21 +5,21 @@ use serde_json::Value;
 
 use crate::common::Result;
 
-#[path = "browse_external_edit_workflow.rs"]
+#[path = "external_edit_workflow.rs"]
 mod browse_external_edit_workflow;
-#[path = "browse_input_delete.rs"]
+#[path = "input_delete.rs"]
 mod browse_input_delete;
-#[path = "browse_input_edit.rs"]
+#[path = "input_edit.rs"]
 mod browse_input_edit;
-#[path = "browse_input_external_edit.rs"]
+#[path = "input_external_edit.rs"]
 mod browse_input_external_edit;
-#[path = "browse_input_history.rs"]
+#[path = "input_history.rs"]
 mod browse_input_history;
-#[path = "browse_input_refresh.rs"]
+#[path = "input_refresh.rs"]
 mod browse_input_refresh;
-#[path = "browse_input_search.rs"]
+#[path = "input_search.rs"]
 mod browse_input_search;
-#[path = "browse_input_shared.rs"]
+#[path = "input_shared.rs"]
 mod browse_input_shared;
 
 use self::browse_input_delete::{confirm_delete, preview_selected_delete};

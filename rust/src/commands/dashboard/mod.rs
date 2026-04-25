@@ -11,18 +11,6 @@ use serde_json::Value;
 // on re-exports, shared constants, and top-level command dispatch.
 mod authoring;
 mod browse;
-mod browse_actions;
-mod browse_edit_dialog;
-mod browse_external_edit_dialog;
-mod browse_history_dialog;
-mod browse_input;
-mod browse_live_detail;
-mod browse_load;
-mod browse_render;
-mod browse_state;
-mod browse_support;
-mod browse_terminal;
-mod browse_tui;
 mod cli_defs;
 mod command_artifacts;
 mod command_runner;
@@ -100,6 +88,10 @@ mod topology_tui;
 mod validate;
 mod vars;
 
+#[cfg(test)]
+#[allow(unused_imports)]
+pub(crate) use browse::{browse_edit_dialog, browse_history_dialog, browse_state};
+pub(crate) use browse::{browse_support, browse_terminal};
 pub(crate) use facade_exports::crate_exports::*;
 pub use facade_exports::pub_exports::*;
 pub(crate) use import::{

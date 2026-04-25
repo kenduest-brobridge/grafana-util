@@ -12,18 +12,18 @@ use crate::dashboard::files::{
 };
 use crate::grafana_api::DashboardResourceClient;
 
-use super::browse_support::{
-    build_dashboard_browse_document_for_org, build_org_node, DashboardBrowseDocument,
-    DashboardBrowseSummary,
-};
-use super::delete_support::normalize_folder_path;
-use super::inspect::{resolve_export_folder_inventory_item, resolve_export_folder_path};
-use super::list::{fetch_current_org_with_request, org_id_value};
-use super::source_loader::{load_dashboard_source, LoadedDashboardSource};
-use super::{
+use super::super::delete_support::normalize_folder_path;
+use super::super::inspect::{resolve_export_folder_inventory_item, resolve_export_folder_path};
+use super::super::list::{fetch_current_org_with_request, org_id_value};
+use super::super::source_loader::{load_dashboard_source, LoadedDashboardSource};
+use super::super::{
     build_auth_context, build_http_client, build_http_client_for_org,
     collect_folder_inventory_with_request, list_dashboard_summaries_with_request, BrowseArgs,
     DashboardImportInputFormat, DEFAULT_DASHBOARD_TITLE, DEFAULT_FOLDER_TITLE,
+};
+use super::browse_support::{
+    build_dashboard_browse_document_for_org, build_org_node, DashboardBrowseDocument,
+    DashboardBrowseSummary,
 };
 
 pub(crate) fn load_dashboard_browse_document_for_args<F>(
@@ -73,7 +73,7 @@ fn load_dashboard_browse_document_from_local_import_dir(
         .as_ref()
         .and_then(|item| item.org_id.as_deref())
         .filter(|value| !value.trim().is_empty())
-        .unwrap_or(super::DEFAULT_ORG_ID);
+        .unwrap_or(super::super::DEFAULT_ORG_ID);
     let mut document = build_dashboard_browse_document_for_org(
         &summaries,
         &folder_inventory,
@@ -101,7 +101,7 @@ fn resolve_local_browse_source(
 fn build_local_dashboard_summaries(
     input_dir: &Path,
     dashboard_files: &[PathBuf],
-    folder_inventory: &[super::FolderInventoryItem],
+    folder_inventory: &[super::super::FolderInventoryItem],
     metadata: Option<&crate::dashboard::models::ExportMetadata>,
 ) -> Result<Vec<Map<String, Value>>> {
     let mut summaries = Vec::new();
@@ -109,7 +109,7 @@ fn build_local_dashboard_summaries(
         .iter()
         .cloned()
         .map(|item| (item.uid.clone(), item))
-        .collect::<BTreeMap<String, super::FolderInventoryItem>>();
+        .collect::<BTreeMap<String, super::super::FolderInventoryItem>>();
     for dashboard_file in dashboard_files {
         if dashboard_file
             .file_name()
@@ -178,7 +178,7 @@ fn build_local_dashboard_summaries(
             Value::String(
                 metadata
                     .and_then(|item| item.org_id.clone())
-                    .unwrap_or_else(|| super::DEFAULT_ORG_ID.to_string()),
+                    .unwrap_or_else(|| super::super::DEFAULT_ORG_ID.to_string()),
             ),
         );
         summaries.push(summary);
@@ -199,9 +199,9 @@ where
     let org_id = org
         .get("id")
         .map(Value::to_string)
-        .unwrap_or_else(|| super::DEFAULT_ORG_ID.to_string());
+        .unwrap_or_else(|| super::super::DEFAULT_ORG_ID.to_string());
     let dashboard_summaries = list_dashboard_summaries_with_request(&mut request_json, page_size)?;
-    let summaries = super::list::attach_dashboard_folder_paths_with_request(
+    let summaries = super::super::list::attach_dashboard_folder_paths_with_request(
         &mut request_json,
         &dashboard_summaries,
     )?;
@@ -257,7 +257,7 @@ where
         let client = build_http_client_for_org(&args.common, org_id)?;
         let dashboard = DashboardResourceClient::new(&client);
         let dashboard_summaries = dashboard.list_dashboard_summaries(args.page_size)?;
-        let summaries = super::list::attach_dashboard_folder_paths_with_request(
+        let summaries = super::super::list::attach_dashboard_folder_paths_with_request(
             |method, path, params, payload| dashboard.request_json(method, path, params, payload),
             &dashboard_summaries,
         )?;

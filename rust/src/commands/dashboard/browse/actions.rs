@@ -4,6 +4,23 @@ use serde_json::Value;
 use crate::common::{message, Result};
 use reqwest::Method;
 
+use super::super::delete_support::{build_delete_plan_with_request, DeletePlan};
+use super::super::edit::{
+    apply_dashboard_edit_with_request, fetch_dashboard_edit_draft_with_request,
+    resolve_folder_uid_for_path, DashboardEditUpdate,
+};
+use super::super::edit_external::{
+    apply_external_dashboard_edit_with_request, fetch_external_dashboard_edit_draft_with_request,
+    open_dashboard_in_external_editor, review_external_dashboard_edit,
+};
+use super::super::history::{
+    list_dashboard_history_versions_with_request,
+    restore_dashboard_history_version_with_request_and_message,
+};
+use super::super::live::{
+    delete_dashboard_request_with_request, delete_folder_request_with_request,
+};
+use super::super::{BrowseArgs, CommonCliArgs, DeleteArgs};
 use super::browse_edit_dialog::EditDialogState;
 use super::browse_external_edit_dialog::ExternalEditDialogState;
 use super::browse_history_dialog::HistoryDialogState;
@@ -11,21 +28,6 @@ use super::browse_support::{
     fetch_dashboard_view_lines_with_request, load_dashboard_browse_document_for_args,
     DashboardBrowseDocument, DashboardBrowseNode, DashboardBrowseNodeKind,
 };
-use super::delete_support::{build_delete_plan_with_request, DeletePlan};
-use super::edit::{
-    apply_dashboard_edit_with_request, fetch_dashboard_edit_draft_with_request,
-    resolve_folder_uid_for_path, DashboardEditUpdate,
-};
-use super::edit_external::{
-    apply_external_dashboard_edit_with_request, fetch_external_dashboard_edit_draft_with_request,
-    open_dashboard_in_external_editor, review_external_dashboard_edit,
-};
-use super::history::{
-    list_dashboard_history_versions_with_request,
-    restore_dashboard_history_version_with_request_and_message,
-};
-use super::live::{delete_dashboard_request_with_request, delete_folder_request_with_request};
-use super::{BrowseArgs, CommonCliArgs, DeleteArgs};
 
 pub(crate) fn refresh_browser_document<F>(
     request_json: &mut F,
@@ -98,7 +100,7 @@ where
 pub(crate) fn apply_dashboard_edit_save<F>(
     request_json: &mut F,
     document: &DashboardBrowseDocument,
-    draft: &super::edit::DashboardEditDraft,
+    draft: &super::super::edit::DashboardEditDraft,
     update: &DashboardEditUpdate,
 ) -> Result<bool>
 where

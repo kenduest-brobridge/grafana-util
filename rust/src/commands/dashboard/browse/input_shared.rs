@@ -2,10 +2,10 @@
 
 use crate::common::{message, Result};
 
-use crate::dashboard::browse_render::render_dashboard_browser_frame;
-use crate::dashboard::browse_state::BrowserState;
-use crate::dashboard::browse_support::DashboardBrowseNode;
-use crate::dashboard::browse_terminal::TerminalSession;
+use super::super::browse_render::render_dashboard_browser_frame;
+use super::super::browse_state::BrowserState;
+use super::super::browse_support::DashboardBrowseNode;
+use super::super::browse_terminal::TerminalSession;
 use crate::dashboard::{build_http_client_for_org, BrowseArgs};
 
 pub(super) fn redraw_browser(

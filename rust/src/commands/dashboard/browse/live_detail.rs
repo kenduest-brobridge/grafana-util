@@ -4,10 +4,10 @@ use serde_json::Value;
 use crate::common::{message, string_field, Result};
 use reqwest::Method;
 
+use super::super::history::list_dashboard_history_versions_with_request;
+use super::super::live::fetch_dashboard_with_request;
+use super::super::DEFAULT_DASHBOARD_TITLE;
 use super::browse_support::{DashboardBrowseNode, DashboardBrowseNodeKind};
-use super::history::list_dashboard_history_versions_with_request;
-use super::live::fetch_dashboard_with_request;
-use super::DEFAULT_DASHBOARD_TITLE;
 
 pub(crate) fn fetch_dashboard_view_lines_with_request<F>(
     mut request_json: F,

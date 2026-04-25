@@ -5,14 +5,14 @@ use serde_json::Value;
 
 use crate::common::Result;
 
-use super::browse_input_shared::{redraw_browser, scoped_org_client};
-use crate::dashboard::browse_actions::{
+use super::super::browse_actions::{
     begin_dashboard_history, refresh_browser_document, restore_dashboard_history_version,
 };
-use crate::dashboard::browse_history_dialog::HistoryDialogAction;
-use crate::dashboard::browse_state::BrowserState;
-use crate::dashboard::browse_support::DashboardBrowseNodeKind;
-use crate::dashboard::browse_terminal::TerminalSession;
+use super::super::browse_history_dialog::HistoryDialogAction;
+use super::super::browse_state::BrowserState;
+use super::super::browse_support::DashboardBrowseNodeKind;
+use super::super::browse_terminal::TerminalSession;
+use super::browse_input_shared::{redraw_browser, scoped_org_client};
 use crate::dashboard::BrowseArgs;
 
 pub(super) fn handle_history_dialog_key<F>(

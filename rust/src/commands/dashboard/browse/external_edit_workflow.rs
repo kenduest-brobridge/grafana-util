@@ -9,12 +9,12 @@ use serde_json::Value;
 
 use crate::common::Result;
 
+use super::super::browse_actions::begin_external_dashboard_edit;
+use super::super::browse_external_edit_dialog::ExternalEditErrorState;
+use super::super::browse_state::BrowserState;
+use super::super::browse_support::DashboardBrowseNodeKind;
+use super::super::browse_terminal::TerminalSession;
 use super::browse_input_shared::scoped_org_client;
-use crate::dashboard::browse_actions::begin_external_dashboard_edit;
-use crate::dashboard::browse_external_edit_dialog::ExternalEditErrorState;
-use crate::dashboard::browse_state::BrowserState;
-use crate::dashboard::browse_support::DashboardBrowseNodeKind;
-use crate::dashboard::browse_terminal::TerminalSession;
 use crate::dashboard::import::collect_import_dry_run_report_with_request;
 use crate::dashboard::{BrowseArgs, CommonCliArgs, DashboardImportInputFormat, ImportArgs};
 

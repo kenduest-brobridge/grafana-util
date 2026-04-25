@@ -4,8 +4,8 @@ use ratatui::layout::{Constraint, Direction, Layout};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 
-use crate::dashboard::browse_state::{BrowserState, PaneFocus};
-use crate::dashboard::browse_support::{DashboardBrowseNode, DashboardBrowseNodeKind};
+use super::super::browse_state::{BrowserState, PaneFocus};
+use super::super::browse_support::{DashboardBrowseNode, DashboardBrowseNodeKind};
 
 pub(crate) fn render_detail_panel(
     frame: &mut ratatui::Frame,

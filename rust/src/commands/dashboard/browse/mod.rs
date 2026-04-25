@@ -8,8 +8,31 @@ use crate::common::message;
 use crate::common::Result;
 use crate::http::JsonHttpClient;
 
+pub(crate) mod actions;
+pub(crate) mod edit_dialog;
+pub(crate) mod external_edit_dialog;
+pub(crate) mod history_dialog;
+pub(crate) mod input;
+pub(crate) mod live_detail;
+pub(crate) mod load;
+pub(crate) mod render;
+pub(crate) mod state;
+pub(crate) mod support;
+pub(crate) mod terminal;
+pub(crate) mod tui;
+
+pub(crate) use actions as browse_actions;
+pub(crate) use edit_dialog as browse_edit_dialog;
+pub(crate) use external_edit_dialog as browse_external_edit_dialog;
+pub(crate) use history_dialog as browse_history_dialog;
+pub(crate) use input as browse_input;
+pub(crate) use render as browse_render;
+pub(crate) use state as browse_state;
+pub(crate) use support as browse_support;
+pub(crate) use terminal as browse_terminal;
+
 #[cfg(feature = "tui")]
-use super::browse_tui::run_dashboard_browser_tui;
+use self::tui::run_dashboard_browser_tui;
 use super::BrowseArgs;
 #[cfg(feature = "tui")]
 use super::{build_http_client, build_http_client_for_org};

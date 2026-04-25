@@ -6,7 +6,7 @@ use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Clear, List, ListItem, ListState, Paragraph, Wrap};
 
-use super::history::DashboardHistoryVersion;
+use super::super::history::DashboardHistoryVersion;
 
 #[derive(Clone, Debug)]
 pub(crate) struct HistoryDialogState {

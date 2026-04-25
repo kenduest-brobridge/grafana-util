@@ -5,18 +5,18 @@ use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Clear, List, ListItem, Paragraph};
 
+use super::super::delete_render::render_delete_dry_run_text;
 use super::browse_state::{BrowserState, PaneFocus, SearchDirection};
-use super::delete_render::render_delete_dry_run_text;
 
-#[path = "browse_render_detail.rs"]
+#[path = "render_detail.rs"]
 mod browse_render_detail;
-#[path = "browse_render_footer.rs"]
+#[path = "render_footer.rs"]
 mod browse_render_footer;
-#[path = "browse_render_rows.rs"]
+#[path = "render_rows.rs"]
 mod browse_render_rows;
 
 #[cfg(test)]
-#[path = "browse_render_rust_tests.rs"]
+#[path = "render_rust_tests.rs"]
 mod browse_render_rust_tests;
 
 use self::browse_render_detail::render_detail_panel;

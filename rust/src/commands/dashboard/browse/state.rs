@@ -9,13 +9,13 @@ use std::collections::BTreeMap;
 
 use ratatui::widgets::ListState;
 
+use super::super::delete_support::DeletePlan;
 use super::browse_edit_dialog::EditDialogState;
 use super::browse_external_edit_dialog::{ExternalEditDialogState, ExternalEditErrorState};
 use super::browse_history_dialog::HistoryDialogState;
 use super::browse_support::{
     DashboardBrowseDocument, DashboardBrowseNode, DashboardBrowseNodeKind,
 };
-use super::delete_support::DeletePlan;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum PaneFocus {

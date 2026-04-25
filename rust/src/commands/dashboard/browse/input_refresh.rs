@@ -4,8 +4,8 @@ use serde_json::Value;
 
 use crate::common::Result;
 
+use super::super::browse_state::BrowserState;
 use super::browse_input_shared::live_view_cache_key;
-use crate::dashboard::browse_state::BrowserState;
 use crate::dashboard::BrowseArgs;
 
 pub(super) fn refresh_selected_dashboard_view<F>(

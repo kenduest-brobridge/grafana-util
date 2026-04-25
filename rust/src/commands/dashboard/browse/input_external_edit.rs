@@ -6,15 +6,15 @@ use std::fs;
 
 use crate::common::{message, Result};
 
+use super::super::browse_actions::{apply_external_dashboard_edit, refresh_browser_document};
+use super::super::browse_external_edit_dialog::{
+    ExternalEditDialogAction, ExternalEditErrorAction,
+};
+use super::super::browse_state::{BrowserState, CompletionNotice};
+use super::super::browse_terminal::TerminalSession;
 use super::browse_external_edit_workflow::preview_external_edit_dry_run;
 pub(super) use super::browse_external_edit_workflow::run_selected_external_edit;
 use super::browse_input_shared::{redraw_browser, scoped_org_client};
-use crate::dashboard::browse_actions::{apply_external_dashboard_edit, refresh_browser_document};
-use crate::dashboard::browse_external_edit_dialog::{
-    ExternalEditDialogAction, ExternalEditErrorAction,
-};
-use crate::dashboard::browse_state::{BrowserState, CompletionNotice};
-use crate::dashboard::browse_terminal::TerminalSession;
 use crate::dashboard::BrowseArgs;
 
 pub(super) fn handle_external_edit_error_key<F>(

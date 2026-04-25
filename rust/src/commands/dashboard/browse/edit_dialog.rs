@@ -5,9 +5,9 @@ use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Clear, List, ListItem, ListState, Paragraph, Wrap};
 
+use super::super::delete_support::normalize_folder_path;
+use super::super::edit::{DashboardEditDraft, DashboardEditUpdate};
 use super::browse_support::{DashboardBrowseDocument, DashboardBrowseNodeKind};
-use super::delete_support::normalize_folder_path;
-use super::edit::{DashboardEditDraft, DashboardEditUpdate};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum EditField {

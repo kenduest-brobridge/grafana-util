@@ -5,13 +5,13 @@ use serde_json::Value;
 
 use crate::common::Result;
 
-use super::browse_input_shared::scoped_org_client;
-use crate::dashboard::browse_actions::{
+use super::super::browse_actions::{
     apply_dashboard_edit_save, begin_dashboard_edit, refresh_browser_document,
 };
-use crate::dashboard::browse_edit_dialog::EditDialogAction;
-use crate::dashboard::browse_state::BrowserState;
-use crate::dashboard::browse_support::DashboardBrowseNodeKind;
+use super::super::browse_edit_dialog::EditDialogAction;
+use super::super::browse_state::BrowserState;
+use super::super::browse_support::DashboardBrowseNodeKind;
+use super::browse_input_shared::scoped_org_client;
 use crate::dashboard::BrowseArgs;
 
 pub(super) fn handle_edit_dialog_key<F>(
