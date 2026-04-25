@@ -27,122 +27,95 @@ Scope rules:
 - Oversized Rust test facades and test-only `pub(crate)` visibility have been
   reduced. Do not re-open those unless a new mixed-responsibility hotspot appears.
 - Remaining risk is mostly maintainability: the remaining status producers,
-  TUI input/render modules, live apply paths, output contract depth, and
+  TUI input/render modules, live apply paths, read-throughput hotspots, and
   overlapping contract systems.
+
+## First Priority - Rust Deficit Audit
+
+This is the current first-priority Rust backlog. Treat it as the ordering lens
+before taking new architecture or cleanup work.
+
+Observed gaps:
+
+- [ ] Dashboard remains the heaviest domain and the highest maintenance risk.
+  The issue is not line count alone; dashboard owns export/import, inspect,
+  governance, topology, live review, TUI, screenshot, and source-alignment
+  behavior in one broad surface.
+- [ ] Grafana 13 Git Sync ownership is now guarded in dashboard import/plan
+  paths. Remaining Git Sync work is broader dashboard/workspace source routing,
+  export layout, and operator docs, not the direct-write safety guard.
+- [ ] Crate-root internal module routing is heavy. `rust/src/lib.rs` documents
+  the facade boundaries, but many crate-private modules are still mounted from
+  the root with `#[path = ...]`, so new shared surfaces should be added
+  conservatively and kept domain-local where possible.
+- [ ] TUI/browser feature surfaces are broad. Default `tui` and optional
+  `browser` builds are supported release lanes, so any TUI/browser-adjacent
+  change must validate the feature matrix, not just default tests.
+- [ ] Live read throughput has bounded fan-out for dashboard details, alert
+  templates, dashboard/folder permission export reads, and a shared
+  dashboard/datasource all-org read pass. Remaining transport risk is proven
+  hot spots only.
+- [ ] Mutation review envelopes remain domain-shaped. A shared adapter should
+  wait until dashboard/datasource/access/alert/workspace prove the same shape.
+- [ ] Production assumptions need opportunistic cleanup. Most `unwrap`,
+  `expect`, and `panic` occurrences are tests or hard-coded regex assertions,
+  but touched live/operator paths should prefer `Result` errors over panic.
+
+First-priority handling order:
+
+- [ ] Continue dashboard inspect/governance/report splits across one stable
+  responsibility boundary at a time.
+- [ ] Keep mutation review envelope, dashboard v2 adapter, and shared status
+  producer trait deferred until the earlier boundaries prove stable.
 
 ## Active Execution Queue
 
 Run the next development passes in this order unless a CI failure or user report
 changes priority.
 
-- [x] Finish the remaining project status producer audit and only normalize the last direct producers that still need the shared internal status reading model. Keep live Grafana evidence such as health and version where available.
-- [x] Add the first concrete contract promotion checker report after the contract ownership lanes are documented. Start informational only.
+- [ ] Continue dashboard inspect/governance/report code splits only where a
+  stable responsibility boundary is obvious. Report model, query-report
+  collection, and query analyzer moves are done; keep
+  `commands/dashboard/mod.rs` as the facade for later moves.
 - [ ] Keep the mutation review envelope adapter work later and only introduce a shared adapter once two or more domains prove the same review shape.
 - [ ] Keep dashboard v2 as a future adapter boundary. Continue rejecting v2-shaped input in the classic prompt lane and keep prompt export parity guarded with fixtures and tests.
+- [ ] Keep the shared status producer trait deferred. `StatusReading` is already
+  useful, but dashboard, datasource, and access still do not prove one common
+  trait interface.
 
+Detailed execution items:
+
+- Dashboard inspect/governance/report re-layering:
+  - [ ] Use the first-pass inventory of inspect, governance, report, topology,
+    impact, and policy modules before each later move.
+  - [ ] Choose exactly one next boundary, preferably a stable inspect or
+    governance responsibility that keeps imports simpler than the current
+    layout.
+  - [ ] Use `git mv` for tracked moves and keep `commands/dashboard/mod.rs`
+    as the facade.
+  - [ ] Keep public CLI/help unchanged; if help changes accidentally, back out
+    wording changes or update docs/contracts in the same commit.
+- Read-only HTTP throughput:
+  - [ ] Preserve deterministic output ordering after concurrent fetches.
+  - [ ] Keep write/apply/import requests serial.
+  - [ ] Gate any default concurrency value behind a conservative constant and
+    live smoke it against the fixed Grafana container.
+  - [ ] Add tests for partial read failures so the first useful diagnostic is
+    still visible.
 ## Rust Architecture Follow-up Checklist
 
 Use this checklist for the next Rust maintenance passes. Keep each checked item
 as a focused commit group with narrow validation.
 
-### P1 - Schema Boundary Cleanup
-
-- [x] Define the boundary between tool-owned artifact schema keys and Grafana raw API response keys in the touched module before refactoring.
-- [x] Centralize sync staged/review/apply document keys in namespaced modules or typed helpers instead of repeating `"kind"`, `"summary"`, `"resourceCount"`, and `"blockingCount"` in production parsing/render paths.
-- [x] Clean up `rust/src/commands/sync/staged_documents_render.rs` raw tool schema literals.
-- [x] Clean up `rust/src/commands/sync/workspace_preview_review_view.rs` plan and review document key access.
-- [x] Clean up `rust/src/commands/sync/project_status_json.rs` summary helper key access if it still reads tool-owned document sections directly.
-- [x] Clean up `rust/src/commands/alert/runtime_support.rs` alert plan, delete-preview, and import dry-run document keys where they are tool-owned.
-- [x] Clean up `rust/src/commands/dashboard/import_validation_dependencies.rs` summary/blocking document keys without globalizing ordinary Grafana keys such as `uid`, `name`, or `folderUid`.
-- [x] Keep test fixture `json!` documents readable; do not force every fixture key through constants unless it removes real duplication.
-- [x] Run focused validation for `sync`, `alert`, `dashboard import_validation`, and full Rust tests.
-
-### P1 - Split `grafana/api/sync_live_read.rs`
-
-- [x] Keep the existing public API/facade stable before moving code.
-- [x] Split dashboard live-read collection into a dedicated child module.
-- [x] Split datasource live-read collection into a dedicated child module.
-- [x] Split folder live-read collection into a dedicated child module if it has enough independent behavior.
-- [x] Split alert live-read collection into a dedicated child module.
-- [x] Keep availability aggregation in one clear module after the read facets are separated.
-- [x] Avoid changing live apply or request behavior during the split.
-- [x] Run `cargo test --manifest-path rust/Cargo.toml --quiet sync_live --lib`.
-- [x] Run `cargo test --manifest-path rust/Cargo.toml --quiet status --lib`.
-- [x] Run full Rust tests.
-
 ### P2 - Dashboard Directory Re-layering
 
-- [x] Propose the first directory boundary before moving files; prefer one stable domain at a time.
-- [x] Move dashboard authoring into `commands/dashboard/authoring/` only if the facade remains easy to follow.
-- [x] Move dashboard import files into `commands/dashboard/import/` after schema cleanup reduces key drift; keep plan reconciliation under `commands/dashboard/plan/`.
-- [ ] Move inspect/governance/report files into a clearer inspect/governance sub-tree only when imports remain manageable.
-- [x] Keep `commands/dashboard/mod.rs` as the public facade and avoid changing CLI command paths.
-- [x] Use `git mv` for tracked file moves.
-- [x] Run focused dashboard suites and parser/help tests.
-- [x] No docs surface checks were required for the completed directory moves
-  because public help and command routing did not change.
-- [x] Run full Rust tests.
-
-### P2 - Split `common/mod.rs`
-
-- [x] Split only after the sync/API/dashboard cleanup above settles to avoid noisy import churn.
-- [x] Extract shared error/result definitions into `common/error.rs`.
-- [x] Extract auth/header resolution into `common/auth.rs`.
-- [x] Extract JSON render/color handling into `common/json_output.rs`.
-- [x] Extract file output helpers into `common/io.rs`.
-- [x] Extract string/path normalization helpers into `common/normalize.rs` if call sites stay readable.
-- [x] Extract shared diff document helpers into `common/diff_document.rs`.
-- [x] Keep `common/mod.rs` as the facade and preserve existing imports where practical.
-- [x] Run `cargo test --manifest-path rust/Cargo.toml --quiet common --lib`.
-- [x] Run CLI help/parser tests.
-- [x] Run full Rust tests.
-
-Task C common split boundaries complete: error/result definitions now live in
-`common/error.rs`; auth/header resolution lives in `common/auth.rs`; JSON
-render/color handling lives in `common/json_output.rs`; file output helpers live
-in `common/io.rs`; string/path normalization lives in `common/normalize.rs`;
-shared diff document helpers live in `common/diff_document.rs`; `common/mod.rs`
-remains the public facade. CLI parser and full Rust tests pass.
-
-Completed cleanup now closed:
-
-- Release `v0.11.0` was prepared, version metadata was updated, `main` was
-  fast-forwarded, and tag `v0.11.0` was pushed.
-- Live smoke defaults were moved to `grafana/grafana:13.0.1`, and Python live
-  smoke entrypoints were consolidated behind `test-python-live`.
-- Grafana 13 disabled the deprecated numeric datasource id write APIs by
-  default; datasource modify/delete, sync live apply, and TUI browse
-  edit/delete now prefer `/api/datasources/uid/{uid}` with numeric id fallback
-  for older servers.
-- Grafana Git Sync support was reviewed and captured as dashboard/workspace
-  ownership backlog below.
-- Push baseline on `dev` completed and is already validated.
-- Remaining project status producers audited; the last dashboard live read
-  failure fallback now routes through `StatusReading`.
-- Status producers routed through `StatusReading` for access and dashboard.
-- Access user browse mutation dispatch was split into a dedicated mutation
-  module.
-- Access user browse reload behavior was split into a dedicated reload module.
-- Dashboard browse footer and action rendering were split from the main render
-  path.
-- Sync live apply datasource target lookup was split into a shared helper.
-- Sync live apply alert dispatch was split into a dedicated helper.
-- Dashboard browse live detail loading was split from browse document support.
-- Raw-to-prompt resolver responsibilities were split into prompt path and
-  datasource resolution modules.
-- Raw-to-prompt live library-panel prompt export parity is covered by a mock
-  Grafana regression test.
-- Raw-to-prompt clippy test module ordering was fixed.
-- Output contract checker collection and enum constraint checks are in place.
-- Docs diff classifier is in place.
-- Feature matrix full probe is in place.
-- Access team browse reload and confirmation boundaries are split.
-- Dashboard browse tree rows are split.
-- Sync live apply response normalization and error classification are split.
-- Oversized Rust test suites split into smaller facades.
-- Dashboard test helper re-exports narrowed from crate-wide visibility.
-- Dashboard and snapshot test-support helpers narrowed to local module trees.
-- Output contract checker now validates collection shape and enum constraints.
+- [ ] Continue moving inspect/governance/report files into clearer
+  inspect/governance boundaries only when imports remain manageable.
+- [ ] Keep `commands/dashboard/mod.rs` as the public facade and avoid changing
+  CLI command paths.
+- [ ] Use `git mv` for tracked file moves.
+- [ ] Run focused dashboard suites and parser/help tests.
+- [ ] Run full Rust tests after the move.
 
 ## Split Policy - Conservative Boundaries
 
@@ -176,44 +149,7 @@ Reject the split if the answer is only "the file is large." Large files are
 acceptable when they own one clear responsibility and are easier to read in one
 place.
 
-## P0 - Dashboard Prompt External Export
-
-### Align Prompt Export With Grafana UI Semantics
-
-Status: classic prompt parity is covered for datasource variables, placeholder
-references, selected current datasource mapping, live library-panel model export,
-and the current dashboard v2 resource/spec rejection boundary. Keep this item
-open for regression hardening and any future dashboard v2 adapter work.
-
-Problem:
-
-Grafana's official source has two external dashboard export paths. The classic
-exporter and the scene exporter agree that prompt output must not synthesize
-datasource variables or treat a datasource variable `query` as an import input.
-The newer scene exporter also preserves `$datasource` panel references while
-mapping a datasource variable's current concrete datasource through a `DS_*`
-input when that variable is used by panel or target datasource references.
-
-Official source areas to keep using as behavior references:
-
-- `/Users/kendlee/tmp/grafana/public/app/features/dashboard/components/DashExportModal/DashboardExporter.ts`
-- `/Users/kendlee/tmp/grafana/public/app/features/dashboard-scene/scene/export/exporters.ts`
-- `/Users/kendlee/tmp/grafana/public/app/features/manage-dashboards/import/utils/inputs.ts`
-- `/Users/kendlee/tmp/grafana/pkg/services/dashboardimport/utils/dash_template_evaluator.go`
-- `/Users/kendlee/tmp/grafana/pkg/services/dashboardimport/service/service.go`
-
-Action:
-
-- [x] Keep concrete datasource references mapped to `__inputs` and `${DS_*}`.
-- [x] Keep datasource variable definitions as variables; do not convert the variable `query` into a datasource input.
-- [x] Preserve panel and target datasource references such as `$datasource`.
-- [x] When a used datasource variable has a concrete current value and datasource type, add the corresponding `DS_*` input and set the variable `current.value` to `${DS_*}`.
-- [x] Keep constant variables mapped through `VAR_*` inputs.
-- [x] Keep expression datasource import handling (`__expr__`) out of user-mapped datasource inputs.
-- [x] Reject dashboard v2 resource/spec input in raw-to-prompt until a dedicated adapter exists.
-- [x] Keep library panel `__elements` live-model export covered by regression tests and add import input validation only when the import lane consumes those elements directly.
-
-### Dashboard Source-Alignment Follow-ups
+## P0 - Dashboard Source-Alignment Follow-ups
 
 Keep these follow-ups separated from the classic prompt contract so the next
 changes stay reviewable and do not blur lane boundaries.
@@ -236,63 +172,13 @@ changes stay reviewable and do not blur lane boundaries.
   datasource/access/alert lifecycle management.
 - [ ] Keep live library-panel `__elements` lookup limited to the live export / import-handoff path. Keep local raw-to-prompt conversion warning-only when a referenced library panel model is missing.
 - [ ] Keep prompt/export fixture parity anchored to Grafana source testdata for datasource variables, selected current datasource handling, library panels, and the classic-vs-v2 rejection boundary.
-- [ ] Add dashboard import/publish preflight evidence for provisioned or managed dashboards before any live write. Surface ownership and provenance as target evidence instead of waiting for Grafana API failures.
+- [ ] Extend the implemented dashboard import/plan ownership evidence into any
+  remaining publish or workspace paths that still lack provenance before live
+  writes.
 - [ ] Keep dashboard v2 as a separate future adapter boundary. Continue rejecting v2-shaped input in the classic prompt lane rather than mixing it into `raw/`, `prompt/`, or provisioning behavior.
 - [ ] Treat provisioning as a derived projection that can be compared later against Grafana file provisioning. Do not rebase the dashboard contract on provisioning as if it were the source of truth.
 - [ ] Keep dashboard permissions adjacent to access evidence and access workflows, not as dashboard JSON fields or as an extension of the prompt export shape.
 - [ ] Split large dashboard modules by responsibility, not by line count alone. Favor focused export planning, prompt conversion, live preflight, and provisioning projection boundaries over arbitrary file carving.
-
-Validation:
-
-- [x] Run `cargo test --manifest-path rust/Cargo.toml --quiet raw_to_prompt --lib`.
-- [x] Run `cargo test --manifest-path rust/Cargo.toml --quiet dashboard_prompt --lib` (0 matching tests).
-- [x] Run `cargo test --manifest-path rust/Cargo.toml --quiet`.
-- [x] Run `cargo fmt --manifest-path rust/Cargo.toml --all --check`.
-
-## P1 - TUI Boundary Cleanup
-
-### Split Access User Browse Input
-
-Problem:
-
-`rust/src/commands/access/user_browse_input.rs` is still a dense TUI input surface. Mutation dispatch and reload behavior are now split; key dispatch, selection state, and error handling should be split only if a stable responsibility boundary remains.
-
-Action:
-
-- [x] Extract only the next stable focused boundary if it remains mixed. Candidate boundary: key handling.
-- [x] Keep public behavior unchanged.
-- [x] Do not create all candidate modules in one pass unless each one removes a clearly mixed responsibility.
-
-Completion note: extracted `user_browse_key.rs` as the user-browse modal/key-routing boundary, leaving row loading in `user_browse_input.rs`. Verified access tests and full-tree formatting.
-
-Validation:
-
-- [x] Run `cargo test --manifest-path rust/Cargo.toml --quiet access`.
-- [x] Run `cargo fmt --manifest-path rust/Cargo.toml --all --check`.
-
-### Continue Dashboard Browse Render Split
-
-Problem:
-
-Dashboard browse/render is still large and UI-sensitive even after the row split.
-
-Hotspots:
-
-- `rust/src/commands/dashboard/browse_support.rs`
-- `rust/src/commands/dashboard/browse_render.rs`
-
-Action:
-
-- [x] Keep detail-pane rendering, footer/action rendering, and live detail loading split.
-- [x] Separate live-tree rendering from local-export-tree rendering where practical.
-- [x] Keep the main render path readable from the current parent module; do not turn one render file into many single-widget files.
-
-Completion note: split dashboard browse tree row rendering into explicit live and local-export builders inside `browse_render_rows.rs`, kept the parent render path as a simple mode dispatch, and added a narrow local-export row test.
-
-Validation:
-
-- [x] Run `cargo test --manifest-path rust/Cargo.toml --quiet dashboard_browse`.
-- [x] Run `cargo test --manifest-path rust/Cargo.toml --quiet dashboard_cli`.
 
 ## P1 - Status Producer Model
 
@@ -313,18 +199,10 @@ Relevant areas:
 
 Action:
 
-- [x] Introduce a shared data shape before introducing a trait. Candidate names: `StatusProducer`, `StatusReading`, `StatusWarning`, `StatusBlockedReason`, `StatusRecordCount`.
-- [x] Keep `status overview` as a consumer/reporting surface, not an orchestration owner.
-- [x] Move domain-specific discovery and warnings into domain producers.
 - [ ] Delay a shared trait until at least dashboard, datasource, and access prove the same producer interface.
-
-Completion note: `StatusReading`/`StatusRecordCount` were already present, and dashboard staged, access staged, and datasource live producers now keep producer-local warnings/blockers in `StatusRecordCount` until the final project-status conversion. Obvious live read-failure domain documents now come from dashboard, datasource, alert, and access producer helpers, so `status live` stays an orchestration/reporting consumer instead of owning those domain IDs, modes, and primary signal keys. A shared trait remains open because dashboard, datasource, and access still differ in input collection, optional producer output, freshness stamping, and multi-org transport boundaries.
-
-Validation:
-
-- [x] Run `cargo test --manifest-path rust/Cargo.toml --quiet status --lib`.
-- [x] Run `cargo test --manifest-path rust/Cargo.toml --quiet project_status`.
-- [x] Run `make quality-architecture`.
+- [ ] Re-check this only after dashboard, datasource, and access converge on
+  input collection, optional output, freshness stamping, and multi-org
+  transport boundaries.
 
 ## P1 - HTTP Transport Efficiency
 
@@ -337,8 +215,9 @@ paths are conservative for large Grafana instances. `JsonHttpClient` reuses one
 reqwest blocking client, which is good, but successful responses are fully read
 and converted to `String` before JSON parsing, response compression is disabled
 with `Accept-Encoding: identity`, HTTP/2 is disabled with `http1_only()`, and
-large inventory flows fetch dashboard details, templates, permissions, and
-all-org scopes serially.
+dashboard/detail fetches, alert template details, dashboard/folder permission
+export reads, and the dashboard/datasource all-org status pass already avoid
+the known repeated reads.
 
 Relevant areas:
 
@@ -351,14 +230,7 @@ Relevant areas:
 
 Action:
 
-- [x] In `request_json`, avoid converting successful response bodies to `String`; keep error response text for diagnostics only.
-- [x] Re-evaluate `Accept-Encoding: identity`; prefer reqwest-managed gzip, brotli, and deflate unless a Grafana compatibility case proves this unsafe.
-- [x] Re-evaluate `.http1_only()` and allow HTTP/2 when the server/proxy supports it.
-- [ ] Add bounded concurrency for dashboard detail fetches after `/api/search`.
-- [ ] Add bounded concurrency for alert template detail fetches.
-- [ ] Add bounded concurrency for dashboard/folder permission export fetches.
 - [ ] Keep write/apply paths serial unless dependency ordering and Grafana API safety are explicitly modeled.
-- [ ] In all-org status/list paths, avoid rebuilding scoped clients or re-reading the same live inputs more than needed; prefer one scoped read pass per org/domain boundary.
 - [ ] Reduce `serde_json::Value` cloning only at proven hot spots; keep flexible JSON handling where the API shape varies by Grafana version.
 
 Validation:
@@ -371,37 +243,19 @@ Validation:
 
 ## P2 - Live Apply Safety
 
-### Split Sync Live Apply By Phase
-
-Problem:
-
-`rust/src/grafana/api/sync_live_apply.rs` is a high-risk live mutation path and remains large.
-
-Action:
-
-- [x] Split live apply client operation request wrappers into `sync_live_apply_client.rs`.
-- [x] Confirm dependency ordering boundary: sync plan construction owns dependency-aware sorting; live apply phase preserves reviewed apply-intent order without reordering.
-- [x] Split apply execution into a phase-specific module.
-- [x] Keep API behavior unchanged.
-- [x] Add focused tests around ordering and the next split boundary if missing.
-- [x] Start with one phase boundary, then reassess. Do not split every phase in a single pass if the parent control flow becomes harder to follow.
-
-Validation:
-
-- [x] Run `cargo test --manifest-path rust/Cargo.toml --quiet sync_live`.
-- [x] Run `cargo test --manifest-path rust/Cargo.toml --quiet apply`.
-- [x] Run `cargo fmt --manifest-path rust/Cargo.toml --all --check`.
-- [x] Run `make quality-sync-rust`.
-
 ### Standardize Mutation Review Envelopes
 
 Problem:
 
 Dashboard, datasource, access, alert, and workspace mutation flows each have review/dry-run/apply concepts, but envelopes are still domain-shaped.
 
+Current baseline:
+
+- A shared internal `ReviewAction` adapter exists for dashboard/access plan
+  projections without changing public JSON contracts.
+
 Action:
 
-- [ ] Introduce a shared `ReviewAction` concept.
 - [ ] Introduce a shared `ReviewRisk` concept.
 - [ ] Introduce a shared `ReviewRequest` concept.
 - [ ] Introduce a shared `ReviewApplyResult` concept.
@@ -410,88 +264,15 @@ Action:
 - [ ] Avoid changing public JSON contracts until a migration path is defined.
 - [ ] Start with one internal model or adapter. Do not force all domains to adopt the envelope in the first commit.
 
+Current blocker:
+
+- Dashboard/access/workspace already prove a shared action/status/blocked-reason shape through the internal review adapter. `ReviewRisk`, `ReviewRequest`, and `ReviewApplyResult` still need one more domain-pair evidence pass because current risk records are dashboard-governance shaped and live apply request/result structs are sync/Grafana API shaped, not yet domain-neutral public contracts.
+
 Validation:
 
 - [ ] Run domain-focused tests first.
 - [ ] Run full `cargo test --manifest-path rust/Cargo.toml --quiet` after shared envelope changes.
 - [ ] Run `make quality-output-contracts` if JSON output changes.
-
-## P2 - Contract Depth And Schema Governance
-
-### Reconcile Output Contracts And Schema Manifests
-
-Problem:
-
-There are two contract systems:
-
-- `scripts/contracts/output-contracts.json`
-- `schemas/manifests` plus `scripts/generate_schema_artifacts.py`
-
-Action:
-
-- [ ] Define output contract ownership as runtime golden JSON artifacts and regression gates.
-- [ ] Define schema manifest ownership as published schema/help contract.
-- [ ] Promote only stable public artifacts from output contracts into schema manifests.
-- [ ] Document promotion criteria in `docs/internal/contract-doc-map.md`.
-
-Validation:
-
-- [ ] Run `make quality-output-contracts`.
-- [ ] Run `make schema-check`.
-- [ ] Run `make quality-docs-surface`.
-
-## P2 - Dashboard Review Model Completion - Closed 2026-04-23
-
-### Wire Review Source Model Into Remaining Dashboard Paths
-
-Problem:
-
-`review_source.rs` now models export-tree, saved-artifact, and live review inputs for topology/impact/policy. Some dashboard summary/help/internal names still use inspection/analysis vocabulary where the concept is really review or summary.
-
-Completion note:
-
-Closed by auditing topology/impact/policy source resolution through `review_source`, renaming stale review-source `analysis` wording while keeping true query analyzer terms, and adding focused Rust coverage for saved review artifacts plus public review-source wording.
-
-Action:
-
-- [x] Audit dashboard modules for stale user-facing `analysis` wording.
-- [x] Keep true query analyzer internals as analyzer names.
-- [x] Route any remaining policy/topology/impact source resolution through `review_source`.
-- [x] Add tests around saved-artifact vs live/export source selection.
-- [x] Do not rename internal analyzer modules that really parse query language or query family behavior.
-
-Validation:
-
-- [x] Run `cargo test --manifest-path rust/Cargo.toml --quiet topology`.
-- [x] Run `cargo test --manifest-path rust/Cargo.toml --quiet governance_gate`.
-- [x] Run `cargo test --manifest-path rust/Cargo.toml --quiet dashboard_cli_inspect_help`.
-
-## P3 - Docs And Generated Surface Discipline
-
-### Keep Public Command Wording Consistent
-
-Status: closed after public README and handbook examples were normalized to
-use `dashboard summary` for live review and `dashboard dependencies` for
-local/export review. The removed command path contract still keeps
-`dashboard analyze` as a blocked legacy reference.
-
-Problem:
-
-The project has intentionally moved away from stale `dashboard analyze` naming. Future command docs and help text can drift back unless wording stays guarded.
-
-Action:
-
-- [x] Keep removed public paths in `scripts/contracts/command-surface.json`.
-- [x] Keep docs checks rejecting removed public paths outside archive/trace contexts.
-- [x] Prefer `dashboard summary` for live dashboard review.
-- [x] Prefer `dashboard dependencies` for local/export dependency review.
-- [x] Use `query analyzer` only for true internal analyzer code.
-
-Validation:
-
-- [x] Run `make quality-docs-surface`.
-- [x] Run `make quality-ai-workflow`.
-- [x] Run targeted `rg` search for removed public paths.
 
 ## P3 - Product Surface Balance
 
