@@ -291,6 +291,35 @@ pub(crate) fn load_json_file(path: &Path) -> Result<Value> {
     Ok(value)
 }
 
+pub(crate) fn is_dashboard_v2_resource(document: &Value) -> bool {
+    let Some(object) = document.as_object() else {
+        return false;
+    };
+    let api_version = object
+        .get("apiVersion")
+        .and_then(Value::as_str)
+        .unwrap_or_default();
+    if api_version.starts_with("dashboard.grafana.app/") {
+        return true;
+    }
+    let kind = object
+        .get("kind")
+        .and_then(Value::as_str)
+        .unwrap_or_default();
+    if kind != "Dashboard" {
+        return false;
+    }
+    object
+        .get("spec")
+        .and_then(Value::as_object)
+        .is_some_and(|spec| {
+            object.contains_key("apiVersion")
+                || object.contains_key("metadata")
+                || spec.contains_key("elements")
+                || spec.contains_key("variables")
+        })
+}
+
 /// Purpose: implementation note.
 pub(crate) fn build_import_payload(
     document: &Value,
@@ -298,6 +327,11 @@ pub(crate) fn build_import_payload(
     replace_existing: bool,
     message_text: &str,
 ) -> Result<Value> {
+    if is_dashboard_v2_resource(document) {
+        return Err(message(
+            "Dashboard import does not support Grafana dashboard v2 resources yet; export classic dashboard JSON before importing.",
+        ));
+    }
     let document_object = value_as_object(document, "Dashboard payload must be a JSON object.")?;
     if document_object.contains_key("__inputs") {
         return Err(message(

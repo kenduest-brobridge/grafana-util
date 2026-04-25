@@ -347,6 +347,25 @@ fn write_single_scope_with_folder_permissions(root: &Path) -> PathBuf {
 }
 
 #[test]
+fn dashboard_plan_local_input_rejects_dashboard_v2_resource() {
+    let document = json!({
+        "apiVersion": "dashboard.grafana.app/v2",
+        "kind": "Dashboard",
+        "metadata": {"name": "v2-main"},
+        "spec": {
+            "title": "V2 Main",
+            "elements": {}
+        }
+    });
+
+    let error = build_local_dashboard(&document, Path::new("v2.json"), &[])
+        .unwrap_err()
+        .to_string();
+
+    assert!(error.contains("Dashboard plan does not support Grafana dashboard v2 resources yet"));
+}
+
+#[test]
 fn build_dashboard_plan_reports_same_create_and_delete_candidates() {
     let report = build_dashboard_plan(sample_plan_input(true));
 

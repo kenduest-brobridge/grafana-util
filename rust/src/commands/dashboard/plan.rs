@@ -20,6 +20,8 @@ use types::{DashboardPlanInput, DashboardPlanReport};
 #[cfg(test)]
 use self::input::collect_plan_input_with_request;
 #[cfg(test)]
+use self::reconcile::build_local_dashboard;
+#[cfg(test)]
 use self::render::{render_plan_table, render_plan_text};
 #[cfg(test)]
 use super::FolderInventoryItem;

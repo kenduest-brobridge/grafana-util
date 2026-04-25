@@ -13,7 +13,9 @@ use super::test_support::{
 };
 use crate::common::GrafanaCliError;
 use crate::dashboard::import_lookup::resolve_source_dashboard_folder_path;
-use crate::dashboard::import_validation::discover_export_org_import_scopes;
+use crate::dashboard::import_validation::{
+    discover_export_org_import_scopes, validate_dashboard_import_dependencies_with_request,
+};
 use serde_json::{json, Value};
 use std::fs;
 use std::path::Path;
@@ -93,4 +95,39 @@ fn resolve_source_dashboard_folder_path_reports_validation_error_for_unrelated_p
     assert!(error
         .to_string()
         .contains("Failed to resolve import-relative dashboard path"));
+}
+
+#[test]
+fn import_dependency_preflight_rejects_dashboard_v2_resource_before_availability_checks() {
+    let temp = tempdir().unwrap();
+    let input_dir = temp.path().join("raw");
+    fs::create_dir_all(&input_dir).unwrap();
+    fs::write(
+        input_dir.join("v2.json"),
+        serde_json::to_string_pretty(&json!({
+            "apiVersion": "dashboard.grafana.app/v2",
+            "kind": "Dashboard",
+            "metadata": {"name": "v2-main"},
+            "spec": {
+                "title": "V2 Main",
+                "elements": {}
+            }
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+
+    let error = validate_dashboard_import_dependencies_with_request(
+        |_method, path, _params, _payload| {
+            Err(crate::common::message(format!("unexpected path {path}")))
+        },
+        &input_dir,
+        false,
+        None,
+    )
+    .unwrap_err()
+    .to_string();
+
+    assert!(error.contains("Refusing dashboard import"));
+    assert!(error.contains("dashboard v2 resources are not supported yet"));
 }

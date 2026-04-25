@@ -3,7 +3,7 @@ use std::collections::BTreeSet;
 use std::path::Path;
 
 use crate::common::{string_field, value_as_object, Result};
-use crate::dashboard::extract_dashboard_object;
+use crate::dashboard::{extract_dashboard_object, is_dashboard_v2_resource};
 
 const CORE_PANEL_TYPES: &[&str] = &[
     "alertlist",
@@ -139,7 +139,7 @@ pub(super) fn validate_dashboard_document(
     target_schema_version: Option<i64>,
 ) -> Result<Vec<DashboardValidationIssue>> {
     let document_object = value_as_object(document, "Dashboard payload must be a JSON object.")?;
-    if is_dashboard_v2_document(document_object) {
+    if is_dashboard_v2_resource(document) {
         let title = document_object
             .get("spec")
             .and_then(Value::as_object)
@@ -274,25 +274,4 @@ pub(super) fn validate_dashboard_document(
     }
 
     Ok(issues)
-}
-
-fn is_dashboard_v2_document(document: &Map<String, Value>) -> bool {
-    let api_version = document
-        .get("apiVersion")
-        .and_then(Value::as_str)
-        .unwrap_or_default();
-    if api_version.starts_with("dashboard.grafana.app/") {
-        return true;
-    }
-    let kind = document
-        .get("kind")
-        .and_then(Value::as_str)
-        .unwrap_or_default();
-    if kind != "Dashboard" {
-        return false;
-    }
-    document
-        .get("spec")
-        .and_then(Value::as_object)
-        .is_some_and(|spec| spec.contains_key("elements") || spec.contains_key("variables"))
 }

@@ -73,8 +73,8 @@ pub(crate) mod crate_exports {
     pub(crate) use super::super::files::{
         build_dashboard_index_item, build_export_metadata, build_import_payload,
         build_preserved_web_import_document, build_root_export_index, build_variant_index,
-        discover_dashboard_files, extract_dashboard_object, load_datasource_inventory,
-        load_export_metadata, load_folder_inventory, load_json_file,
+        discover_dashboard_files, extract_dashboard_object, is_dashboard_v2_resource,
+        load_datasource_inventory, load_export_metadata, load_folder_inventory, load_json_file,
         resolve_dashboard_import_source, write_dashboard, write_json_document,
         DashboardRepoLayoutKind, DashboardSourceKind, ResolvedDashboardImportSource,
     };

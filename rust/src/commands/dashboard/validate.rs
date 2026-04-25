@@ -227,6 +227,58 @@ mod tests {
     }
 
     #[test]
+    fn validate_dashboard_export_surfaces_dashboard_v2_resource_as_warning() {
+        let temp = tempdir().unwrap();
+        let input_dir = temp.path().join("raw");
+        fs::create_dir_all(&input_dir).unwrap();
+        fs::write(
+            input_dir.join("v2.json"),
+            serde_json::to_string_pretty(&json!({
+                "apiVersion": "dashboard.grafana.app/v2",
+                "kind": "Dashboard",
+                "metadata": {"name": "v2-main"},
+                "spec": {
+                    "title": "V2 Main",
+                    "elements": {}
+                }
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+
+        let result = validate_dashboard_export_dir(&input_dir, false, false, None).unwrap();
+
+        assert_eq!(result.dashboard_count, 1);
+        assert_eq!(result.error_count, 0);
+        assert_eq!(result.warning_count, 1);
+        assert_eq!(result.issues[0].code, "unsupported-dashboard-v2-resource");
+        assert_eq!(result.issues[0].dashboard_uid, "v2-main");
+        assert_eq!(result.issues[0].dashboard_title, "V2 Main");
+    }
+
+    #[test]
+    fn validate_dashboard_import_document_rejects_dashboard_v2_resource() {
+        let temp = tempdir().unwrap();
+        let file = temp.path().join("v2.json");
+        let document = json!({
+            "apiVersion": "dashboard.grafana.app/v2",
+            "kind": "Dashboard",
+            "metadata": {"name": "v2-main"},
+            "spec": {
+                "title": "V2 Main",
+                "elements": {}
+            }
+        });
+
+        let error = validate_dashboard_import_document(&document, &file, false, None)
+            .unwrap_err()
+            .to_string();
+
+        assert!(error.contains("Refusing dashboard import"));
+        assert!(error.contains("dashboard v2 resources are not supported yet"));
+    }
+
+    #[test]
     fn run_dashboard_validate_export_supports_git_sync_repo_root_without_export_metadata() {
         let temp = tempdir().unwrap();
         let repo_root = temp.path().join("grafana-oac-repo");
@@ -328,6 +380,12 @@ pub(crate) fn validate_dashboard_import_document(
     strict: bool,
     target_schema_version: Option<i64>,
 ) -> Result<()> {
+    if super::is_dashboard_v2_resource(document) {
+        return Err(message(format!(
+            "Refusing dashboard import because Grafana dashboard v2 resources are not supported yet in {}.",
+            file.display()
+        )));
+    }
     let issues =
         validate_dashboard_document(document, file, strict, strict, target_schema_version)?;
     let blocking = issues

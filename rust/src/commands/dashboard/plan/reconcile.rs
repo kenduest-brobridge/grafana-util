@@ -58,6 +58,11 @@ fn strip_dashboard_noise(value: &mut Value) {
 }
 
 fn normalize_dashboard_document(document: &Value) -> Result<Value> {
+    if super::super::is_dashboard_v2_resource(document) {
+        return Err(message(
+            "Dashboard plan does not support Grafana dashboard v2 resources yet; export classic dashboard JSON before planning.",
+        ));
+    }
     let object = value_as_object(document, "Dashboard payload must be a JSON object.")?;
     let mut normalized = Value::Object(extract_dashboard_object(object)?.clone());
     strip_dashboard_noise(&mut normalized);
