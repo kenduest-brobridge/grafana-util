@@ -18,6 +18,7 @@ mod tests;
 use serde_json::Value;
 use std::fs::Metadata;
 use std::path::PathBuf;
+use std::thread;
 
 use crate::access::build_access_live_read_failed_domain_status;
 use crate::alert::build_alert_live_read_failed_domain_status;
@@ -53,6 +54,73 @@ const PROJECT_STATUS_LIVE_INSTANCE_SOURCE: &str = "api-health";
 enum AllOrgScopedClients {
     OrgListFailed(String),
     Scoped(Result<Vec<ScopedLiveOrgClient>>),
+}
+
+fn build_dashboard_datasource_statuses_with_optional_all_org_scope(
+    client: &crate::http::JsonHttpClient,
+    all_org_scope: Option<&AllOrgScopedClients>,
+) -> (ProjectDomainStatus, ProjectDomainStatus) {
+    match all_org_scope {
+        Some(AllOrgScopedClients::Scoped(Ok(clients))) if !clients.is_empty() => {
+            build_live_multi_org_domain_status_pair(
+                clients,
+                build_live_dashboard_and_datasource_statuses,
+            )
+            .unwrap_or_else(|error| {
+                (
+                    append_live_read_error_next_action(
+                        build_live_dashboard_read_failed_domain_status(
+                            "live-dashboard-search",
+                            "restore dashboard/org read access, then re-run live status --all-orgs",
+                        ),
+                        &error,
+                    ),
+                    append_live_read_error_next_action(
+                        build_live_datasource_read_failed_domain_status(
+                            "live-datasource-list",
+                            "restore datasource/org read access, then re-run live status --all-orgs",
+                        ),
+                        &error,
+                    ),
+                )
+            })
+        }
+        Some(AllOrgScopedClients::Scoped(Ok(_))) | None => {
+            build_live_dashboard_and_datasource_statuses(client)
+        }
+        Some(AllOrgScopedClients::Scoped(Err(error))) => (
+            append_live_read_error_next_action(
+                build_live_dashboard_read_failed_domain_status(
+                    "live-dashboard-search",
+                    "restore dashboard/org read access, then re-run live status --all-orgs",
+                ),
+                error,
+            ),
+            append_live_read_error_next_action(
+                build_live_datasource_read_failed_domain_status(
+                    "live-datasource-list",
+                    "restore datasource/org read access, then re-run live status --all-orgs",
+                ),
+                error,
+            ),
+        ),
+        Some(AllOrgScopedClients::OrgListFailed(error)) => (
+            append_live_read_error_next_action(
+                build_live_dashboard_read_failed_domain_status(
+                    "live-org-list",
+                    "restore org list access, then re-run live status --all-orgs",
+                ),
+                error,
+            ),
+            append_live_read_error_next_action(
+                build_live_datasource_read_failed_domain_status(
+                    "live-org-list",
+                    "restore org list access, then re-run live status --all-orgs",
+                ),
+                error,
+            ),
+        ),
+    }
 }
 
 fn build_status_with_optional_all_org_scope<F, G>(
@@ -167,83 +235,51 @@ pub(crate) fn build_live_project_status(args: &ProjectStatusLiveArgs) -> Result<
     } else {
         None
     };
-    let (dashboard_status, datasource_status) = match all_org_scoped_clients.as_ref() {
-        Some(AllOrgScopedClients::Scoped(Ok(clients))) if !clients.is_empty() => {
-            build_live_multi_org_domain_status_pair(
-                clients,
-                build_live_dashboard_and_datasource_statuses,
-            )
-            .unwrap_or_else(|error| {
-                (
-                    append_live_read_error_next_action(
-                        build_live_dashboard_read_failed_domain_status(
-                            "live-dashboard-search",
-                            "restore dashboard/org read access, then re-run live status --all-orgs",
-                        ),
-                        &error,
-                    ),
-                    append_live_read_error_next_action(
-                        build_live_datasource_read_failed_domain_status(
-                            "live-datasource-list",
-                            "restore datasource/org read access, then re-run live status --all-orgs",
-                        ),
-                        &error,
-                    ),
+    let ((dashboard_status, datasource_status), alert_status, access_status, discovery) =
+        thread::scope(|scope| {
+            let dashboard_datasource_handle = scope.spawn(|| {
+                build_dashboard_datasource_statuses_with_optional_all_org_scope(
+                    &client,
+                    all_org_scoped_clients.as_ref(),
                 )
-            })
-        }
-        Some(AllOrgScopedClients::Scoped(Ok(_))) | None => {
-            build_live_dashboard_and_datasource_statuses(&client)
-        }
-        Some(AllOrgScopedClients::Scoped(Err(error))) => (
-            append_live_read_error_next_action(
-                build_live_dashboard_read_failed_domain_status(
-                    "live-dashboard-search",
-                    "restore dashboard/org read access, then re-run live status --all-orgs",
-                ),
-                error,
-            ),
-            append_live_read_error_next_action(
-                build_live_datasource_read_failed_domain_status(
-                    "live-datasource-list",
-                    "restore datasource/org read access, then re-run live status --all-orgs",
-                ),
-                error,
-            ),
-        ),
-        Some(AllOrgScopedClients::OrgListFailed(error)) => (
-            append_live_read_error_next_action(
-                build_live_dashboard_read_failed_domain_status(
-                    "live-org-list",
-                    "restore org list access, then re-run live status --all-orgs",
-                ),
-                error,
-            ),
-            append_live_read_error_next_action(
-                build_live_datasource_read_failed_domain_status(
-                    "live-org-list",
-                    "restore org list access, then re-run live status --all-orgs",
-                ),
-                error,
-            ),
-        ),
-    };
-    let alert_status = build_status_with_optional_all_org_scope(
-        &client,
-        all_org_scoped_clients.as_ref(),
-        build_live_alert_status,
-        build_alert_live_read_failed_domain_status,
-        "alert",
-        "restore alert/org read access, then re-run live status --all-orgs",
-    );
-    let access_status = build_status_with_optional_all_org_scope(
-        &client,
-        all_org_scoped_clients.as_ref(),
-        build_live_access_status,
-        build_access_live_read_failed_domain_status,
-        "grafana-utils-access-live-org-users",
-        "restore access/org read access, then re-run live status --all-orgs",
-    );
+            });
+            let alert_handle = scope.spawn(|| {
+                build_status_with_optional_all_org_scope(
+                    &client,
+                    all_org_scoped_clients.as_ref(),
+                    build_live_alert_status,
+                    build_alert_live_read_failed_domain_status,
+                    "alert",
+                    "restore alert/org read access, then re-run live status --all-orgs",
+                )
+            });
+            let access_handle = scope.spawn(|| {
+                build_status_with_optional_all_org_scope(
+                    &client,
+                    all_org_scoped_clients.as_ref(),
+                    build_live_access_status,
+                    build_access_live_read_failed_domain_status,
+                    "grafana-utils-access-live-org-users",
+                    "restore access/org read access, then re-run live status --all-orgs",
+                )
+            });
+            let discovery_handle = scope.spawn(|| build_live_status_discovery(&client));
+
+            (
+                dashboard_datasource_handle
+                    .join()
+                    .expect("live dashboard/datasource status collector panicked"),
+                alert_handle
+                    .join()
+                    .expect("live alert status collector panicked"),
+                access_handle
+                    .join()
+                    .expect("live access status collector panicked"),
+                discovery_handle
+                    .join()
+                    .expect("live discovery collector panicked"),
+            )
+        });
     let domains = vec![
         dashboard_status,
         datasource_status,
@@ -283,6 +319,6 @@ pub(crate) fn build_live_project_status(args: &ProjectStatusLiveArgs) -> Result<
         overall_freshness,
         domains,
     );
-    status.discovery = Some(build_live_status_discovery(&client));
+    status.discovery = Some(discovery);
     Ok(status)
 }

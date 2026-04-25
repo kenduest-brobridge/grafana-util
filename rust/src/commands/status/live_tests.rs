@@ -310,6 +310,52 @@ fn build_live_multi_org_domain_status_with_orgs_fans_out_and_aggregates_counts()
 }
 
 #[test]
+fn build_live_multi_org_domain_status_with_orgs_preserves_next_action_order() {
+    let orgs = vec![
+        json!({"id": 22, "name": "Edge"})
+            .as_object()
+            .unwrap()
+            .clone(),
+        json!({"id": 11, "name": "Core"})
+            .as_object()
+            .unwrap()
+            .clone(),
+    ];
+
+    let aggregated = build_live_multi_org_domain_status_with_orgs(&orgs, |org_id| {
+        Ok(ProjectDomainStatus {
+            id: "dashboard".to_string(),
+            scope: "live".to_string(),
+            mode: "live-dashboard-read".to_string(),
+            status: PROJECT_STATUS_PARTIAL.to_string(),
+            reason_code: "partial".to_string(),
+            primary_count: 1,
+            blocker_count: 0,
+            warning_count: 0,
+            source_kinds: vec!["live-dashboard-search".to_string()],
+            signal_keys: vec!["live.dashboardCount".to_string()],
+            blockers: Vec::new(),
+            warnings: Vec::new(),
+            next_actions: vec![
+                format!("inspect org {org_id} dashboard access"),
+                "re-run live status".to_string(),
+            ],
+            freshness: ProjectStatusFreshness::default(),
+        })
+    })
+    .unwrap();
+
+    assert_eq!(
+        aggregated.next_actions,
+        vec![
+            "inspect org 22 dashboard access".to_string(),
+            "re-run live status".to_string(),
+            "inspect org 11 dashboard access".to_string(),
+        ]
+    );
+}
+
+#[test]
 fn build_live_multi_org_domain_status_with_orgs_rejects_empty_org_lists() {
     let error = build_live_multi_org_domain_status_with_orgs(&[], |_org_id| {
         Ok(ProjectDomainStatus {
