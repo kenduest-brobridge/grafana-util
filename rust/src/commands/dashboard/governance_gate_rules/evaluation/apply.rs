@@ -10,11 +10,11 @@ use super::super::{string_field, QueryThresholdPolicy};
 use crate::common::{message, Result};
 use crate::dashboard::governance_gate::DashboardGovernanceGateFinding;
 
-use super::governance_gate_rules_evaluation_findings::{
+use super::findings::{
     array_of_objects, build_dashboard_violation, build_dashboard_violation_from_fields,
     build_query_violation,
 };
-use super::governance_gate_rules_evaluation_policy::{
+use super::policy::{
     is_sql_family, loki_query_is_broad, parse_duration_seconds, prometheus_query_is_broad,
     query_dashboard_refresh_seconds, query_uses_regex_matchers, query_uses_time_filter,
     query_uses_unscoped_loki_search, score_query_complexity,

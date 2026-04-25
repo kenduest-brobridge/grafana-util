@@ -3,16 +3,13 @@
 use serde_json::Value;
 use std::collections::BTreeSet;
 
-#[path = "governance_gate_rules_evaluation.rs"]
-mod governance_gate_rules_evaluation;
-#[path = "governance_gate_rules_findings.rs"]
-mod governance_gate_rules_findings;
-#[path = "governance_gate_rules_policy.rs"]
-mod governance_gate_rules_policy;
+mod evaluation;
+mod findings;
+mod policy;
 
-pub(crate) use governance_gate_rules_evaluation::evaluate_dashboard_governance_gate_violations;
-pub(crate) use governance_gate_rules_findings::build_governance_warning_findings;
-pub(crate) use governance_gate_rules_policy::{build_checked_rules, parse_query_threshold_policy};
+pub(crate) use evaluation::evaluate_dashboard_governance_gate_violations;
+pub(crate) use findings::build_governance_warning_findings;
+pub(crate) use policy::{build_checked_rules, parse_query_threshold_policy};
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub(crate) struct QueryThresholdPolicy {

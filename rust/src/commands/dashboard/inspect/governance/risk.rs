@@ -1,9 +1,9 @@
 //! Risk and audit row builders for dashboard inspect governance output.
 //! Keeps scoring, deduping, and risk metadata out of the facade module.
 
-#[path = "inspect_governance_risk_rows.rs"]
+#[path = "risk_rows.rs"]
 mod inspect_governance_risk_rows;
-#[path = "inspect_governance_risk_spec.rs"]
+#[path = "risk_spec.rs"]
 mod inspect_governance_risk_spec;
 
 pub(crate) use inspect_governance_risk_rows::{

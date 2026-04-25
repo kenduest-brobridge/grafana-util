@@ -2,15 +2,15 @@
 //! Keeps the stable row models in a sibling module while document assembly lives here.
 use serde::Serialize;
 
-#[path = "inspect_governance_coverage.rs"]
+#[path = "inspect/governance/coverage.rs"]
 mod inspect_governance_coverage;
-#[path = "inspect_governance_document.rs"]
+#[path = "inspect/governance/document.rs"]
 mod inspect_governance_document;
-#[path = "inspect_governance_render.rs"]
+#[path = "inspect/governance/render.rs"]
 mod inspect_governance_render;
-#[path = "inspect_governance_risk.rs"]
+#[path = "inspect/governance/risk.rs"]
 mod inspect_governance_risk;
-#[path = "inspect_governance_rows.rs"]
+#[path = "inspect/governance/rows.rs"]
 mod inspect_governance_rows;
 
 #[allow(unused_imports)]
