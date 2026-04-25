@@ -75,9 +75,9 @@ changes priority.
 
 - [ ] Continue dashboard inspect/governance/report code splits only where a
   stable responsibility boundary is obvious. Report model, query-report
-  collection, query analyzer, inspect governance report internals, and
-  governance gate rules/TUI are done; keep `commands/dashboard/mod.rs` as the
-  facade for later moves.
+  collection, query analyzer, inspect governance report internals, governance
+  gate rules/TUI, and governance gate runner/output support are done; keep
+  `commands/dashboard/mod.rs` as the facade for later moves.
 - [ ] Keep the mutation review envelope adapter work later and only introduce a shared adapter once two or more domains prove the same review shape.
 - [ ] Keep dashboard v2 as a future adapter boundary. Continue rejecting v2-shaped input in the classic prompt lane and keep prompt export parity guarded with fixtures and tests.
 
@@ -86,9 +86,9 @@ Detailed execution items:
 - Dashboard inspect/governance/report re-layering:
   - [ ] Use the first-pass inventory of inspect, governance, report, topology,
     impact, and policy modules before each later move.
-  - [ ] Choose exactly one next boundary; remaining candidates include
-    `governance_gate.rs` runner/output support if it remains separable from
-    the governance gate facade.
+  - [ ] Choose exactly one next boundary; remaining candidates should be based
+    on a fresh inventory because the obvious governance gate runner/output
+    boundary is already separated from the facade.
   - [ ] Use `git mv` for tracked moves and keep `commands/dashboard/mod.rs`
     as the facade.
   - [ ] Keep public CLI/help unchanged; if help changes accidentally, back out
@@ -228,7 +228,10 @@ Relevant areas:
 Action:
 
 - [ ] Keep write/apply paths serial unless dependency ordering and Grafana API safety are explicitly modeled.
-- [ ] Reduce `serde_json::Value` cloning only at proven hot spots; keep flexible JSON handling where the API shape varies by Grafana version.
+- [ ] Reduce `serde_json::Value` cloning only at proven hot spots; dashboard
+  live-read detail normalization now moves the fetched dashboard body instead
+  of deep-cloning it, while flexible JSON handling remains for version-varying
+  Grafana API shapes.
 
 Validation:
 
@@ -264,8 +267,12 @@ Current blocker:
 - Dashboard/access now prove a shared action/status/blocked-reason shape, and
   alert/sync live apply now prove the common apply-result evidence shape.
   `ReviewRisk` and `ReviewRequest` still need cautious evidence handling.
-  Current risk records are dashboard-governance shaped; request structs are
-  split between datasource import planning and lower-level request closures.
+  Current risk records are still only dashboard-governance shaped
+  (`GovernanceRiskSpec` and `GovernanceRiskRow`). Current request structs do
+  not prove a shared review-request shape: dashboard source loading,
+  datasource import request planning, and dashboard import lookup request
+  closure wrappers represent different layers and should stay domain-local
+  until a second mutation-review domain emits the same evidence fields.
 
 Validation:
 

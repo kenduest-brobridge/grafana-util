@@ -5,6 +5,7 @@ use reqwest::Method;
 use serde_json::{Map, Value};
 
 use crate::common::{message, Result};
+#[cfg(test)]
 use crate::sync::require_json_object;
 
 use super::SyncLiveClient;
@@ -94,7 +95,7 @@ where
                 Some(value) => value,
                 None => continue,
             };
-            append_dashboard_spec(specs, uid, &dashboard_wrapper)?;
+            append_dashboard_spec(specs, uid, dashboard_wrapper)?;
         }
         if batch_len < page_size {
             break;
@@ -144,14 +145,19 @@ fn append_folder_spec(specs: &mut Vec<Value>, folder: &Map<String, Value>) -> Re
 fn append_dashboard_spec(
     specs: &mut Vec<Value>,
     uid: &str,
-    dashboard_wrapper: &Value,
+    dashboard_wrapper: Value,
 ) -> Result<()> {
-    let wrapper = require_json_object(dashboard_wrapper, "Grafana dashboard payload")?;
+    let mut wrapper = match dashboard_wrapper {
+        Value::Object(wrapper) => wrapper,
+        _ => return Err(message("Grafana dashboard payload")),
+    };
     let dashboard = wrapper
-        .get("dashboard")
+        .remove("dashboard")
         .ok_or_else(|| message(format!("Unexpected dashboard payload for UID {uid}.")))?;
-    let body = require_json_object(dashboard, "Grafana dashboard body")?;
-    let mut normalized = body.clone();
+    let mut normalized = match dashboard {
+        Value::Object(body) => body,
+        _ => return Err(message("Grafana dashboard body")),
+    };
     normalized.remove("id");
     let title = normalized
         .get("title")
@@ -221,7 +227,7 @@ where
     let mut dashboard_specs = Vec::new();
     for (uid, result) in reads {
         let dashboard_wrapper = result?;
-        append_dashboard_spec(&mut dashboard_specs, &uid, &dashboard_wrapper)?;
+        append_dashboard_spec(&mut dashboard_specs, &uid, dashboard_wrapper)?;
     }
     specs.extend(dashboard_specs);
     Ok(())

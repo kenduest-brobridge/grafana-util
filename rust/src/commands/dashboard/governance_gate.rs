@@ -7,20 +7,15 @@ use std::cmp::Reverse;
 #[cfg(test)]
 use std::path::Path;
 
-use crate::common::{message, render_json_value, Result};
+use crate::common::{message, Result};
 
 use super::governance_gate_rules as rules;
-use super::review_source::{resolve_dashboard_review_artifacts, DashboardReviewSourceArgs};
-use super::{
-    load_governance_policy, write_json_document, GovernanceGateArgs, GovernanceGateOutputFormat,
-};
-#[cfg(test)]
-use crate::interactive_browser::run_interactive_browser;
+
+mod runner;
+pub(crate) use runner::run_dashboard_governance_gate;
 
 #[cfg(feature = "tui")]
 pub(crate) mod tui;
-#[cfg(all(feature = "tui", not(test)))]
-use tui::run_governance_gate_interactive;
 #[cfg(test)]
 pub(crate) use tui::{build_governance_gate_tui_groups, build_governance_gate_tui_items};
 
@@ -404,79 +399,6 @@ pub(crate) fn render_dashboard_governance_gate_result(
         }
     }
     lines.join("\n")
-}
-
-pub(crate) fn run_dashboard_governance_gate(args: &GovernanceGateArgs) -> Result<()> {
-    let policy = load_governance_policy(args)?;
-    let artifacts = resolve_dashboard_review_artifacts(&DashboardReviewSourceArgs {
-        common: &args.common,
-        page_size: args.page_size,
-        org_id: args.org_id,
-        all_orgs: args.all_orgs,
-        input_dir: args.input_dir.as_deref(),
-        input_format: args.input_format,
-        input_type: args.input_type,
-        governance: args.governance.as_deref(),
-        queries: args.queries.as_deref(),
-        require_queries: true,
-    })?;
-    let result =
-        evaluate_dashboard_governance_gate(&policy, &artifacts.governance, &artifacts.queries)?;
-
-    if let Some(output_path) = args.json_output.as_ref() {
-        write_json_document(&result, output_path)?;
-    }
-    if args.interactive {
-        #[cfg(all(feature = "tui", not(test)))]
-        {
-            run_governance_gate_interactive(&result)?;
-            return if result.ok {
-                Ok(())
-            } else {
-                Err(message(
-                    "Dashboard governance gate reported policy violations.",
-                ))
-            };
-        }
-        #[cfg(test)]
-        {
-            let summary_lines = render_dashboard_governance_gate_result(&result)
-                .lines()
-                .map(|line| line.to_string())
-                .collect::<Vec<_>>();
-            run_interactive_browser(
-                "Dashboard Governance Gate",
-                &summary_lines,
-                &build_governance_gate_tui_items(&result, "all"),
-            )?;
-            return if result.ok {
-                Ok(())
-            } else {
-                Err(message(
-                    "Dashboard governance gate reported policy violations.",
-                ))
-            };
-        }
-        #[cfg(not(feature = "tui"))]
-        {
-            return super::tui_not_built("policy --interactive");
-        }
-    }
-    match args.output_format {
-        GovernanceGateOutputFormat::Json => {
-            println!("{}", render_json_value(&result)?);
-        }
-        GovernanceGateOutputFormat::Text => {
-            println!("{}", render_dashboard_governance_gate_result(&result));
-        }
-    }
-    if result.ok {
-        Ok(())
-    } else {
-        Err(message(
-            "Dashboard governance gate reported policy violations.",
-        ))
-    }
 }
 
 #[cfg(test)]
