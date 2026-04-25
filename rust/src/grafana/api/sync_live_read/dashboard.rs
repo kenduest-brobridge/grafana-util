@@ -149,14 +149,14 @@ fn append_dashboard_spec(
 ) -> Result<()> {
     let mut wrapper = match dashboard_wrapper {
         Value::Object(wrapper) => wrapper,
-        _ => return Err(message("Grafana dashboard payload")),
+        _ => return Err(message(format!("Grafana dashboard payload for UID {uid}."))),
     };
     let dashboard = wrapper
         .remove("dashboard")
         .ok_or_else(|| message(format!("Unexpected dashboard payload for UID {uid}.")))?;
     let mut normalized = match dashboard {
         Value::Object(body) => body,
-        _ => return Err(message("Grafana dashboard body")),
+        _ => return Err(message(format!("Grafana dashboard body for UID {uid}."))),
     };
     normalized.remove("id");
     let title = normalized
@@ -300,6 +300,24 @@ mod tests {
         assert!(error.contains("Failed to fetch 2 dashboard detail(s) after /api/search"));
         assert!(error.contains("uid=dash-b: boom dash-b"));
         assert!(error.contains("uid=dash-c: boom dash-c"));
+        assert_eq!(
+            specs,
+            vec![serde_json::json!({"kind": "folder", "uid": "f"})]
+        );
+    }
+
+    #[test]
+    fn append_dashboard_specs_from_summaries_reports_uid_for_malformed_detail_payload() {
+        let mut specs = vec![serde_json::json!({"kind": "folder", "uid": "f"})];
+
+        let error =
+            append_dashboard_specs_from_summaries(&mut specs, vec![summary("dash-a")], |_uid| {
+                Ok(serde_json::json!({"dashboard": []}))
+            })
+            .unwrap_err()
+            .to_string();
+
+        assert!(error.contains("Grafana dashboard body for UID dash-a."));
         assert_eq!(
             specs,
             vec![serde_json::json!({"kind": "folder", "uid": "f"})]

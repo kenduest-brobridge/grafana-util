@@ -1,4 +1,6 @@
 //! Dashboard CLI execution and orchestration.
+mod auth;
+
 use crate::common::{message, print_supported_columns, set_json_color_choice, Result};
 use crate::http::JsonHttpClient;
 use serde_json::Value;
@@ -30,11 +32,11 @@ use super::validate::run_dashboard_validate_export;
 use super::vars::inspect_dashboard_variables;
 #[allow(unused_imports)]
 use super::{
-    build_dashboard_review, build_http_client, materialize_dashboard_common_auth,
-    render_summary_export_help_full, render_summary_live_help_full, DashboardCliArgs,
-    DashboardCommand, DashboardHistorySubcommand, InspectExportArgs, InspectLiveArgs, ReviewArgs,
-    SimpleOutputFormat, SummaryArgs,
+    build_dashboard_review, build_http_client, render_summary_export_help_full,
+    render_summary_live_help_full, DashboardCliArgs, DashboardCommand, DashboardHistorySubcommand,
+    InspectExportArgs, InspectLiveArgs, ReviewArgs, SimpleOutputFormat, SummaryArgs,
 };
+use auth::materialize_dashboard_command_auth;
 
 const DASHBOARD_LIST_OUTPUT_COLUMNS: &[&str] = &[
     "uid",
@@ -531,71 +533,4 @@ pub fn run_dashboard_cli(args: DashboardCliArgs) -> Result<()> {
             capture_dashboard_screenshot(&screenshot_args)
         }
     }
-}
-
-pub(crate) fn materialize_dashboard_command_auth(args: &mut DashboardCliArgs) -> Result<()> {
-    match &mut args.command {
-        DashboardCommand::Browse(inner) => {
-            inner.common = materialize_dashboard_common_auth(inner.common.clone())?
-        }
-        DashboardCommand::List(inner) => {
-            inner.common = materialize_dashboard_common_auth(inner.common.clone())?
-        }
-        DashboardCommand::Export(inner) => {
-            inner.common = materialize_dashboard_common_auth(inner.common.clone())?
-        }
-        DashboardCommand::Get(inner) => {
-            inner.common = materialize_dashboard_common_auth(inner.common.clone())?
-        }
-        DashboardCommand::CloneLive(inner) => {
-            inner.common = materialize_dashboard_common_auth(inner.common.clone())?
-        }
-        DashboardCommand::EditLive(inner) => {
-            inner.common = materialize_dashboard_common_auth(inner.common.clone())?
-        }
-        DashboardCommand::Import(inner) => {
-            inner.common = materialize_dashboard_common_auth(inner.common.clone())?
-        }
-        DashboardCommand::Plan(inner) => {
-            inner.common = materialize_dashboard_common_auth(inner.common.clone())?
-        }
-        DashboardCommand::InspectLive(inner) => {
-            inner.common = materialize_dashboard_common_auth(inner.common.clone())?
-        }
-        DashboardCommand::Diff(inner) => {
-            inner.common = materialize_dashboard_common_auth(inner.common.clone())?
-        }
-        DashboardCommand::Screenshot(inner) => {
-            inner.common = materialize_dashboard_common_auth(inner.common.clone())?
-        }
-        DashboardCommand::Delete(inner) => {
-            inner.common = materialize_dashboard_common_auth(inner.common.clone())?
-        }
-        DashboardCommand::Publish(inner) => {
-            inner.common = materialize_dashboard_common_auth(inner.common.clone())?
-        }
-        DashboardCommand::History(history_args) => match &mut history_args.command {
-            DashboardHistorySubcommand::List(inner) => {
-                inner.common = materialize_dashboard_common_auth(inner.common.clone())?
-            }
-            DashboardHistorySubcommand::Restore(inner) => {
-                inner.common = materialize_dashboard_common_auth(inner.common.clone())?
-            }
-            DashboardHistorySubcommand::Export(inner) => {
-                inner.common = materialize_dashboard_common_auth(inner.common.clone())?
-            }
-            DashboardHistorySubcommand::Diff(_) => {}
-        },
-        DashboardCommand::Review(_)
-        | DashboardCommand::PatchFile(_)
-        | DashboardCommand::Serve(_)
-        | DashboardCommand::Summary(_)
-        | DashboardCommand::GovernanceGate(_)
-        | DashboardCommand::Topology(_)
-        | DashboardCommand::Impact(_)
-        | DashboardCommand::ValidateExport(_)
-        | DashboardCommand::InspectExport(_)
-        | DashboardCommand::InspectVars(_) => {}
-    }
-    Ok(())
 }
