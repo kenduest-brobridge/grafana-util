@@ -77,9 +77,9 @@ changes priority.
 - [ ] Continue dashboard inspect/governance/report code splits only where a
   stable responsibility boundary is obvious. Report model, query-report
   collection, query analyzer, inspect governance report internals,
-  inspect-summary projection, topology impact, governance gate rules/TUI, and
-  governance gate runner/output support are done; keep
-  `commands/dashboard/mod.rs` as the facade for later moves.
+  inspect-summary projection, dependency output rendering, topology impact,
+  governance gate rules/TUI, and governance gate runner/output support are
+  done; keep `commands/dashboard/mod.rs` as the facade for later moves.
 - [ ] Keep the mutation review envelope adapter work later and only introduce a shared adapter once two or more domains prove the same review shape.
 - [ ] Keep dashboard v2 as a future adapter boundary. Continue rejecting v2-shaped input in the classic prompt lane and keep prompt export parity guarded with fixtures and tests.
 
@@ -87,8 +87,9 @@ Detailed execution items:
 
 - Dashboard inspect/governance/report re-layering:
   - [ ] Use a fresh inventory of remaining inspect, governance, report,
-    topology, and policy modules before each later move; topology impact and
-    inspect-summary projection are already split.
+    topology, and policy modules before each later move; topology impact,
+    inspect-summary projection, and dependency output rendering are already
+    split.
   - [ ] Choose exactly one next boundary; remaining candidates should be based
     on a fresh inventory because the obvious governance gate runner/output
     boundary is already separated from the facade.
