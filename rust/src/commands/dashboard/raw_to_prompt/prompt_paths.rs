@@ -7,7 +7,7 @@ use crate::common::Result;
 use crate::dashboard::prompt::{build_library_panel_export, collect_library_panel_uids};
 use crate::grafana_api::DashboardResourceClient;
 
-use super::{
+use super::super::{
     build_http_client, build_http_client_for_org, CommonCliArgs, RawToPromptArgs, DEFAULT_TIMEOUT,
     DEFAULT_URL,
 };

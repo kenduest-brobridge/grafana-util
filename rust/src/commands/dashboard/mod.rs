@@ -89,12 +89,6 @@ mod prompt_helpers;
 mod prompt_inputs;
 mod prompt_variables;
 mod raw_to_prompt;
-mod raw_to_prompt_datasource_resolution;
-mod raw_to_prompt_output;
-mod raw_to_prompt_plan;
-mod raw_to_prompt_prompt_paths;
-mod raw_to_prompt_resolution;
-mod raw_to_prompt_types;
 mod review_source;
 mod run_inspect;
 mod run_list;
@@ -225,7 +219,7 @@ mod inspect_live_rust_tests;
 #[path = "inspect_vars_rust_tests.rs"]
 mod inspect_vars_rust_tests;
 #[cfg(test)]
-#[path = "raw_to_prompt_rust_tests.rs"]
+#[path = "raw_to_prompt/rust_tests.rs"]
 mod raw_to_prompt_rust_tests;
 #[cfg(test)]
 #[path = "screenshot_rust_tests.rs"]

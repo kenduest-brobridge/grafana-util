@@ -9,14 +9,13 @@ use crate::dashboard::inspect_query::{
     resolve_query_analyzer_family_from_query_signature,
 };
 
-use super::collect_datasource_refs;
+use super::super::collect_datasource_refs;
+use super::super::{DatasourceInventoryItem, RawToPromptResolution};
 use super::raw_to_prompt_prompt_paths::is_placeholder_datasource_reference;
 use super::raw_to_prompt_types::{
     DashboardScanContext, DatasourceMapDocument, RawToPromptStats, ResolvedDatasourceReplacement,
     MAPPING_KIND,
 };
-use super::DatasourceInventoryItem;
-use super::RawToPromptResolution;
 
 pub(crate) fn load_datasource_mapping(
     mapping_path: Option<&std::path::Path>,
@@ -27,7 +26,7 @@ pub(crate) fn load_datasource_mapping(
     if !mapping_path.exists() {
         return Ok(None);
     }
-    let mut document = super::load_json_file(mapping_path)?;
+    let mut document = super::super::load_json_file(mapping_path)?;
     if document
         .get("datasources")
         .and_then(Value::as_array)
@@ -216,7 +215,7 @@ fn rewrite_datasource_ref_value(
     warnings: &mut Vec<String>,
     stats: &mut RawToPromptStats,
 ) -> Result<()> {
-    if super::is_builtin_datasource_ref(reference)
+    if super::super::is_builtin_datasource_ref(reference)
         || reference.is_null()
         || is_placeholder_datasource_reference(reference)
     {

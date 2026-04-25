@@ -15,10 +15,10 @@
 //!   layers and alert handlers.
 //! - Keep diff/import/export payload transforms next to their handlers, not in dispatcher code.
 
-use crate::common::{message, sanitize_path_component, string_field, write_json_file, Result};
-use serde_json::{json, Map, Value};
-use std::path::{Path, PathBuf};
+use crate::common::{string_field, write_json_file, Result};
 
+#[path = "authoring.rs"]
+mod alert_authoring;
 #[path = "cli/mod.rs"]
 mod alert_cli_defs;
 #[path = "cli/runtime.rs"]
@@ -53,6 +53,12 @@ pub(crate) use crate::grafana_api::alert_live::{
 };
 #[cfg(test)]
 pub(crate) use crate::grafana_api::{expect_object_list, parse_template_list_response};
+pub(crate) use alert_authoring::{
+    build_desired_route_document, contact_point_output_path_for_name, extract_policy_spec,
+    find_existing_rule_document, load_or_init_policy_document, path_string, require_desired_dir,
+    require_scaffold_name, require_source_name, resource_kind_to_document_kind,
+    rule_output_path_for_name, scaffold_output_path,
+};
 pub use alert_cli_defs::{
     build_auth_context, cli_args_from_common, normalize_alert_group_command,
     normalize_alert_namespace_args, parse_cli_from, root_command, AlertAddContactPointArgs,
@@ -146,209 +152,6 @@ pub const ROOT_INDEX_KIND: &str = "grafana-util-alert-export-index";
 
 /// Constant for alert help text.
 pub const ALERT_HELP_TEXT: &str = "Examples:\n\n  Inventory alert resources without learning the internal tree:\n    grafana-util alert list-rules --url https://grafana.example.com --token \"$GRAFANA_API_TOKEN\" --json\n\n  Back up alerting resources to local files:\n    grafana-util alert export --url https://grafana.example.com --output-dir ./alerts --overwrite\n\n  Import alerting resources back into Grafana:\n    grafana-util alert import --url https://grafana.example.com --input-dir ./alerts/raw --replace-existing\n\n  Compare a local alert export against Grafana:\n    grafana-util alert diff --url https://grafana.example.com --diff-dir ./alerts/raw --output-format json\n\n  Author a staged alert rule:\n    grafana-util alert add-rule --desired-dir ./alerts/desired --name cpu-high --folder platform-alerts --rule-group cpu --receiver pagerduty-primary --severity critical --expr 'A' --threshold 80 --above --for 5m";
-
-fn resource_kind_to_document_kind(kind: AlertResourceKind) -> &'static str {
-    match kind {
-        AlertResourceKind::Rule => RULE_KIND,
-        AlertResourceKind::ContactPoint => CONTACT_POINT_KIND,
-        AlertResourceKind::MuteTiming => MUTE_TIMING_KIND,
-        AlertResourceKind::PolicyTree => POLICIES_KIND,
-        AlertResourceKind::Template => TEMPLATE_KIND,
-    }
-}
-
-fn scaffold_output_path(
-    desired_dir: &Path,
-    subdir: &str,
-    name: &str,
-    file_suffix: &str,
-) -> PathBuf {
-    desired_dir
-        .join(subdir)
-        .join(format!("{}{file_suffix}", sanitize_path_component(name)))
-}
-
-fn path_string(path: &Path) -> String {
-    path.to_string_lossy().to_string()
-}
-
-fn require_desired_dir<'a>(args: &'a AlertCliArgs, label: &str) -> Result<&'a Path> {
-    args.desired_dir
-        .as_deref()
-        .ok_or_else(|| message(format!("{label} requires --desired-dir.")))
-}
-
-fn require_scaffold_name<'a>(args: &'a AlertCliArgs, label: &str) -> Result<&'a str> {
-    args.scaffold_name
-        .as_deref()
-        .ok_or_else(|| message(format!("{label} requires --name.")))
-}
-
-fn require_source_name<'a>(args: &'a AlertCliArgs, label: &str) -> Result<&'a str> {
-    args.source_name
-        .as_deref()
-        .ok_or_else(|| message(format!("{label} requires --source.")))
-}
-
-fn parse_string_pairs(values: &[String], label: &str) -> Result<Map<String, Value>> {
-    let mut pairs = Map::new();
-    for entry in values {
-        let Some((key, value)) = entry.split_once('=') else {
-            return Err(message(format!(
-                "{label} entries must use key=value form: {entry}"
-            )));
-        };
-        let key = key.trim();
-        if key.is_empty() {
-            return Err(message(format!("{label} key cannot be empty: {entry}")));
-        }
-        pairs.insert(key.to_string(), Value::String(value.trim().to_string()));
-    }
-    Ok(pairs)
-}
-
-fn rule_output_path_for_name(desired_dir: &Path, name: &str) -> PathBuf {
-    scaffold_output_path(desired_dir, RULES_SUBDIR, name, ".yaml")
-}
-
-fn contact_point_output_path_for_name(desired_dir: &Path, name: &str) -> PathBuf {
-    scaffold_output_path(desired_dir, CONTACT_POINTS_SUBDIR, name, ".yaml")
-}
-
-fn preferred_policy_path(desired_dir: &Path) -> PathBuf {
-    desired_dir
-        .join(POLICIES_SUBDIR)
-        .join("notification-policies.yaml")
-}
-
-fn resolve_policy_path(desired_dir: &Path) -> PathBuf {
-    let candidates = [
-        desired_dir
-            .join(POLICIES_SUBDIR)
-            .join("notification-policies.yaml"),
-        desired_dir
-            .join(POLICIES_SUBDIR)
-            .join("notification-policies.yml"),
-        desired_dir
-            .join(POLICIES_SUBDIR)
-            .join("notification-policies.json"),
-    ];
-    candidates
-        .into_iter()
-        .find(|path| path.exists())
-        .unwrap_or_else(|| preferred_policy_path(desired_dir))
-}
-
-fn build_default_policy_document(receiver: &str) -> Value {
-    let policy = json!({
-        "receiver": if receiver.trim().is_empty() { "grafana-default-email" } else { receiver.trim() },
-        "group_by": ["grafana_folder", "alertname"],
-        "routes": [],
-    });
-    let mut document = build_policies_export_document(
-        policy
-            .as_object()
-            .expect("default notification policies must be an object"),
-    );
-    if let Some(metadata) = document.get_mut("metadata").and_then(Value::as_object_mut) {
-        metadata.insert(
-            "managedBy".to_string(),
-            Value::String("grafana-utils".to_string()),
-        );
-    }
-    document
-}
-
-fn load_or_init_policy_document(desired_dir: &Path, receiver: &str) -> Result<(PathBuf, Value)> {
-    let path = resolve_policy_path(desired_dir);
-    if path.exists() {
-        Ok((
-            path.clone(),
-            load_alert_resource_file(&path, "Notification policies")?,
-        ))
-    } else {
-        Ok((path, build_default_policy_document(receiver)))
-    }
-}
-
-fn extract_policy_spec(document: &Value) -> Result<Value> {
-    if let Some(spec) = document.get("spec") {
-        if spec.is_object() {
-            return Ok(spec.clone());
-        }
-    }
-    if document.is_object() {
-        return Ok(document.clone());
-    }
-    Err(message(
-        "Notification policies document must be a tool document or object.",
-    ))
-}
-
-fn build_desired_route_document(args: &AlertCliArgs) -> Result<Option<Value>> {
-    if args.no_route {
-        return Ok(None);
-    }
-    let Some(receiver) = args.receiver.as_deref() else {
-        return Ok(None);
-    };
-    let labels = parse_string_pairs(&args.labels, "Alert route label")?;
-    let mut matchers = labels
-        .into_iter()
-        .map(|(key, value)| json!([key, "=", value_to_string(&value)]))
-        .collect::<Vec<Value>>();
-    if let Some(severity) = args.severity.as_deref() {
-        matchers.push(json!(["severity", "=", severity]));
-    }
-    Ok(Some(json!({
-        "receiver": receiver,
-        "group_by": ["grafana_folder", "alertname"],
-        "continue": false,
-        "object_matchers": matchers,
-    })))
-}
-
-fn find_existing_rule_document(desired_dir: &Path, source: &str) -> Result<(PathBuf, Value)> {
-    let normalized_source = sanitize_path_component(source);
-    for path in discover_alert_resource_files(desired_dir)? {
-        let document = load_alert_resource_file(&path, "Alert source rule")?;
-        let kind = document
-            .as_object()
-            .and_then(|item| detect_document_kind(item).ok());
-        if kind != Some(RULE_KIND) {
-            continue;
-        }
-        let metadata = document.get("metadata").and_then(Value::as_object);
-        let spec = document.get("spec").and_then(Value::as_object);
-        let candidates = [
-            metadata
-                .and_then(|item| item.get("uid"))
-                .and_then(Value::as_str)
-                .unwrap_or_default(),
-            metadata
-                .and_then(|item| item.get("title"))
-                .and_then(Value::as_str)
-                .unwrap_or_default(),
-            spec.and_then(|item| item.get("uid"))
-                .and_then(Value::as_str)
-                .unwrap_or_default(),
-            spec.and_then(|item| item.get("title"))
-                .and_then(Value::as_str)
-                .unwrap_or_default(),
-        ];
-        if candidates.iter().any(|candidate| {
-            !candidate.is_empty()
-                && (candidate == &source || sanitize_path_component(candidate) == normalized_source)
-        }) {
-            return Ok((path, document));
-        }
-    }
-    Err(message(format!(
-        "Could not find staged alert rule source {:?} under {}.",
-        source,
-        desired_dir.display()
-    )))
-}
 
 /// Alert domain execution boundary.
 ///

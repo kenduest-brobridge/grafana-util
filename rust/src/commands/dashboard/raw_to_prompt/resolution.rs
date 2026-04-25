@@ -6,6 +6,11 @@ use std::path::Path;
 use crate::common::{message, Result};
 use crate::grafana_api::{DashboardResourceClient, DatasourceResourceClient};
 
+use super::super::{
+    build_datasource_catalog, build_datasource_inventory_record, build_external_export_document,
+    build_http_client, build_http_client_for_org, load_json_file, CommonCliArgs,
+    DatasourceInventoryItem, RawToPromptArgs, RawToPromptResolution, DEFAULT_TIMEOUT, DEFAULT_URL,
+};
 use super::raw_to_prompt_datasource_resolution::{
     build_synthetic_catalog, collect_reference_families, rewrite_datasource_refs,
 };
@@ -17,11 +22,6 @@ use super::raw_to_prompt_prompt_paths::{
 use super::raw_to_prompt_types::{
     DashboardScanContext, DatasourceMapDocument, RawToPromptOutcome, RawToPromptResolutionKind,
     RawToPromptStats,
-};
-use super::{
-    build_datasource_catalog, build_datasource_inventory_record, build_external_export_document,
-    build_http_client, build_http_client_for_org, load_json_file, CommonCliArgs,
-    DatasourceInventoryItem, RawToPromptArgs, RawToPromptResolution, DEFAULT_TIMEOUT, DEFAULT_URL,
 };
 use crate::dashboard::prompt::build_external_export_document_with_library_panels;
 
@@ -72,7 +72,7 @@ pub(crate) fn convert_raw_dashboard_file(
             "dashboard raw-to-prompt does not support Grafana dashboard v2 resources yet; export classic dashboard JSON for the prompt lane.",
         ));
     }
-    let mut dashboard = super::build_preserved_web_import_document(&payload)?;
+    let mut dashboard = super::super::build_preserved_web_import_document(&payload)?;
     let mut warnings = collect_library_panel_portability_warnings(&dashboard);
     let placeholder_paths = collect_panel_placeholder_datasource_paths(&dashboard);
     let mut scan = DashboardScanContext::default();

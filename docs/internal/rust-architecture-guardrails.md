@@ -25,7 +25,7 @@ Keep each layer focused on one job:
 - `render`
   - turns model data into human-readable output
   - does not re-discover data or mutate contract state
-- `fixtures`
+- `tests/fixtures`
   - holds validation data, golden cases, and sample inputs
   - does not become a hidden production scratch area
 

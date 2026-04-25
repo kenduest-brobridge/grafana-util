@@ -8,15 +8,15 @@ use std::path::{Path, PathBuf};
 use crate::common::{render_json_value, Result};
 use crate::tabular_output::render_yaml;
 
-use super::inspect_render::render_simple_table;
-use super::raw_to_prompt_types::{
-    RawToPromptItemSummary, RawToPromptPlan, RawToPromptResolutionKind, RawToPromptStatus,
-    RawToPromptSummary, RAW_TO_PROMPT_KIND,
-};
-use super::{
+use super::super::inspect_render::render_simple_table;
+use super::super::{
     build_export_metadata, build_variant_index, write_json_document, DashboardIndexItem,
     ExportMetadata, RawToPromptArgs, RawToPromptLogFormat, RawToPromptOutputFormat,
     EXPORT_METADATA_FILENAME, PROMPT_EXPORT_SUBDIR,
+};
+use super::raw_to_prompt_types::{
+    RawToPromptItemSummary, RawToPromptPlan, RawToPromptResolutionKind, RawToPromptStatus,
+    RawToPromptSummary, RAW_TO_PROMPT_KIND,
 };
 
 #[derive(Debug, Clone)]

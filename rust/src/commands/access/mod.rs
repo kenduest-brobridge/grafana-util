@@ -2,14 +2,7 @@
 //!
 //! Owns access command dispatch, argument normalization, and the shared parser/model re-exports
 //! used by the CLI and tests.
-use reqwest::Method;
-use serde_json::{Map, Value};
-use std::path::Path;
-
-use crate::common::{message, tool_version, value_as_object, Result};
-
-pub(crate) const ACCESS_IMPORT_DRY_RUN_KIND: &str = "grafana-utils-access-import-dry-run";
-pub(crate) const ACCESS_IMPORT_DRY_RUN_SCHEMA_VERSION: i64 = 1;
+use crate::common::Result;
 
 // Internal modules stay split by resource kind so user/org/team/service-account
 // workflows can evolve independently while this file keeps only domain routing.
@@ -33,6 +26,8 @@ mod cli_defs;
 mod dispatch;
 #[path = "facade_support.rs"]
 mod facade_support;
+#[path = "import_dry_run.rs"]
+mod import_dry_run;
 #[path = "live_project_status.rs"]
 mod live_project_status;
 #[path = "org.rs"]
@@ -43,6 +38,8 @@ mod pending_delete;
 mod project_status;
 #[path = "render.rs"]
 mod render;
+#[path = "request_helpers.rs"]
+mod request_helpers;
 #[path = "service_account.rs"]
 mod service_account;
 #[path = "team.rs"]
@@ -80,152 +77,12 @@ pub(crate) use facade_support::{
     build_access_live_domain_status, build_access_live_domain_status_with_request,
     build_access_live_read_failed_domain_status,
 };
+pub(crate) use import_dry_run::build_access_import_dry_run_document;
 pub use pending_delete::{
     GroupCommandStage, ServiceAccountDeleteArgs, ServiceAccountTokenDeleteArgs, TeamDeleteArgs,
 };
 pub(crate) use project_status::{build_access_domain_status, AccessDomainStatusInputs};
-
-fn request_object<F>(
-    mut request_json: F,
-    method: Method,
-    path: &str,
-    params: &[(String, String)],
-    payload: Option<&Value>,
-    error_message: &str,
-) -> Result<Map<String, Value>>
-where
-    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
-{
-    // Normalize "one object expected" API responses into a single helper so
-    // callers can focus on workflow logic instead of response-shape validation.
-    let value =
-        request_json(method, path, params, payload)?.ok_or_else(|| message(error_message))?;
-    Ok(value_as_object(&value, error_message)?.clone())
-}
-
-fn request_array<F>(
-    mut request_json: F,
-    method: Method,
-    path: &str,
-    params: &[(String, String)],
-    payload: Option<&Value>,
-    error_message: &str,
-) -> Result<Vec<Map<String, Value>>>
-where
-    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
-{
-    // Treat missing list payloads as empty collections to match Grafana list-style
-    // endpoints that can legitimately return no body or an empty array.
-    match request_json(method, path, params, payload)? {
-        Some(Value::Array(items)) => items
-            .into_iter()
-            .map(|item| Ok(value_as_object(&item, error_message)?.clone()))
-            .collect(),
-        Some(_) => Err(message(error_message)),
-        None => Ok(Vec::new()),
-    }
-}
-
-fn request_object_list_field<F>(
-    mut request_json: F,
-    method: Method,
-    path: &str,
-    params: &[(String, String)],
-    payload: Option<&Value>,
-    field: &str,
-    error_messages: (&str, &str),
-) -> Result<Vec<Map<String, Value>>>
-where
-    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
-{
-    let (object_error_message, list_error_message) = error_messages;
-    let object = request_object(
-        &mut request_json,
-        method,
-        path,
-        params,
-        payload,
-        object_error_message,
-    )?;
-    match object.get(field) {
-        Some(Value::Array(items)) => items
-            .iter()
-            .map(|item| Ok(value_as_object(item, list_error_message)?.clone()))
-            .collect(),
-        _ => Err(message(list_error_message)),
-    }
-}
-
-pub(crate) fn build_access_import_dry_run_document(
-    resource_kind: &str,
-    rows: &[Map<String, Value>],
-    processed: usize,
-    created: usize,
-    updated: usize,
-    skipped: usize,
-    source: &Path,
-) -> Value {
-    let blocked = rows
-        .iter()
-        .filter(|row| {
-            matches!(row.get("blocked"), Some(Value::Bool(true)))
-                || matches!(row.get("status"), Some(Value::String(status)) if status == "blocked")
-        })
-        .count();
-    Value::Object(Map::from_iter(vec![
-        (
-            "kind".to_string(),
-            Value::String(ACCESS_IMPORT_DRY_RUN_KIND.to_string()),
-        ),
-        (
-            "schemaVersion".to_string(),
-            Value::Number(ACCESS_IMPORT_DRY_RUN_SCHEMA_VERSION.into()),
-        ),
-        (
-            "toolVersion".to_string(),
-            Value::String(tool_version().to_string()),
-        ),
-        ("reviewRequired".to_string(), Value::Bool(true)),
-        ("reviewed".to_string(), Value::Bool(false)),
-        (
-            "resourceKind".to_string(),
-            Value::String(resource_kind.to_string()),
-        ),
-        (
-            "rows".to_string(),
-            Value::Array(rows.iter().cloned().map(Value::Object).collect()),
-        ),
-        (
-            "summary".to_string(),
-            Value::Object(Map::from_iter(vec![
-                (
-                    "processed".to_string(),
-                    Value::Number((processed as i64).into()),
-                ),
-                (
-                    "created".to_string(),
-                    Value::Number((created as i64).into()),
-                ),
-                (
-                    "updated".to_string(),
-                    Value::Number((updated as i64).into()),
-                ),
-                (
-                    "skipped".to_string(),
-                    Value::Number((skipped as i64).into()),
-                ),
-                (
-                    "blocked".to_string(),
-                    Value::Number((blocked as i64).into()),
-                ),
-                (
-                    "source".to_string(),
-                    Value::String(source.to_string_lossy().to_string()),
-                ),
-            ])),
-        ),
-    ]))
-}
+use request_helpers::{request_array, request_object, request_object_list_field};
 
 pub fn run_access_cli(args: AccessCliArgs) -> Result<()> {
     // Access CLI boundary:

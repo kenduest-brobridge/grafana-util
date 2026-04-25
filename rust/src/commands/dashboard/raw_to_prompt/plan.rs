@@ -4,13 +4,13 @@ use std::path::{Path, PathBuf};
 
 use crate::common::{message, Result};
 
-use super::files::resolve_dashboard_export_root;
-use super::raw_to_prompt_types::{RawToPromptPlan, RawToPromptPlanItem};
-use super::source_loader::resolve_dashboard_workspace_variant_dir;
-use super::{
+use super::super::files::resolve_dashboard_export_root;
+use super::super::source_loader::resolve_dashboard_workspace_variant_dir;
+use super::super::{
     discover_dashboard_files, ExportMetadata, RawToPromptArgs, PROMPT_EXPORT_SUBDIR,
     RAW_EXPORT_SUBDIR,
 };
+use super::raw_to_prompt_types::{RawToPromptPlan, RawToPromptPlanItem};
 
 pub(crate) fn build_raw_to_prompt_plan(args: &RawToPromptArgs) -> Result<RawToPromptPlan> {
     if args.output_file.is_some() && args.input_file.len() != 1 {
@@ -154,6 +154,6 @@ pub(crate) fn load_raw_to_prompt_metadata(
     let Some(metadata_source_dir) = metadata_source_dir else {
         return Ok(None);
     };
-    let metadata = super::load_export_metadata(metadata_source_dir, None)?;
+    let metadata = super::super::load_export_metadata(metadata_source_dir, None)?;
     Ok(Some((metadata_source_dir.to_path_buf(), metadata)))
 }

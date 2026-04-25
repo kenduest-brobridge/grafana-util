@@ -2,15 +2,28 @@
 
 use crate::common::{message, Result};
 
-use super::raw_to_prompt_output::{
+#[path = "datasource_resolution.rs"]
+mod raw_to_prompt_datasource_resolution;
+#[path = "output.rs"]
+mod raw_to_prompt_output;
+#[path = "plan.rs"]
+mod raw_to_prompt_plan;
+#[path = "prompt_paths.rs"]
+mod raw_to_prompt_prompt_paths;
+#[path = "resolution.rs"]
+mod raw_to_prompt_resolution;
+#[path = "types.rs"]
+mod raw_to_prompt_types;
+
+use self::raw_to_prompt_output::{
     build_log_writer, build_summary, print_summary, write_log_event, write_prompt_lane_metadata,
     RawToPromptLogEvent,
 };
-use super::raw_to_prompt_plan::{build_raw_to_prompt_plan, load_raw_to_prompt_metadata};
-use super::raw_to_prompt_resolution::{
+use self::raw_to_prompt_plan::{build_raw_to_prompt_plan, load_raw_to_prompt_metadata};
+use self::raw_to_prompt_resolution::{
     convert_raw_dashboard_file, load_datasource_mapping, load_live_datasource_inventory,
 };
-use super::raw_to_prompt_types::{
+use self::raw_to_prompt_types::{
     RawToPromptItemSummary, RawToPromptResolutionKind, RawToPromptStatus,
 };
 use super::RawToPromptArgs;
