@@ -208,6 +208,165 @@ fn build_export_inspection_governance_document_summarizes_families_and_risks() {
 }
 
 #[test]
+fn build_export_inspection_governance_document_surfaces_dashboard_ownership_from_index() {
+    let temp = tempdir().unwrap();
+    fs::write(
+        temp.path().join("index.json"),
+        serde_json::to_string_pretty(&json!([
+            {
+                "uid": "api-main",
+                "title": "API Main",
+                "path": "api-main.json",
+                "format": "grafana-web-import-preserve-uid",
+                "ownership": "api-managed",
+                "provenance": ["ownership=api-managed"]
+            },
+            {
+                "uid": "file-main",
+                "title": "File Main",
+                "path": "file-main.json",
+                "format": "grafana-web-import-preserve-uid",
+                "ownership": "file-provisioned",
+                "provenance": [
+                    "ownership=file-provisioned",
+                    "provisionedExternalId=dashboards/file-main.json"
+                ]
+            },
+            {
+                "uid": "git-main",
+                "title": "Git Main",
+                "path": "git-main.json",
+                "format": "grafana-web-import-preserve-uid",
+                "ownership": "git-sync-managed",
+                "provenance": [
+                    "ownership=git-sync-managed",
+                    "managedRepository{name=platform-dashboards}"
+                ]
+            }
+        ]))
+        .unwrap(),
+    )
+    .unwrap();
+
+    let summary = test_support::ExportInspectionSummary {
+        input_dir: temp.path().display().to_string(),
+        export_org: Some("Main Org.".to_string()),
+        export_org_id: Some("1".to_string()),
+        dashboard_count: 3,
+        folder_count: 1,
+        panel_count: 3,
+        query_count: 3,
+        datasource_inventory_count: 1,
+        orphaned_datasource_count: 0,
+        mixed_dashboard_count: 0,
+        folder_paths: Vec::new(),
+        datasource_usage: Vec::new(),
+        datasource_inventory: vec![test_support::DatasourceInventorySummary {
+            uid: "prom-main".to_string(),
+            name: "Prometheus Main".to_string(),
+            datasource_type: "prometheus".to_string(),
+            access: "proxy".to_string(),
+            url: "http://prometheus:9090".to_string(),
+            is_default: "true".to_string(),
+            org: "Main Org.".to_string(),
+            org_id: "1".to_string(),
+            reference_count: 3,
+            dashboard_count: 3,
+        }],
+        orphaned_datasources: Vec::new(),
+        mixed_dashboards: Vec::new(),
+    };
+    let report = test_support::ExportInspectionQueryReport {
+        input_dir: temp.path().display().to_string(),
+        summary: test_support::QueryReportSummary {
+            dashboard_count: 3,
+            panel_count: 3,
+            query_count: 3,
+            report_row_count: 3,
+        },
+        queries: vec![
+            test_support::make_core_family_report_row(
+                "api-main",
+                "1",
+                "A",
+                "prom-main",
+                "Prometheus Main",
+                "prometheus",
+                "prometheus",
+                "up",
+                &[],
+            ),
+            test_support::make_core_family_report_row(
+                "file-main",
+                "2",
+                "A",
+                "prom-main",
+                "Prometheus Main",
+                "prometheus",
+                "prometheus",
+                "process_cpu_seconds_total",
+                &[],
+            ),
+            test_support::make_core_family_report_row(
+                "git-main",
+                "3",
+                "A",
+                "prom-main",
+                "Prometheus Main",
+                "prometheus",
+                "prometheus",
+                "process_resident_memory_bytes",
+                &[],
+            ),
+        ],
+    };
+
+    let document = test_support::build_export_inspection_governance_document(&summary, &report);
+    let ownerships = document
+        .dashboard_dependencies
+        .iter()
+        .map(|row| {
+            (
+                row.dashboard_uid.clone(),
+                (row.ownership.clone(), row.provenance.clone()),
+            )
+        })
+        .collect::<std::collections::BTreeMap<String, (String, Vec<String>)>>();
+
+    assert_eq!(
+        ownerships.get("api-main"),
+        Some(&(
+            "api-managed".to_string(),
+            vec!["ownership=api-managed".to_string()]
+        ))
+    );
+    assert_eq!(
+        ownerships.get("file-main"),
+        Some(&(
+            "file-provisioned".to_string(),
+            vec![
+                "ownership=file-provisioned".to_string(),
+                "provisionedExternalId=dashboards/file-main.json".to_string()
+            ]
+        ))
+    );
+    assert_eq!(
+        ownerships.get("git-main"),
+        Some(&(
+            "git-sync-managed".to_string(),
+            vec![
+                "ownership=git-sync-managed".to_string(),
+                "managedRepository{name=platform-dashboards}".to_string()
+            ]
+        ))
+    );
+    assert!(document
+        .dashboard_governance
+        .iter()
+        .any(|row| row.dashboard_uid == "git-main" && row.ownership == "git-sync-managed"));
+}
+
+#[test]
 fn build_export_inspection_governance_document_flags_broad_loki_selectors() {
     let summary = test_support::ExportInspectionSummary {
         input_dir: "/tmp/raw".to_string(),

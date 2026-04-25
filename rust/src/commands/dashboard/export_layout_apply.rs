@@ -326,6 +326,8 @@ fn merge_variant_entries_into_root(
                     entry.org.clone()
                 },
                 org_id: entry_org_id,
+                ownership: entry.ownership.clone(),
+                provenance: entry.provenance.clone(),
                 raw_path: None,
                 prompt_path: None,
                 provisioning_path: None,
@@ -338,6 +340,12 @@ fn merge_variant_entries_into_root(
         }
         if item.folder_path.is_empty() {
             item.folder_path = entry.folder_path;
+        }
+        if item.ownership.is_empty() {
+            item.ownership = entry.ownership;
+        }
+        if item.provenance.is_empty() {
+            item.provenance = entry.provenance;
         }
         match variant {
             LayoutVariant::Raw => item.raw_path = Some(path),

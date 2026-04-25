@@ -117,6 +117,9 @@ pub(crate) struct DashboardDependencyRow {
     pub(crate) folder_path: String,
     #[serde(rename = "file")]
     pub(crate) file_path: String,
+    pub(crate) ownership: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub(crate) provenance: Vec<String>,
     #[serde(rename = "panelCount")]
     pub(crate) panel_count: usize,
     #[serde(rename = "queryCount")]
@@ -180,6 +183,9 @@ pub(crate) struct DashboardGovernanceRow {
     pub(crate) dashboard_title: String,
     #[serde(rename = "folderPath")]
     pub(crate) folder_path: String,
+    pub(crate) ownership: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub(crate) provenance: Vec<String>,
     #[serde(rename = "panelCount")]
     pub(crate) panel_count: usize,
     #[serde(rename = "queryCount")]

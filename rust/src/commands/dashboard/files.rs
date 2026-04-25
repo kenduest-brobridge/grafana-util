@@ -393,6 +393,8 @@ pub(crate) fn build_dashboard_index_item(
                 _ => value.to_string(),
             })
             .unwrap_or_else(|| DEFAULT_ORG_ID.to_string()),
+        ownership: String::new(),
+        provenance: Vec::new(),
         raw_path: None,
         prompt_path: None,
         provisioning_path: None,
@@ -418,6 +420,8 @@ pub(crate) fn build_variant_index(
                 folder_path: item.folder_path.clone(),
                 org: item.org.clone(),
                 org_id: item.org_id.clone(),
+                ownership: item.ownership.clone(),
+                provenance: item.provenance.clone(),
             })
         })
         .collect()

@@ -104,9 +104,10 @@ pub(super) use crate::dashboard::inspect_summary::{
 };
 pub(super) use crate::dashboard::inspect_workbench_support::build_inspect_workbench_document;
 pub(super) use crate::dashboard::list::{
-    attach_dashboard_folder_paths_with_request, collect_dashboard_source_metadata,
-    format_dashboard_summary_line, list_dashboards_with_client, list_dashboards_with_request,
-    render_dashboard_summary_csv, render_dashboard_summary_json, render_dashboard_summary_table,
+    attach_dashboard_folder_paths_with_request, collect_dashboard_ownership_provenance,
+    collect_dashboard_source_metadata, format_dashboard_summary_line, list_dashboards_with_client,
+    list_dashboards_with_request, render_dashboard_summary_csv, render_dashboard_summary_json,
+    render_dashboard_summary_table,
 };
 pub(super) use crate::dashboard::live::{
     build_datasource_inventory_record, build_folder_inventory_status, build_folder_path,

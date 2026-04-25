@@ -324,6 +324,48 @@ fn render_dashboard_summary_json_includes_sources_when_present() {
 }
 
 #[test]
+fn render_dashboard_summary_json_includes_ownership_and_provenance_when_present() {
+    let summaries = vec![json!({
+        "uid": "abc",
+        "folderUid": "infra",
+        "folderPath": "Platform / Infra",
+        "folderTitle": "Infra",
+        "orgId": 1,
+        "orgName": "Main Org",
+        "title": "CPU",
+        "ownership": "git-sync-managed",
+        "provenance": [
+            "ownership=git-sync-managed",
+            "managedRepository{name=platform-dashboards}"
+        ]
+    })
+    .as_object()
+    .unwrap()
+    .clone()];
+
+    let value = render_dashboard_summary_json(&summaries, &[]);
+    assert_eq!(
+        value,
+        json!([
+            {
+                "uid": "abc",
+                "name": "CPU",
+                "folder": "Infra",
+                "folderUid": "infra",
+                "path": "Platform / Infra",
+                "org": "Main Org",
+                "orgId": "1",
+                "ownership": "git-sync-managed",
+                "provenance": [
+                    "ownership=git-sync-managed",
+                    "managedRepository{name=platform-dashboards}"
+                ]
+            }
+        ])
+    );
+}
+
+#[test]
 fn render_dashboard_summary_table_respects_selected_columns() {
     let summaries = vec![json!({
         "uid": "abc",
@@ -576,6 +618,43 @@ fn collect_dashboard_source_names_accepts_preserved_raw_dashboard_documents() {
         source_uids,
         vec!["loki_uid".to_string(), "prom_uid".to_string()]
     );
+}
+
+#[test]
+fn collect_dashboard_ownership_provenance_reports_api_file_and_git_sync_states() {
+    let api = test_support::collect_dashboard_ownership_provenance(&json!({
+        "dashboard": {"uid": "api", "title": "API"},
+        "meta": {"folderUid": "general"}
+    }))
+    .unwrap();
+    assert_eq!(api.ownership, "api-managed");
+    assert_eq!(api.provenance, vec!["ownership=api-managed".to_string()]);
+
+    let file = test_support::collect_dashboard_ownership_provenance(&json!({
+        "dashboard": {"uid": "file", "title": "File"},
+        "meta": {
+            "provisioned": true,
+            "provisionedExternalId": "dashboards/file.json"
+        }
+    }))
+    .unwrap();
+    assert_eq!(file.ownership, "file-provisioned");
+    assert!(file
+        .provenance
+        .contains(&"provisionedExternalId=dashboards/file.json".to_string()));
+
+    let git_sync = test_support::collect_dashboard_ownership_provenance(&json!({
+        "dashboard": {"uid": "git", "title": "Git Sync"},
+        "meta": {
+            "managedBy": {"kind": "repo", "id": "grafana-dashboard-repo"},
+            "managedRepository": {"name": "platform-dashboards"}
+        }
+    }))
+    .unwrap();
+    assert_eq!(git_sync.ownership, "git-sync-managed");
+    assert!(git_sync
+        .provenance
+        .contains(&"ownership=git-sync-managed".to_string()));
 }
 
 #[test]

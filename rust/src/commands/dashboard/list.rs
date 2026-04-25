@@ -28,7 +28,9 @@ pub(crate) use list_render::{
     format_dashboard_summary_line, render_dashboard_summary_csv, render_dashboard_summary_json,
     render_dashboard_summary_table, render_dashboard_summary_text,
 };
-pub(crate) use source_metadata::collect_dashboard_source_metadata;
+pub(crate) use source_metadata::{
+    collect_dashboard_ownership_provenance, collect_dashboard_source_metadata,
+};
 
 struct DashboardListResourceClients<'a> {
     dashboard: DashboardResourceClient<'a>,
@@ -102,8 +104,20 @@ impl<'a> DashboardListResourceClients<'a> {
                     return Ok(item);
                 }
                 let payload = self.dashboard.fetch_dashboard(&uid)?;
+                let ownership = collect_dashboard_ownership_provenance(&payload)?;
                 let (sources, source_uids) =
                     collect_dashboard_source_metadata(&payload, &datasource_catalog)?;
+                item.insert("ownership".to_string(), Value::String(ownership.ownership));
+                item.insert(
+                    "provenance".to_string(),
+                    Value::Array(
+                        ownership
+                            .provenance
+                            .into_iter()
+                            .map(Value::String)
+                            .collect(),
+                    ),
+                );
                 item.insert(
                     "sources".to_string(),
                     Value::Array(sources.into_iter().map(Value::String).collect()),
@@ -249,8 +263,20 @@ where
                 return Ok(item);
             }
             let payload = fetch_dashboard_with_request(&mut request_json, &uid)?;
+            let ownership = collect_dashboard_ownership_provenance(&payload)?;
             let (sources, source_uids) =
                 collect_dashboard_source_metadata(&payload, &datasource_catalog)?;
+            item.insert("ownership".to_string(), Value::String(ownership.ownership));
+            item.insert(
+                "provenance".to_string(),
+                Value::Array(
+                    ownership
+                        .provenance
+                        .into_iter()
+                        .map(Value::String)
+                        .collect(),
+                ),
+            );
             item.insert(
                 "sources".to_string(),
                 Value::Array(sources.into_iter().map(Value::String).collect()),

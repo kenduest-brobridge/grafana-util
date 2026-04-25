@@ -2,12 +2,20 @@ use serde_json::{Map, Value};
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::common::{string_field, value_as_object, Result};
+use crate::dashboard::import::build_dashboard_target_review;
+use crate::dashboard::import::target::dashboard_target_review_ownership_label;
 
 use super::super::{
     collect_datasource_refs, datasource_type_alias, extract_dashboard_object,
     is_builtin_datasource_ref, is_placeholder_string, lookup_datasource,
     resolve_datasource_type_alias,
 };
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct DashboardOwnershipProvenance {
+    pub(crate) ownership: String,
+    pub(crate) provenance: Vec<String>,
+}
 
 fn lookup_unique_datasource_name_by_type(
     datasources_by_uid: &BTreeMap<String, Map<String, Value>>,
@@ -128,6 +136,22 @@ fn resolve_datasource_source_uid(
         }
         _ => None,
     }
+}
+
+pub(crate) fn collect_dashboard_ownership_provenance(
+    payload: &Value,
+) -> Result<DashboardOwnershipProvenance> {
+    let review = build_dashboard_target_review(payload)?;
+    let ownership = dashboard_target_review_ownership_label(&review).to_string();
+    let ownership_note = format!("ownership={ownership}");
+    let mut provenance = review.evidence;
+    if !provenance.iter().any(|value| value == &ownership_note) {
+        provenance.insert(0, ownership_note);
+    }
+    Ok(DashboardOwnershipProvenance {
+        ownership,
+        provenance,
+    })
 }
 
 /// collect dashboard source metadata.

@@ -246,6 +246,8 @@ pub(crate) fn write_prompt_lane_metadata(
             folder_path: String::new(),
             org: source_org.unwrap_or("Main Org.").to_string(),
             org_id: source_org_id.unwrap_or("1").to_string(),
+            ownership: "api-managed".to_string(),
+            provenance: vec!["ownership=api-managed".to_string()],
             raw_path: None,
             prompt_path: Some(output_path.display().to_string()),
             provisioning_path: None,

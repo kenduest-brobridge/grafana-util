@@ -416,6 +416,8 @@ mod tests {
                 dashboard_uid: "cpu-main".to_string(),
                 dashboard_title: "CPU Main".to_string(),
                 folder_path: "General".to_string(),
+                ownership: "api-managed".to_string(),
+                provenance: vec!["ownership=api-managed".to_string()],
                 panel_count: 1,
                 query_count: 1,
                 datasource_count: 1,

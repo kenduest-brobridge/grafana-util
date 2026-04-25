@@ -1,10 +1,14 @@
 //! Governance document assembly for dashboard inspect output.
 //! Keeps dashboard dependency, datasource edge, and summary orchestration out of the facade.
 use std::collections::{BTreeMap, BTreeSet};
+use std::path::Path;
 
+use super::super::files::{load_export_metadata, load_json_file};
+use super::super::inspect_live::load_variant_index_entries;
 use super::super::inspect_report::{
     normalize_query_report, ExportInspectionQueryReport, ExportInspectionQueryRow,
 };
+use super::super::list::collect_dashboard_ownership_provenance;
 use super::{
     build_dashboard_audit_rows, build_datasource_coverage_rows,
     build_datasource_family_coverage_rows, build_datasource_governance_rows,
@@ -15,6 +19,65 @@ use super::{
     GOVERNANCE_RISK_KIND_MIXED_DASHBOARD,
 };
 use crate::dashboard::inspect_family::normalize_family_name;
+
+#[derive(Clone, Debug, Default)]
+struct DashboardOwnershipDetail {
+    ownership: String,
+    provenance: Vec<String>,
+}
+
+fn load_dashboard_ownership_from_index(
+    input_dir: &Path,
+) -> BTreeMap<String, DashboardOwnershipDetail> {
+    let metadata = load_export_metadata(input_dir, None).ok().flatten();
+    let mut ownership_by_uid = BTreeMap::new();
+    if let Ok(entries) = load_variant_index_entries(input_dir, metadata.as_ref()) {
+        for entry in entries {
+            if entry.uid.trim().is_empty() {
+                continue;
+            }
+            let ownership = entry.ownership.trim().to_string();
+            let provenance = entry
+                .provenance
+                .into_iter()
+                .map(|value| value.trim().to_string())
+                .filter(|value| !value.is_empty())
+                .collect::<Vec<String>>();
+            if ownership.is_empty() && provenance.is_empty() {
+                continue;
+            }
+            ownership_by_uid.insert(
+                entry.uid,
+                DashboardOwnershipDetail {
+                    ownership,
+                    provenance,
+                },
+            );
+        }
+    }
+    ownership_by_uid
+}
+
+fn load_dashboard_ownership_from_file(file_path: &str) -> Option<DashboardOwnershipDetail> {
+    let payload = load_json_file(Path::new(file_path)).ok()?;
+    let detail = collect_dashboard_ownership_provenance(&payload).ok()?;
+    Some(DashboardOwnershipDetail {
+        ownership: detail.ownership,
+        provenance: detail.provenance,
+    })
+}
+
+fn resolve_dashboard_ownership_detail(
+    ownership_by_uid: &BTreeMap<String, DashboardOwnershipDetail>,
+    dashboard_uid: &str,
+    file_path: &str,
+) -> DashboardOwnershipDetail {
+    ownership_by_uid
+        .get(dashboard_uid)
+        .cloned()
+        .or_else(|| load_dashboard_ownership_from_file(file_path))
+        .unwrap_or_default()
+}
 
 #[derive(Clone, Debug)]
 pub(crate) struct ResolvedDatasourceIdentity {
@@ -87,6 +150,7 @@ pub(crate) fn resolve_datasource_identity(
 pub(crate) fn build_dashboard_dependency_rows(
     report: &ExportInspectionQueryReport,
 ) -> Vec<DashboardDependencyRow> {
+    let ownership_by_uid = load_dashboard_ownership_from_index(Path::new(&report.input_dir));
     let normalized = normalize_query_report(report);
     normalized
         .dashboards
@@ -96,6 +160,8 @@ pub(crate) fn build_dashboard_dependency_rows(
             let dashboard_title = dashboard.dashboard_title;
             let folder_path = dashboard.folder_path;
             let file_path = dashboard.file_path;
+            let ownership_detail =
+                resolve_dashboard_ownership_detail(&ownership_by_uid, &dashboard_uid, &file_path);
             let panel_count = dashboard.panels.len();
             let query_count = dashboard
                 .panels
@@ -162,6 +228,8 @@ pub(crate) fn build_dashboard_dependency_rows(
                 dashboard_title,
                 folder_path,
                 file_path,
+                ownership: ownership_detail.ownership,
+                provenance: ownership_detail.provenance,
                 panel_count,
                 query_count,
                 datasource_count: datasources.len(),
@@ -210,6 +278,8 @@ pub(crate) fn build_dashboard_governance_rows(
                 dashboard_uid: row.dashboard_uid,
                 dashboard_title: row.dashboard_title,
                 folder_path: row.folder_path,
+                ownership: row.ownership,
+                provenance: row.provenance,
                 panel_count: row.panel_count,
                 query_count: row.query_count,
                 datasource_count: row.datasource_count,

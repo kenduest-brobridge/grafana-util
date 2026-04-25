@@ -8,8 +8,8 @@ use crate::common::{message, string_field, Result};
 
 use super::super::history::build_dashboard_history_export_document_with_request;
 use super::super::list::{
-    attach_dashboard_org_metadata, collect_dashboard_source_metadata,
-    fetch_current_org_with_request,
+    attach_dashboard_org_metadata, collect_dashboard_ownership_provenance,
+    collect_dashboard_source_metadata, fetch_current_org_with_request,
 };
 use super::super::prompt::build_external_export_document_with_library_panels;
 use super::super::{
@@ -195,6 +195,7 @@ where
             );
         }
         let payload = fetch_dashboard_with_request(&mut scoped_request, &uid)?;
+        let ownership = collect_dashboard_ownership_provenance(&payload)?;
         let (source_names, source_uids) =
             collect_dashboard_source_metadata(&payload, &datasource_catalog)?;
         used_source_names.extend(source_names);
@@ -221,6 +222,8 @@ where
             .and_then(|key| folder_paths_by_key.get(&key))
             .map(String::as_str);
         item.folder_path = folder_path.unwrap_or("").to_string();
+        item.ownership = ownership.ownership;
+        item.provenance = ownership.provenance;
         if !args.without_dashboard_raw {
             let raw_document = build_preserved_web_import_document(&payload)?;
             let raw_path =

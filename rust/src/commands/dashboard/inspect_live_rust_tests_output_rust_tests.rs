@@ -94,7 +94,10 @@ fn inspect_live_dashboards_with_request_writes_governance_json_to_output_file_ma
                             }
                         ]
                     },
-                    "meta": {}
+                    "meta": {
+                        "managedBy": {"kind": "repo", "id": "grafana-dashboard-repo"},
+                        "managedRepository": {"name": "platform-dashboards"}
+                    }
                 }))),
                 (reqwest::Method::GET, "/api/dashboards/uid/cpu-main/permissions") => {
                     Ok(Some(json!([])))
@@ -120,6 +123,18 @@ fn inspect_live_dashboards_with_request_writes_governance_json_to_output_file_ma
     assert_eq!(
         output["dashboardDependencies"][0]["datasourceFamilies"],
         json!(["prometheus"])
+    );
+    assert_eq!(
+        output["dashboardDependencies"][0]["ownership"],
+        Value::String("git-sync-managed".to_string())
+    );
+    assert_eq!(
+        output["dashboardDependencies"][0]["provenance"],
+        json!([
+            "ownership=git-sync-managed",
+            "managedBy{kind=repo,id=grafana-dashboard-repo}",
+            "managedRepository{name=platform-dashboards}"
+        ])
     );
 }
 

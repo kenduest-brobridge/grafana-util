@@ -178,6 +178,10 @@ pub(crate) struct DashboardIndexItem {
     pub org: String,
     #[serde(rename = "orgId")]
     pub org_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub ownership: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub provenance: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub raw_path: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -216,6 +220,10 @@ pub(crate) struct VariantIndexEntry {
     #[serde(rename = "orgId")]
     #[serde(default)]
     pub org_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub ownership: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub provenance: Vec<String>,
 }
 
 /// Struct definition for RootExportVariants.

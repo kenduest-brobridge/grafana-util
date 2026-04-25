@@ -104,6 +104,8 @@ mod tests {
             folder_path: "General".to_string(),
             org: "Main Org".to_string(),
             org_id: "1".to_string(),
+            ownership: "api-managed".to_string(),
+            provenance: vec!["ownership=api-managed".to_string()],
             raw_path: Some("/tmp/export/raw/CPU__cpu-main.json".to_string()),
             prompt_path: None,
             provisioning_path: None,

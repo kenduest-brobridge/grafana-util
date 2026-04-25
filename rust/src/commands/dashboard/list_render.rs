@@ -105,6 +105,31 @@ fn dashboard_sources_cell(summary: &Map<String, Value>) -> Option<String> {
     }
 }
 
+fn dashboard_ownership(summary: &Map<String, Value>) -> Option<String> {
+    summary
+        .get("ownership")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+}
+
+fn dashboard_provenance(summary: &Map<String, Value>) -> Option<Vec<String>> {
+    let values = summary.get("provenance")?.as_array()?;
+    let values = values
+        .iter()
+        .filter_map(Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+        .collect::<Vec<String>>();
+    if values.is_empty() {
+        None
+    } else {
+        Some(values)
+    }
+}
+
 fn summaries_include_sources(summaries: &[Map<String, Value>]) -> bool {
     summaries
         .iter()
@@ -215,6 +240,12 @@ pub(crate) fn format_dashboard_summary_line(summary: &Map<String, Value>) -> Str
     }
     if let Some(sources) = dashboard_sources_cell(summary) {
         let _ = write!(&mut line, " sources={sources}");
+    }
+    if let Some(ownership) = dashboard_ownership(summary) {
+        let _ = write!(&mut line, " ownership={ownership}");
+    }
+    if let Some(provenance) = dashboard_provenance(summary) {
+        let _ = write!(&mut line, " provenance={}", provenance.join(";"));
     }
     line
 }
@@ -338,6 +369,17 @@ pub(crate) fn render_dashboard_summary_json(
                                 Value::String(dashboard_list_value(summary, *column)),
                             );
                         }
+                    }
+                }
+                if output_columns.is_empty() {
+                    if let Some(ownership) = dashboard_ownership(summary) {
+                        object.insert("ownership".to_string(), Value::String(ownership));
+                    }
+                    if let Some(provenance) = dashboard_provenance(summary) {
+                        object.insert(
+                            "provenance".to_string(),
+                            Value::Array(provenance.into_iter().map(Value::String).collect()),
+                        );
                     }
                 }
                 Value::Object(object)
