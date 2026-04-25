@@ -1,53 +1,19 @@
 //! Shared Dashboard helpers for internal state transitions and reusable orchestration logic.
 
 use reqwest::Method;
-use serde::Serialize;
 use serde_json::{Map, Value};
 
 use crate::common::{message, string_field, Result};
 
-use super::{
-    collect_folder_inventory_with_request, DeleteArgs, DEFAULT_DASHBOARD_TITLE,
-    DEFAULT_FOLDER_TITLE,
+use super::{collect_folder_inventory_with_request, DeleteArgs, DEFAULT_FOLDER_TITLE};
+
+mod types;
+
+use types::{build_dashboard_target, folder_path_matches};
+
+pub(crate) use types::{
+    normalize_folder_path, DashboardDeleteTarget, DeletePlan, FolderDeleteTarget,
 };
-
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
-pub(crate) struct DashboardDeleteTarget {
-    pub uid: String,
-    pub title: String,
-    pub folder_path: String,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
-pub(crate) struct FolderDeleteTarget {
-    pub uid: String,
-    pub title: String,
-    pub path: String,
-    pub parent_uid: Option<String>,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
-pub(crate) struct DeletePlan {
-    pub selector_uid: Option<String>,
-    pub selector_path: Option<String>,
-    pub delete_folders: bool,
-    pub dashboards: Vec<DashboardDeleteTarget>,
-    pub folders: Vec<FolderDeleteTarget>,
-}
-
-pub(crate) fn normalize_folder_path(path: &str) -> String {
-    let normalized = path.trim().replace('\\', "/");
-    let parts: Vec<&str> = normalized
-        .split('/')
-        .map(str::trim)
-        .filter(|part| !part.is_empty())
-        .collect();
-    if parts.is_empty() {
-        normalized.trim().to_string()
-    } else {
-        parts.join(" / ")
-    }
-}
 
 pub(crate) fn validate_delete_args(args: &DeleteArgs) -> Result<()> {
     let uid = args.uid.as_deref().unwrap_or("").trim();
@@ -205,16 +171,4 @@ where
         dashboards,
         folders,
     })
-}
-
-fn build_dashboard_target(summary: &Map<String, Value>) -> DashboardDeleteTarget {
-    DashboardDeleteTarget {
-        uid: string_field(summary, "uid", "").to_string(),
-        title: string_field(summary, "title", DEFAULT_DASHBOARD_TITLE).to_string(),
-        folder_path: string_field(summary, "folderPath", DEFAULT_FOLDER_TITLE).to_string(),
-    }
-}
-
-fn folder_path_matches(candidate: &str, root: &str) -> bool {
-    candidate == root || candidate.starts_with(&format!("{root} / "))
 }
