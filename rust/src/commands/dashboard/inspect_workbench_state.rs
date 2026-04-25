@@ -16,6 +16,8 @@ use ratatui::widgets::ListState;
 
 use super::inspect_workbench_support::{InspectWorkbenchDocument, InspectWorkbenchGroup};
 
+#[path = "inspect_workbench_state/detail.rs"]
+mod detail;
 #[path = "inspect_workbench_modal_state.rs"]
 mod inspect_workbench_modal_state;
 
@@ -109,34 +111,11 @@ impl InspectWorkbenchState {
     }
 
     pub(crate) fn current_detail_lines(&self) -> Vec<String> {
-        self.selected_item()
-            .map(|item| {
-                if item.details.is_empty() {
-                    vec!["No facts available.".to_string()]
-                } else {
-                    item.details.clone()
-                }
-            })
-            .unwrap_or_else(|| vec!["No item selected.".to_string()])
+        detail::current_detail_lines(self.selected_item())
     }
 
     pub(crate) fn current_full_detail_lines(&self) -> Vec<String> {
-        self.selected_item()
-            .map(|item| {
-                let mut lines = vec![
-                    fact_line("Kind", &item.kind),
-                    fact_line("Title", &item.title),
-                ];
-                if !item.meta.is_empty() {
-                    lines.push(fact_line("Summary", &item.meta));
-                }
-                if !item.details.is_empty() {
-                    lines.push(String::new());
-                    lines.extend(item.details.clone());
-                }
-                lines
-            })
-            .unwrap_or_else(|| vec!["No item selected.".to_string()])
+        detail::current_full_detail_lines(self.selected_item())
     }
 
     pub(crate) fn reset_items(&mut self) {
@@ -322,10 +301,6 @@ impl InspectWorkbenchState {
         self.reset_items();
         self.status = format!("{group_label} mode view: {view_label}.");
     }
-}
-
-fn fact_line(label: &str, value: &str) -> String {
-    format!("{label:<16}: {value}")
 }
 
 pub(crate) fn handle_search_key(state: &mut InspectWorkbenchState, key: &KeyEvent) {
