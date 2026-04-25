@@ -1,6 +1,13 @@
 use super::live_discovery::build_live_instance_discovery_with_request;
-use super::live_domains::{build_live_promotion_status, build_live_sync_status};
-use super::live_multi_org::build_live_multi_org_domain_status_with_orgs;
+use super::live_domains::{
+    build_live_dashboard_and_datasource_statuses, build_live_promotion_status,
+    build_live_sync_status,
+};
+use super::live_multi_org::{
+    build_live_multi_org_domain_status_pair, build_live_multi_org_domain_status_with_clients,
+    build_live_multi_org_domain_status_with_orgs, scoped_live_org_client_for_test,
+};
+use crate::http::{JsonHttpClient, JsonHttpClientConfig};
 use crate::project_status::{
     status_finding, ProjectDomainStatus, ProjectStatusFreshness, PROJECT_STATUS_BLOCKED,
     PROJECT_STATUS_PARTIAL, PROJECT_STATUS_READY, PROJECT_STATUS_UNKNOWN,
@@ -11,6 +18,10 @@ use chrono::{DateTime, Utc};
 use reqwest::Method;
 use serde_json::json;
 use std::fs;
+use std::io::{Read, Write};
+use std::net::TcpListener;
+use std::sync::{Arc, Mutex};
+use std::thread;
 use std::time::{Duration, SystemTime};
 use tempfile::tempdir;
 
@@ -321,4 +332,195 @@ fn build_live_multi_org_domain_status_with_orgs_rejects_empty_org_lists() {
     assert!(error
         .to_string()
         .contains("at least one per-org domain status"));
+}
+
+#[test]
+fn build_live_multi_org_domain_status_with_clients_reuses_prebuilt_scoped_clients() {
+    let clients = vec![
+        scoped_live_org_client_for_test(11, test_http_client()),
+        scoped_live_org_client_for_test(22, test_http_client()),
+    ];
+    let mut seen_org_ids = Vec::new();
+
+    let aggregated = build_live_multi_org_domain_status_with_clients(&clients, |client| {
+        let org_id = client.org_id();
+        seen_org_ids.push(org_id);
+        ProjectDomainStatus {
+            id: "datasource".to_string(),
+            scope: "live".to_string(),
+            mode: "live-datasource-inventory".to_string(),
+            status: PROJECT_STATUS_READY.to_string(),
+            reason_code: PROJECT_STATUS_READY.to_string(),
+            primary_count: if org_id == 11 { 1 } else { 2 },
+            blocker_count: 0,
+            warning_count: 0,
+            source_kinds: vec!["live-datasource-list".to_string()],
+            signal_keys: vec!["live.datasourceCount".to_string()],
+            blockers: Vec::new(),
+            warnings: Vec::new(),
+            next_actions: Vec::new(),
+            freshness: ProjectStatusFreshness {
+                status: "current".to_string(),
+                source_count: 1,
+                newest_age_seconds: Some(10),
+                oldest_age_seconds: Some(20),
+            },
+        }
+    })
+    .unwrap();
+
+    assert_eq!(seen_org_ids, vec![11, 22]);
+    assert_eq!(aggregated.primary_count, 3);
+    assert_eq!(aggregated.mode, "live-datasource-inventory-all-orgs");
+}
+
+#[test]
+fn build_live_multi_org_domain_status_pair_reads_each_scoped_org_once() {
+    let clients = vec![
+        scoped_live_org_client_for_test(11, test_http_client()),
+        scoped_live_org_client_for_test(22, test_http_client()),
+    ];
+    let mut pass_count = 0usize;
+
+    let (dashboard, datasource) = build_live_multi_org_domain_status_pair(&clients, |_client| {
+        pass_count += 1;
+        (
+            ready_test_domain("dashboard", "live-dashboard-inventory", 1),
+            ready_test_domain("datasource", "live-datasource-inventory", 2),
+        )
+    })
+    .unwrap();
+
+    assert_eq!(pass_count, 2);
+    assert_eq!(dashboard.primary_count, 2);
+    assert_eq!(dashboard.mode, "live-dashboard-inventory-all-orgs");
+    assert_eq!(datasource.primary_count, 4);
+    assert_eq!(datasource.mode, "live-datasource-inventory-all-orgs");
+}
+
+#[test]
+fn build_live_dashboard_and_datasource_statuses_reuses_datasource_read() {
+    let updated = DateTime::<Utc>::from(SystemTime::now() - Duration::from_secs(60)).to_rfc3339();
+    let responses = vec![
+        http_response(
+            "200 OK",
+            &format!(
+                r#"[{{"uid":"cpu-main","title":"CPU Main","type":"dash-db","folderUid":"infra","folderTitle":"Infra","updated":"{updated}"}}]"#
+            ),
+        ),
+        http_response(
+            "200 OK",
+            r#"[{"uid":"prom-main","name":"Prometheus Main","type":"prometheus","orgId":1}]"#,
+        ),
+        http_response("200 OK", r#"[{"id":1,"name":"Main"}]"#),
+        http_response("200 OK", r#"{"id":1,"name":"Main"}"#),
+    ];
+    let (client, requests, handle) = build_sequence_test_client(responses);
+
+    let (dashboard, datasource) = build_live_dashboard_and_datasource_statuses(&client);
+    handle.join().unwrap();
+    let requests = requests.lock().unwrap();
+    let datasource_reads = requests
+        .iter()
+        .filter(|line| line.starts_with("GET /api/datasources "))
+        .count();
+
+    assert_eq!(dashboard.status, PROJECT_STATUS_READY);
+    assert_eq!(datasource.status, PROJECT_STATUS_READY);
+    assert_eq!(datasource_reads, 1);
+    assert!(requests
+        .iter()
+        .any(|line| line.starts_with("GET /api/search?")));
+    assert!(requests
+        .iter()
+        .any(|line| line.starts_with("GET /api/orgs ")));
+    assert!(requests
+        .iter()
+        .any(|line| line.starts_with("GET /api/org ")));
+}
+
+fn test_http_client() -> JsonHttpClient {
+    JsonHttpClient::new(JsonHttpClientConfig {
+        base_url: "http://127.0.0.1:3000".to_string(),
+        headers: Vec::new(),
+        timeout_secs: 1,
+        verify_ssl: false,
+    })
+    .unwrap()
+}
+
+fn ready_test_domain(id: &str, mode: &str, primary_count: usize) -> ProjectDomainStatus {
+    ProjectDomainStatus {
+        id: id.to_string(),
+        scope: "live".to_string(),
+        mode: mode.to_string(),
+        status: PROJECT_STATUS_READY.to_string(),
+        reason_code: PROJECT_STATUS_READY.to_string(),
+        primary_count,
+        blocker_count: 0,
+        warning_count: 0,
+        source_kinds: vec![format!("live-{id}")],
+        signal_keys: vec![format!("live.{id}Count")],
+        blockers: Vec::new(),
+        warnings: Vec::new(),
+        next_actions: Vec::new(),
+        freshness: ProjectStatusFreshness {
+            status: "current".to_string(),
+            source_count: 1,
+            newest_age_seconds: Some(10),
+            oldest_age_seconds: Some(20),
+        },
+    }
+}
+
+fn build_sequence_test_client(
+    responses: Vec<String>,
+) -> (
+    JsonHttpClient,
+    Arc<Mutex<Vec<String>>>,
+    thread::JoinHandle<()>,
+) {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let address = listener.local_addr().unwrap();
+    let requests = Arc::new(Mutex::new(Vec::new()));
+    let requests_thread = Arc::clone(&requests);
+    let handle = thread::spawn(move || {
+        for response in responses {
+            let (mut stream, _) = listener.accept().unwrap();
+            let mut request = Vec::new();
+            let mut buffer = [0_u8; 1024];
+            loop {
+                let bytes_read = stream.read(&mut buffer).unwrap();
+                if bytes_read == 0 {
+                    break;
+                }
+                request.extend_from_slice(&buffer[..bytes_read]);
+                if request.windows(4).any(|window| window == b"\r\n\r\n") {
+                    break;
+                }
+            }
+            let request_line = String::from_utf8_lossy(&request)
+                .lines()
+                .next()
+                .unwrap_or_default()
+                .to_string();
+            requests_thread.lock().unwrap().push(request_line);
+            stream.write_all(response.as_bytes()).unwrap();
+        }
+    });
+    let client = JsonHttpClient::new(JsonHttpClientConfig {
+        base_url: format!("http://{address}"),
+        headers: Vec::new(),
+        timeout_secs: 5,
+        verify_ssl: false,
+    })
+    .unwrap();
+    (client, requests, handle)
+}
+
+fn http_response(status: &str, body: &str) -> String {
+    format!(
+        "HTTP/1.1 {status}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+        body.len()
+    )
 }

@@ -30,6 +30,40 @@ fn org_id_from_record(org: &Map<String, Value>) -> Result<i64> {
         .ok_or_else(|| message("Grafana org payload did not include a usable numeric id."))
 }
 
+pub(super) struct ScopedLiveOrgClient {
+    #[cfg(test)]
+    org_id: i64,
+    client: JsonHttpClient,
+}
+
+impl ScopedLiveOrgClient {
+    #[cfg(test)]
+    pub(super) fn org_id(&self) -> i64 {
+        self.org_id
+    }
+
+    fn client(&self) -> &JsonHttpClient {
+        &self.client
+    }
+}
+
+pub(super) fn build_scoped_live_org_clients(
+    api: &crate::grafana_api::GrafanaApiClient,
+    orgs: &[Map<String, Value>],
+) -> Result<Vec<ScopedLiveOrgClient>> {
+    orgs.iter()
+        .map(|org| {
+            let org_id = org_id_from_record(org)?;
+            let client = build_live_project_status_client_from_api(api, Some(org_id))?;
+            Ok(ScopedLiveOrgClient {
+                #[cfg(test)]
+                org_id,
+                client,
+            })
+        })
+        .collect()
+}
+
 fn merge_project_status_findings(findings: &[ProjectStatusFinding]) -> Vec<ProjectStatusFinding> {
     let mut merged = BTreeMap::<(String, String), usize>::new();
     for finding in findings {
@@ -126,6 +160,7 @@ fn merge_live_domain_statuses(statuses: Vec<ProjectDomainStatus>) -> Result<Proj
     .into_project_domain_status())
 }
 
+#[cfg(test)]
 pub(super) fn build_live_multi_org_domain_status_with_orgs<F>(
     orgs: &[Map<String, Value>],
     mut build_org_status: F,
@@ -141,15 +176,58 @@ where
 }
 
 pub(super) fn build_live_multi_org_domain_status<F>(
-    api: &crate::grafana_api::GrafanaApiClient,
-    orgs: &[Map<String, Value>],
+    clients: &[ScopedLiveOrgClient],
     mut build_status: F,
 ) -> Result<ProjectDomainStatus>
 where
     F: FnMut(&JsonHttpClient) -> ProjectDomainStatus,
 {
-    build_live_multi_org_domain_status_with_orgs(orgs, |org_id| {
-        let client = build_live_project_status_client_from_api(api, Some(org_id))?;
-        Ok(build_status(&client))
-    })
+    let mut statuses = Vec::new();
+    for client in clients {
+        statuses.push(build_status(client.client()));
+    }
+    merge_live_domain_statuses(statuses)
+}
+
+pub(super) fn build_live_multi_org_domain_status_pair<F>(
+    clients: &[ScopedLiveOrgClient],
+    mut build_statuses: F,
+) -> Result<(ProjectDomainStatus, ProjectDomainStatus)>
+where
+    F: FnMut(&JsonHttpClient) -> (ProjectDomainStatus, ProjectDomainStatus),
+{
+    let mut first_statuses = Vec::new();
+    let mut second_statuses = Vec::new();
+    for client in clients {
+        let (first, second) = build_statuses(client.client());
+        first_statuses.push(first);
+        second_statuses.push(second);
+    }
+    Ok((
+        merge_live_domain_statuses(first_statuses)?,
+        merge_live_domain_statuses(second_statuses)?,
+    ))
+}
+
+#[cfg(test)]
+pub(super) fn build_live_multi_org_domain_status_with_clients<F>(
+    clients: &[ScopedLiveOrgClient],
+    mut build_status: F,
+) -> Result<ProjectDomainStatus>
+where
+    F: FnMut(&ScopedLiveOrgClient) -> ProjectDomainStatus,
+{
+    let mut statuses = Vec::new();
+    for client in clients {
+        statuses.push(build_status(client));
+    }
+    merge_live_domain_statuses(statuses)
+}
+
+#[cfg(test)]
+pub(super) fn scoped_live_org_client_for_test(
+    org_id: i64,
+    client: JsonHttpClient,
+) -> ScopedLiveOrgClient {
+    ScopedLiveOrgClient { org_id, client }
 }

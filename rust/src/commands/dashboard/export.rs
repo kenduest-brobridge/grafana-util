@@ -5,9 +5,9 @@
 //! - Render staged export variants (`raw`, `prompt`, `provisioning`) using shared helpers.
 //! - Build dashboard export metadata/index artifacts and stream operator-facing progress/output.
 use reqwest::Method;
-use serde_json::Value;
+use serde_json::{Map, Value};
 
-use crate::common::Result;
+use crate::common::{message, value_as_object, Result};
 use crate::grafana_api::DashboardResourceClient;
 use crate::http::JsonHttpClient;
 
@@ -35,10 +35,14 @@ use self::export_provisioning::{build_provisioning_config, write_yaml_document};
 pub(crate) use self::export_render::{format_export_progress_line, format_export_verbose_line};
 use self::export_root_bundle::write_all_orgs_root_export_bundle;
 #[allow(unused_imports)]
-pub(crate) use self::export_scope::{export_dashboards_in_scope_with_request, ScopeExportResult};
+pub(crate) use self::export_scope::{
+    export_dashboards_in_scope_with_permission_fetcher, export_dashboards_in_scope_with_request,
+    ScopeExportResult,
+};
 use self::export_support::{
     build_all_orgs_output_dir, build_permission_bundle_document, build_used_datasource_summaries,
     collect_library_panel_exports_with_request, collect_permission_export_documents,
+    collect_permission_export_documents_with_fetcher, PermissionExportTarget,
 };
 
 pub(crate) fn export_dashboards_with_request<F>(
@@ -90,10 +94,23 @@ where
 }
 
 pub fn export_dashboards_with_client(client: &JsonHttpClient, args: &ExportArgs) -> Result<usize> {
-    export_dashboards_with_request(
-        |method, path, params, payload| client.request_json(method, path, params, payload),
+    if args.all_orgs {
+        return export_dashboards_with_request(
+            |method, path, params, payload| client.request_json(method, path, params, payload),
+            args,
+        );
+    }
+    let permission_fetcher = |target: &PermissionExportTarget| {
+        fetch_permission_target_with_client(client, target, args.org_id)
+    };
+    Ok(export_dashboards_in_scope_with_permission_fetcher(
+        &mut |method, path, params, payload| client.request_json(method, path, params, payload),
         args,
-    )
+        None,
+        args.org_id,
+        &permission_fetcher,
+    )?
+    .exported_count)
 }
 
 pub(crate) fn export_dashboards_with_org_clients(args: &ExportArgs) -> Result<usize> {
@@ -107,13 +124,17 @@ pub(crate) fn export_dashboards_with_org_clients(args: &ExportArgs) -> Result<us
         for org in admin_dashboard.list_orgs()? {
             let org_id = org_id_value(&org)?;
             let org_client = build_http_client_for_org_from_api(&admin_api, org_id)?;
-            let scope_result = export_dashboards_in_scope_with_request(
+            let permission_fetcher = |target: &PermissionExportTarget| {
+                fetch_permission_target_with_client(&org_client, target, None)
+            };
+            let scope_result = export_dashboards_in_scope_with_permission_fetcher(
                 &mut |method, path, params, payload| {
                     org_client.request_json(method, path, params, payload)
                 },
                 args,
                 Some(&org),
                 None,
+                &permission_fetcher,
             )?;
             total += scope_result.exported_count;
             if let Some(root_index) = scope_result.root_index {
@@ -137,26 +158,73 @@ pub(crate) fn export_dashboards_with_org_clients(args: &ExportArgs) -> Result<us
         Ok(total)
     } else if let Some(org_id) = args.org_id {
         let org_client = build_http_client_for_org(&args.common, org_id)?;
-        Ok(export_dashboards_in_scope_with_request(
+        let permission_fetcher = |target: &PermissionExportTarget| {
+            fetch_permission_target_with_client(&org_client, target, None)
+        };
+        Ok(export_dashboards_in_scope_with_permission_fetcher(
             &mut |method, path, params, payload| {
                 org_client.request_json(method, path, params, payload)
             },
             args,
             None,
             None,
+            &permission_fetcher,
         )?
         .exported_count)
     } else {
         let client = build_http_client(&args.common)?;
         let dashboard = DashboardResourceClient::new(&client);
         let current_org = dashboard.fetch_current_org()?;
-        Ok(export_dashboards_in_scope_with_request(
+        let permission_fetcher = |target: &PermissionExportTarget| {
+            fetch_permission_target_with_client(&client, target, None)
+        };
+        Ok(export_dashboards_in_scope_with_permission_fetcher(
             &mut |method, path, params, payload| client.request_json(method, path, params, payload),
             args,
             Some(&current_org),
             None,
+            &permission_fetcher,
         )?
         .exported_count)
+    }
+}
+
+fn fetch_permission_target_with_client(
+    client: &JsonHttpClient,
+    target: &PermissionExportTarget,
+    org_id_override: Option<i64>,
+) -> Result<Vec<Map<String, Value>>> {
+    let path = match target.resource_kind {
+        "folder" => format!("/api/folders/{}/permissions", target.resource_uid),
+        "dashboard" => format!("/api/dashboards/uid/{}/permissions", target.resource_uid),
+        other => {
+            return Err(message(format!(
+                "Unsupported permission export resource kind {other}."
+            )))
+        }
+    };
+    let params = org_id_override
+        .map(|org_id| vec![("orgId".to_string(), org_id.to_string())])
+        .unwrap_or_default();
+    match client.request_json(Method::GET, &path, &params, None)? {
+        Some(Value::Array(items)) => items
+            .into_iter()
+            .map(|item| {
+                value_as_object(
+                    &item,
+                    &format!(
+                        "Unexpected {} permissions payload for UID {}.",
+                        target.resource_kind, target.resource_uid
+                    ),
+                )
+                .cloned()
+            })
+            .collect(),
+        Some(_) => Err(message(format!(
+            "Unexpected {} permissions payload for UID {}.",
+            target.resource_kind, target.resource_uid
+        ))),
+        None => Ok(Vec::new()),
     }
 }
 

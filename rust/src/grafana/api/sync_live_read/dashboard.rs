@@ -1,3 +1,5 @@
+use rayon::prelude::*;
+use rayon::ThreadPoolBuilder;
 #[cfg(test)]
 use reqwest::Method;
 use serde_json::{Map, Value};
@@ -6,6 +8,8 @@ use crate::common::{message, Result};
 use crate::sync::require_json_object;
 
 use super::SyncLiveClient;
+
+const DASHBOARD_DETAIL_FETCH_CONCURRENCY: usize = 8;
 
 pub(crate) fn append_folder_specs(
     client: &SyncLiveClient<'_>,
@@ -22,15 +26,11 @@ pub(crate) fn append_dashboard_specs(
     specs: &mut Vec<Value>,
     page_size: usize,
 ) -> Result<()> {
-    for summary in client.list_dashboard_summaries(page_size)? {
-        let uid = summary_uid(&summary);
-        if uid.is_empty() {
-            continue;
-        }
-        let dashboard_wrapper = client.fetch_dashboard(uid)?;
-        append_dashboard_spec(specs, uid, &dashboard_wrapper)?;
-    }
-    Ok(())
+    append_dashboard_specs_from_summaries(
+        specs,
+        client.list_dashboard_summaries(page_size)?,
+        |uid| client.fetch_dashboard(uid),
+    )
 }
 
 #[cfg(test)]
@@ -168,10 +168,135 @@ fn append_dashboard_spec(
     Ok(())
 }
 
+fn append_dashboard_specs_from_summaries<F>(
+    specs: &mut Vec<Value>,
+    summaries: Vec<Map<String, Value>>,
+    fetch_dashboard: F,
+) -> Result<()>
+where
+    F: Fn(&str) -> Result<Value> + Sync,
+{
+    let uids = summaries
+        .iter()
+        .filter_map(|summary| {
+            let uid = summary_uid(summary);
+            (!uid.is_empty()).then(|| uid.to_string())
+        })
+        .collect::<Vec<_>>();
+    if uids.is_empty() {
+        return Ok(());
+    }
+
+    let pool = ThreadPoolBuilder::new()
+        .num_threads(DASHBOARD_DETAIL_FETCH_CONCURRENCY)
+        .build()
+        .map_err(|error| {
+            message(format!(
+                "Failed to build dashboard detail read worker pool: {error}"
+            ))
+        })?;
+    let reads = pool.install(|| {
+        uids.par_iter()
+            .map(|uid| (uid.clone(), fetch_dashboard(uid)))
+            .collect::<Vec<_>>()
+    });
+
+    let failures = reads
+        .iter()
+        .filter_map(|(uid, result)| {
+            result
+                .as_ref()
+                .err()
+                .map(|error| format!("uid={uid}: {error}"))
+        })
+        .collect::<Vec<_>>();
+    if !failures.is_empty() {
+        return Err(message(format!(
+            "Failed to fetch {} dashboard detail(s) after /api/search: {}",
+            failures.len(),
+            failures.join("; ")
+        )));
+    }
+
+    let mut dashboard_specs = Vec::new();
+    for (uid, result) in reads {
+        let dashboard_wrapper = result?;
+        append_dashboard_spec(&mut dashboard_specs, &uid, &dashboard_wrapper)?;
+    }
+    specs.extend(dashboard_specs);
+    Ok(())
+}
+
 fn summary_uid(summary: &Map<String, Value>) -> &str {
     summary
         .get("uid")
         .and_then(Value::as_str)
         .map(str::trim)
         .unwrap_or("")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn summary(uid: &str) -> Map<String, Value> {
+        let mut object = Map::new();
+        object.insert("uid".to_string(), Value::String(uid.to_string()));
+        object
+    }
+
+    fn dashboard_payload(title: &str) -> Value {
+        serde_json::json!({
+            "dashboard": {
+                "id": 123,
+                "title": title,
+                "panels": []
+            }
+        })
+    }
+
+    #[test]
+    fn append_dashboard_specs_from_summaries_preserves_search_order() {
+        let mut specs = Vec::new();
+
+        append_dashboard_specs_from_summaries(
+            &mut specs,
+            vec![summary("dash-b"), summary("dash-a"), summary("dash-c")],
+            |uid| Ok(dashboard_payload(&format!("title-{uid}"))),
+        )
+        .unwrap();
+
+        let uids = specs
+            .iter()
+            .map(|spec| spec["uid"].as_str().unwrap())
+            .collect::<Vec<_>>();
+        assert_eq!(uids, vec!["dash-b", "dash-a", "dash-c"]);
+    }
+
+    #[test]
+    fn append_dashboard_specs_from_summaries_aggregates_detail_failures() {
+        let mut specs = vec![serde_json::json!({"kind": "folder", "uid": "f"})];
+
+        let error = append_dashboard_specs_from_summaries(
+            &mut specs,
+            vec![summary("dash-a"), summary("dash-b"), summary("dash-c")],
+            |uid| {
+                if uid == "dash-b" || uid == "dash-c" {
+                    Err(message(format!("boom {uid}")))
+                } else {
+                    Ok(dashboard_payload(&format!("title-{uid}")))
+                }
+            },
+        )
+        .unwrap_err()
+        .to_string();
+
+        assert!(error.contains("Failed to fetch 2 dashboard detail(s) after /api/search"));
+        assert!(error.contains("uid=dash-b: boom dash-b"));
+        assert!(error.contains("uid=dash-c: boom dash-c"));
+        assert_eq!(
+            specs,
+            vec![serde_json::json!({"kind": "folder", "uid": "f"})]
+        );
+    }
 }

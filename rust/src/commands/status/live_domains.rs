@@ -1,4 +1,4 @@
-use serde_json::Value;
+use serde_json::{Map, Value};
 use std::fs::Metadata;
 
 use crate::access::{build_access_live_domain_status, build_access_live_read_failed_domain_status};
@@ -6,15 +6,16 @@ use crate::alert::{
     build_alert_live_project_status_domain, build_alert_live_read_failed_domain_status,
     AlertLiveProjectStatusInputs,
 };
+use crate::common::Result;
 use crate::dashboard::{
     build_live_dashboard_domain_status_from_inputs, build_live_dashboard_read_failed_domain_status,
-    DEFAULT_PAGE_SIZE,
+    LiveDashboardProjectStatusInputs, DEFAULT_PAGE_SIZE,
 };
 use crate::datasource_live_project_status::{
     build_datasource_live_project_status_from_inputs,
-    build_live_datasource_read_failed_domain_status,
-    collect_live_datasource_project_status_inputs_with_request,
+    build_live_datasource_read_failed_domain_status, LiveDatasourceProjectStatusInputs,
 };
+use crate::grafana_api::{DashboardResourceClient, DatasourceResourceClient};
 use crate::http::JsonHttpClient;
 use crate::project_status::ProjectDomainStatus;
 use crate::project_status_freshness::ProjectStatusFreshnessSample;
@@ -27,12 +28,50 @@ use crate::sync::{
 
 use super::stamp_live_domain_freshness;
 
-pub(super) fn build_live_dashboard_status(client: &JsonHttpClient) -> ProjectDomainStatus {
-    match project_status_live::collect_live_dashboard_project_status_inputs(
-        client,
-        DEFAULT_PAGE_SIZE,
+struct LiveDashboardDatasourceReadPass {
+    dashboard_summaries: Result<Vec<Map<String, Value>>>,
+    datasources: Result<Vec<Map<String, Value>>>,
+    datasource_org_list: Vec<Map<String, Value>>,
+    datasource_current_org: Option<Map<String, Value>>,
+}
+
+fn collect_live_dashboard_datasource_read_pass(
+    client: &JsonHttpClient,
+) -> LiveDashboardDatasourceReadPass {
+    let dashboard_client = DashboardResourceClient::new(client);
+    let datasource_client = DatasourceResourceClient::new(client);
+    let dashboard_summaries = dashboard_client.list_dashboard_summaries(DEFAULT_PAGE_SIZE);
+    let datasources = datasource_client.list_datasources();
+    let (datasource_org_list, datasource_current_org) = if datasources.is_ok() {
+        (
+            datasource_client.list_orgs().unwrap_or_default(),
+            datasource_client.fetch_current_org().ok(),
+        )
+    } else {
+        (Vec::new(), None)
+    };
+
+    LiveDashboardDatasourceReadPass {
+        dashboard_summaries,
+        datasources,
+        datasource_org_list,
+        datasource_current_org,
+    }
+}
+
+fn build_live_dashboard_status_from_read_pass(
+    client: &JsonHttpClient,
+    read_pass: &LiveDashboardDatasourceReadPass,
+) -> ProjectDomainStatus {
+    match (
+        read_pass.dashboard_summaries.as_ref(),
+        read_pass.datasources.as_ref(),
     ) {
-        Ok(inputs) => {
+        (Ok(dashboard_summaries), Ok(datasources)) => {
+            let inputs = LiveDashboardProjectStatusInputs {
+                dashboard_summaries: dashboard_summaries.clone(),
+                datasources: datasources.clone(),
+            };
             let status = build_live_dashboard_domain_status_from_inputs(&inputs);
             let mut freshness_samples =
                 project_status_live::dashboard_project_status_freshness_samples(&inputs);
@@ -52,18 +91,23 @@ pub(super) fn build_live_dashboard_status(client: &JsonHttpClient) -> ProjectDom
             }
             stamp_live_domain_freshness(status, &freshness_samples)
         }
-        Err(_) => build_live_dashboard_read_failed_domain_status(
+        _ => build_live_dashboard_read_failed_domain_status(
             "live-dashboard-search",
             "restore dashboard search access, then re-run live status",
         ),
     }
 }
 
-pub(super) fn build_live_datasource_status(client: &JsonHttpClient) -> ProjectDomainStatus {
-    let status = match collect_live_datasource_project_status_inputs_with_request(
-        &mut |method, path, params, payload| client.request_json(method, path, params, payload),
-    ) {
-        Ok(inputs) => {
+fn build_live_datasource_status_from_read_pass(
+    read_pass: &LiveDashboardDatasourceReadPass,
+) -> ProjectDomainStatus {
+    let status = match read_pass.datasources.as_ref() {
+        Ok(datasources) => {
+            let inputs = LiveDatasourceProjectStatusInputs {
+                datasource_list: datasources.clone(),
+                org_list: read_pass.datasource_org_list.clone(),
+                current_org: read_pass.datasource_current_org.clone(),
+            };
             build_datasource_live_project_status_from_inputs(&inputs).unwrap_or_else(|| {
                 build_live_datasource_read_failed_domain_status(
                     "live-datasource-list",
@@ -77,6 +121,16 @@ pub(super) fn build_live_datasource_status(client: &JsonHttpClient) -> ProjectDo
         ),
     };
     stamp_live_domain_freshness(status, &[])
+}
+
+pub(super) fn build_live_dashboard_and_datasource_statuses(
+    client: &JsonHttpClient,
+) -> (ProjectDomainStatus, ProjectDomainStatus) {
+    let read_pass = collect_live_dashboard_datasource_read_pass(client);
+    (
+        build_live_dashboard_status_from_read_pass(client, &read_pass),
+        build_live_datasource_status_from_read_pass(&read_pass),
+    )
 }
 
 pub(super) fn build_live_alert_status(client: &JsonHttpClient) -> ProjectDomainStatus {

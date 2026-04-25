@@ -1,3 +1,5 @@
+use rayon::prelude::*;
+use rayon::ThreadPoolBuilder;
 #[cfg(test)]
 use reqwest::Method;
 use serde_json::{Map, Value};
@@ -9,6 +11,8 @@ use crate::sync::require_json_object;
 use crate::sync::{normalize_alert_managed_fields, normalize_alert_resource_identity_and_title};
 
 use super::SyncLiveClient;
+
+const ALERT_TEMPLATE_DETAIL_FETCH_CONCURRENCY: usize = 8;
 
 pub(super) fn append_alert_resource_specs_from_client(
     client: &SyncLiveClient<'_>,
@@ -37,13 +41,9 @@ pub(super) fn append_alert_resource_specs_from_client(
         client.get_notification_policies()?,
     )?);
 
-    for template in client.list_templates()? {
-        let name = template_name(&template)?;
-        specs.push(build_live_alert_resource_spec(
-            "alert-template",
-            client.get_template(name)?,
-        )?);
-    }
+    append_alert_template_specs_from_summaries(specs, client.list_templates()?, |name| {
+        client.get_template(name)
+    })?;
 
     Ok(())
 }
@@ -194,4 +194,133 @@ fn template_name(template: &Map<String, Value>) -> Result<&str> {
         .map(str::trim)
         .filter(|value| !value.is_empty())
         .ok_or_else(|| message("Live template payload is missing name."))
+}
+
+fn append_alert_template_specs_from_summaries<F>(
+    specs: &mut Vec<Value>,
+    templates: Vec<Map<String, Value>>,
+    fetch_template: F,
+) -> Result<()>
+where
+    F: Fn(&str) -> Result<Map<String, Value>> + Sync,
+{
+    let names = templates
+        .iter()
+        .map(|template| template_name(template).map(str::to_string))
+        .collect::<Result<Vec<_>>>()?;
+    if names.is_empty() {
+        return Ok(());
+    }
+
+    let pool = ThreadPoolBuilder::new()
+        .num_threads(ALERT_TEMPLATE_DETAIL_FETCH_CONCURRENCY)
+        .build()
+        .map_err(|error| {
+            message(format!(
+                "Failed to build alert template detail read worker pool: {error}"
+            ))
+        })?;
+    let reads = pool.install(|| {
+        names
+            .par_iter()
+            .map(|name| (name.clone(), fetch_template(name)))
+            .collect::<Vec<_>>()
+    });
+
+    let failures = reads
+        .iter()
+        .filter_map(|(name, result)| {
+            result
+                .as_ref()
+                .err()
+                .map(|error| format!("name={name}: {error}"))
+        })
+        .collect::<Vec<_>>();
+    if !failures.is_empty() {
+        return Err(message(format!(
+            "Failed to fetch {} alert template detail(s) after /api/v1/provisioning/templates: {}",
+            failures.len(),
+            failures.join("; ")
+        )));
+    }
+
+    let mut template_specs = Vec::new();
+    for (_, result) in reads {
+        template_specs.push(build_live_alert_resource_spec("alert-template", result?)?);
+    }
+    specs.extend(template_specs);
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn template_summary(name: &str) -> Map<String, Value> {
+        let mut object = Map::new();
+        object.insert("name".to_string(), Value::String(name.to_string()));
+        object
+    }
+
+    fn template_payload(name: &str) -> Map<String, Value> {
+        let mut object = Map::new();
+        object.insert("name".to_string(), Value::String(name.to_string()));
+        object.insert(
+            "template".to_string(),
+            Value::String(format!("{{{{ define \"{name}\" }}}}ok{{{{ end }}}}")),
+        );
+        object
+    }
+
+    #[test]
+    fn append_alert_template_specs_from_summaries_preserves_template_list_order() {
+        let mut specs = Vec::new();
+
+        append_alert_template_specs_from_summaries(
+            &mut specs,
+            vec![
+                template_summary("template-b"),
+                template_summary("template-a"),
+                template_summary("template-c"),
+            ],
+            |name| Ok(template_payload(name)),
+        )
+        .unwrap();
+
+        let names = specs
+            .iter()
+            .map(|spec| spec["name"].as_str().unwrap())
+            .collect::<Vec<_>>();
+        assert_eq!(names, vec!["template-b", "template-a", "template-c"]);
+    }
+
+    #[test]
+    fn append_alert_template_specs_from_summaries_aggregates_detail_failures() {
+        let mut specs = vec![serde_json::json!({"kind": "alert-policy"})];
+
+        let error = append_alert_template_specs_from_summaries(
+            &mut specs,
+            vec![
+                template_summary("template-a"),
+                template_summary("template-b"),
+                template_summary("template-c"),
+            ],
+            |name| {
+                if name == "template-b" || name == "template-c" {
+                    Err(message(format!("boom {name}")))
+                } else {
+                    Ok(template_payload(name))
+                }
+            },
+        )
+        .unwrap_err()
+        .to_string();
+
+        assert!(error.contains(
+            "Failed to fetch 2 alert template detail(s) after /api/v1/provisioning/templates"
+        ));
+        assert!(error.contains("name=template-b: boom template-b"));
+        assert!(error.contains("name=template-c: boom template-c"));
+        assert_eq!(specs, vec![serde_json::json!({"kind": "alert-policy"})]);
+    }
 }

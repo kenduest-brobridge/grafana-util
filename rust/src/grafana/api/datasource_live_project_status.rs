@@ -1,10 +1,16 @@
+#[cfg(test)]
 use reqwest::Method;
+#[cfg(test)]
 use serde_json::Value;
 
+#[cfg(test)]
 use crate::common::{message, Result};
+#[cfg(test)]
 use crate::datasource_live_project_status::LiveDatasourceProjectStatusInputs;
+#[cfg(test)]
 use crate::grafana_api::project_status_live as project_status_live_support;
 
+#[cfg(test)]
 pub(crate) fn collect_live_datasource_project_status_inputs_with_request<F>(
     request_json: &mut F,
 ) -> Result<LiveDatasourceProjectStatusInputs>

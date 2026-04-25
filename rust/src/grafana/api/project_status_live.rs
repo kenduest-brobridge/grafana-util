@@ -5,9 +5,9 @@
 
 use crate::common::{message, value_as_object, Result};
 use crate::dashboard::LiveDashboardProjectStatusInputs;
-use crate::grafana_api::{
-    AccessResourceClient, AlertingResourceClient, DashboardResourceClient, DatasourceResourceClient,
-};
+#[cfg(test)]
+use crate::grafana_api::DatasourceResourceClient;
+use crate::grafana_api::{AccessResourceClient, AlertingResourceClient, DashboardResourceClient};
 use crate::http::JsonHttpClient;
 use crate::project_status_freshness::ProjectStatusFreshnessSample;
 use reqwest::Method;
@@ -254,6 +254,7 @@ pub(crate) fn list_visible_orgs(client: &JsonHttpClient) -> Result<Vec<Map<Strin
     AccessResourceClient::new(client).list_orgs()
 }
 
+#[cfg(test)]
 pub(crate) fn collect_live_dashboard_project_status_inputs(
     client: &JsonHttpClient,
     page_size: usize,
@@ -348,6 +349,7 @@ pub(crate) fn fetch_current_org(client: &JsonHttpClient) -> Result<Map<String, V
     AccessResourceClient::new(client).fetch_current_org()
 }
 
+#[cfg(test)]
 pub(crate) fn fetch_current_org_with_request<F>(request_json: &mut F) -> Result<Map<String, Value>>
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,

@@ -31,7 +31,8 @@ use super::export_render::{format_export_progress_line, format_export_verbose_li
 use super::{
     build_all_orgs_output_dir, build_permission_bundle_document, build_provisioning_config,
     build_used_datasource_summaries, collect_library_panel_exports_with_request,
-    collect_permission_export_documents, write_yaml_document,
+    collect_permission_export_documents, collect_permission_export_documents_with_fetcher,
+    write_yaml_document, PermissionExportTarget,
 };
 
 pub(crate) struct ScopeExportResult {
@@ -48,6 +49,46 @@ pub(crate) fn export_dashboards_in_scope_with_request<F>(
 ) -> Result<ScopeExportResult>
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
+{
+    export_dashboards_in_scope_with_optional_permission_fetcher(
+        request_json,
+        args,
+        org,
+        org_id_override,
+        Option::<&fn(&PermissionExportTarget) -> Result<Vec<Map<String, Value>>>>::None,
+    )
+}
+
+pub(crate) fn export_dashboards_in_scope_with_permission_fetcher<F, P>(
+    request_json: &mut F,
+    args: &ExportArgs,
+    org: Option<&Map<String, Value>>,
+    org_id_override: Option<i64>,
+    permission_fetcher: &P,
+) -> Result<ScopeExportResult>
+where
+    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
+    P: Fn(&PermissionExportTarget) -> Result<Vec<Map<String, Value>>> + Sync,
+{
+    export_dashboards_in_scope_with_optional_permission_fetcher(
+        request_json,
+        args,
+        org,
+        org_id_override,
+        Some(permission_fetcher),
+    )
+}
+
+fn export_dashboards_in_scope_with_optional_permission_fetcher<F, P>(
+    request_json: &mut F,
+    args: &ExportArgs,
+    org: Option<&Map<String, Value>>,
+    org_id_override: Option<i64>,
+    permission_fetcher: Option<&P>,
+) -> Result<ScopeExportResult>
+where
+    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
+    P: Fn(&PermissionExportTarget) -> Result<Vec<Map<String, Value>>> + Sync,
 {
     if args.without_dashboard_raw
         && args.without_dashboard_prompt
@@ -119,6 +160,12 @@ where
     let folder_paths_by_key = build_folder_paths_by_inventory_key(&folder_inventory);
     let permission_documents = if args.without_dashboard_raw || args.dry_run {
         Vec::new()
+    } else if let Some(permission_fetcher) = permission_fetcher {
+        collect_permission_export_documents_with_fetcher(
+            &summaries,
+            &folder_inventory,
+            permission_fetcher,
+        )?
     } else {
         collect_permission_export_documents(&mut scoped_request, &summaries, &folder_inventory)?
     };

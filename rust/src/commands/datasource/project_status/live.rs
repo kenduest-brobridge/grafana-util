@@ -7,9 +7,12 @@
 //!   response, fall back to a single live read response when needed, and only
 //!   derive counts that are directly visible in the payloads.
 
+#[cfg(test)]
 use serde_json::Value;
 
+#[cfg(test)]
 use crate::common::Result;
+#[cfg(test)]
 use crate::grafana_api::datasource_live_project_status as datasource_live_project_status_support;
 
 #[path = "live_analysis.rs"]
@@ -23,6 +26,7 @@ pub(crate) use analysis::{
     LiveDatasourceProjectStatusInputs,
 };
 
+#[cfg(test)]
 pub(crate) fn collect_live_datasource_project_status_inputs_with_request<F>(
     request_json: &mut F,
 ) -> Result<LiveDatasourceProjectStatusInputs>
