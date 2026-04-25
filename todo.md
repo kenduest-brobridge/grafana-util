@@ -26,28 +26,32 @@ Scope rules:
 - Output contracts have root and nested-path validation through `requiredFields`, `requiredPaths`, `pathTypes`, and golden fixtures.
 - Oversized Rust test facades and test-only `pub(crate)` visibility have been
   reduced. Do not re-open those unless a new mixed-responsibility hotspot appears.
-- Remaining risk is mostly maintainability: the remaining status producers,
-  TUI input/render modules, live apply paths, read-throughput hotspots, and
-  overlapping contract systems.
+- Recent Rust re-layering has reduced the immediate dashboard directory
+  structure risk across browse, inspect workbench, governance gate, live status,
+  and topology. Do not continue fine-grained file splitting unless a fresh
+  responsibility-boundary review proves it is needed.
+- Remaining risk is now mostly product and architecture alignment: dashboard
+  source ownership/Git Sync routing, workspace/status/overview ownership,
+  mutation review adapters, live-read throughput, and cross-domain balance.
 
-## First Priority - Rust Deficit Audit
+## First Priority - Architecture Deficit Audit
 
-This is the current first-priority Rust backlog. Treat it as the ordering lens
-before taking new architecture or cleanup work.
+This is the current first-priority backlog. Treat it as the ordering lens
+before taking new cleanup work. The next phase should favor product/architecture
+capability over more mechanical module reshaping.
 
 Observed gaps:
 
-- [ ] Dashboard remains the heaviest domain and the highest maintenance risk.
-  The issue is not line count alone; dashboard owns export/import, inspect,
-  governance, topology, live review, TUI, screenshot, and source-alignment
-  behavior in one broad surface.
+- [ ] Dashboard remains the heaviest product domain, but the next risk is not
+  file size. The main risk is source ownership: API-managed dashboards,
+  file-provisioned dashboards, and Git Sync-managed dashboards must route to the
+  correct review/apply path.
 - [ ] Grafana 13 Git Sync ownership is now guarded in dashboard import/plan
   paths. Remaining Git Sync work is broader dashboard/workspace source routing,
   export layout, and operator docs, not the direct-write safety guard.
-- [ ] Crate-root internal module routing is heavy. `rust/src/lib.rs` documents
-  the facade boundaries, but many crate-private modules are still mounted from
-  the root with `#[path = ...]`, so new shared surfaces should be added
-  conservatively and kept domain-local where possible.
+- [ ] Crate-root and domain facade routing should stay stable. Avoid moving
+  shared surfaces to crate root unless they are already proven across domains
+  and documented as shared architecture.
 - [ ] TUI/browser feature surfaces are broad. Default `tui` and optional
   `browser` builds are supported release lanes, so any TUI/browser-adjacent
   change must validate the feature matrix, not just default tests.
@@ -55,67 +59,182 @@ Observed gaps:
   templates, dashboard/folder permission export reads, and a shared
   dashboard/datasource all-org read pass. Remaining transport risk is proven
   hot spots only.
-- [ ] Mutation review envelopes remain domain-shaped. A shared adapter should
-  wait until dashboard/datasource/access/alert/workspace prove the same shape.
+- [ ] Mutation review envelopes remain domain-shaped. A shared internal adapter
+  should be introduced only after workspace plus one concrete domain prove the
+  same action/status/reason/risk shape.
 - [ ] Production assumptions need opportunistic cleanup. Most `unwrap`,
   `expect`, and `panic` occurrences are tests or hard-coded regex assertions,
   but touched live/operator paths should prefer `Result` errors over panic.
 
 First-priority handling order:
 
-- [ ] Continue dashboard inspect/governance/report splits across one stable
-  responsibility boundary at a time. The topology impact builder and
-  inspect-summary projection/document/row builders are already separated.
-- [ ] Keep mutation review envelope, dashboard v2 adapter, and broader shared
-  status producer adoption deferred until the earlier boundaries prove stable.
+- [ ] First complete a dashboard source-ownership matrix across import, plan,
+  export/layout, workspace, live inventory, and docs.
+- [ ] Then implement the smallest missing source-ownership route, preferably a
+  read/review path before a write/apply path.
+- [ ] Then introduce one internal mutation-review adapter over an already-stable
+  domain output without changing public JSON.
+- [ ] Defer dashboard v2 and broad shared-status rewrites until source
+  ownership and review adapters are stable.
 
 ## Active Execution Queue
 
 Run the next development passes in this order unless a CI failure or user report
 changes priority.
 
-- [ ] Continue dashboard inspect/governance/report code splits only where a
-  stable responsibility boundary is obvious. Report model, query-report
-  collection, query-report output rendering, query analyzer, inspect governance report internals,
-  inspect-summary projection, dependency output rendering, topology impact,
-  governance gate rules/TUI, and governance gate runner/output support are
-  done; keep `commands/dashboard/mod.rs` as the facade for later moves.
-- [ ] Keep the mutation review envelope adapter work later and only introduce a shared adapter once two or more domains prove the same review shape.
-- [ ] Keep dashboard v2 as a future adapter boundary. Continue rejecting v2-shaped input in the classic prompt lane and keep prompt export parity guarded with fixtures and tests.
+- [ ] P0: Build the dashboard source-ownership matrix. Record current behavior
+  and missing ownership evidence for import, plan, export layout,
+  workspace/sync, live inventory, and operator docs.
+- [ ] P0: Extend one missing source-ownership read/review path. Prefer
+  workspace source-bundle/preview ownership evidence before direct live writes.
+- [ ] P1: Add an internal mutation-review adapter for workspace plus one domain
+  plan/review output. Start with datasource plan internal projection and do not
+  change public JSON contracts in the first pass.
+- [ ] P1: Normalize the status producer model only where a domain-owned signal
+  already exists and can feed shared `status` aggregation without moving live
+  collection into the shared trait.
+- [ ] P1: Improve live status diagnostics before changing read concurrency.
+  Preserve deterministic output ordering and keep write/apply/import serial.
+- [ ] P2: Revisit dashboard v2 as a separate adapter boundary. Continue
+  rejecting v2-shaped input in the classic prompt lane until fixtures and tests
+  prove a clean migration path.
+- [ ] P2: Perform more dashboard directory re-layering only after the
+  pre-split checklist proves a mixed-responsibility hotspot remains.
 
-Detailed execution items:
+## Next Architecture Checklists
 
-- Dashboard inspect/governance/report re-layering:
-  - [ ] Use a fresh inventory of remaining inspect, governance, report,
-    topology, and policy modules before each later move; topology impact,
-    inspect-summary projection, and dependency output rendering are already
-    split.
-  - [ ] Choose exactly one next boundary; remaining candidates should be based
-    on a fresh inventory because the obvious governance gate runner/output
-    boundary is already separated from the facade.
-  - [ ] Use `git mv` for tracked moves and keep `commands/dashboard/mod.rs`
-    as the facade.
-  - [ ] Keep public CLI/help unchanged; if help changes accidentally, back out
-    wording changes or update docs/contracts in the same commit.
-- Read-only HTTP throughput:
-  - [ ] Preserve deterministic output ordering after concurrent fetches.
-  - [ ] Keep write/apply/import requests serial.
-  - [ ] Gate any default concurrency value behind a conservative constant and
-    live smoke it against the fixed Grafana container.
-  - [ ] Add tests for partial read failures so the first useful diagnostic is
-    still visible.
-## Rust Architecture Follow-up Checklist
+Use these checklists for workers. Each item should be a focused commit group
+with narrow validation and a final full Rust test run when code changes.
 
-Use this checklist for the next Rust maintenance passes. Keep each checked item
-as a focused commit group with narrow validation.
+### P0 - Dashboard Source Ownership Matrix
+
+- [ ] Inventory existing ownership evidence in `dashboard/import/target.rs` and
+  identify every caller that consumes `ownership=...` evidence.
+- [ ] Check dashboard import/apply direct-write behavior for API-managed,
+  file-provisioned, Git Sync-managed, and unknown-managed targets.
+- [ ] Check dashboard plan behavior for the same ownership classes.
+- [ ] Check export/layout conversion behavior for Git Sync tree input and
+  whether the output can be reviewed without pretending it is an API export.
+- [ ] Check workspace/sync dashboard apply paths for missing ownership
+  evidence before live writes.
+- [ ] Check live inventory/review outputs for ownership/provenance visibility.
+- [ ] Check operator docs/help for clear routing: Git Sync targets go through
+  repository/PR workflow; API-managed targets may use direct API apply.
+- [x] Produce a short implementation order with one read/review gap first and
+  one write/apply gap later.
+- [ ] First implementation: propagate dashboard ownership/provenance from
+  dashboard export indexes into workspace source-bundle/preview specs and
+  review output.
+- [ ] Later implementation: add dashboard ownership preflight to workspace live
+  apply before POST/DELETE, reusing dashboard import/plan ownership semantics.
+
+### P0 - Source Ownership Implementation
+
+- [ ] Add or extend typed ownership evidence instead of passing ad hoc strings
+  where a stable model already exists.
+- [ ] Preserve export index `ownership` and `provenance` when normalizing
+  dashboard bundle items for workspace/source-bundle review.
+- [ ] Surface ownership/provenance in workspace preview/review before changing
+  live write behavior.
+- [ ] Keep direct write blocked by default for file-provisioned and Git
+  Sync-managed dashboards.
+- [ ] Keep managed-unknown as warning unless a path proves it must be blocked.
+- [ ] Preserve existing API-managed import/apply behavior.
+- [ ] Add tests for all ownership classes before changing write behavior.
+- [ ] If output JSON changes, update contracts/fixtures and run
+  `make quality-output-contracts`.
+
+### P1 - Workspace / Status / Overview Boundary
+
+- [x] Audit current public/user-facing references to `workspace`, `status`,
+  `status overview`, `sync`, and `project-status`.
+- [ ] Clean up user-facing drift: avoid `project status` and `staged sync`
+  wording in normal help/docs unless the text is explicitly schema or
+  compatibility-related.
+- [ ] Keep schema/contract references to `project-status`,
+  `grafana-util-project-status`, and `grafana-utils-sync-*` when they describe
+  existing wire shapes.
+- [ ] Keep `workspace` as the public staged change workflow surface.
+- [ ] Keep `sync` as internal runtime/JSON compatibility naming unless a
+  deliberate contract migration is planned.
+- [ ] Keep shared staged/live aggregation under `status`, not `overview`.
+- [ ] Keep `overview` as human-first projection and handoff surface.
+- [ ] When replacing stale docs/help, use public terms only unless the text is
+  explicitly maintainer-only or compatibility-related.
+
+### P1 - Internal Mutation Review Adapter
+
+- [x] Pick one existing normalized shape as the seed, likely
+  `ReviewMutationAction`.
+- [x] Map workspace review actions into the adapter without changing public JSON.
+- [ ] Map datasource plan actions into an internal `ReviewMutationAction`
+  projection without adding a public `review` field to datasource plan JSON.
+- [ ] Keep `raw` payload available for domain-specific evidence.
+- [ ] Add `risk` only after real risk evidence exists in at least two domains.
+- [ ] Avoid introducing public `ReviewRequest` until two mutation-review domains
+  prove the same request fields.
+- [ ] Add adapter tests that assert action, status, reason, identity, ordering,
+  and blocked-reason behavior.
+
+### P1 - Status Producer Model
+
+- [ ] Keep domain-owned collection outside the shared producer trait.
+- [ ] Keep multi-org live transport outside the shared producer trait.
+- [ ] Feed domain-owned signals into shared `status` aggregation only after the
+  domain has a stable staged or live status row.
+- [ ] Avoid moving overview-specific projection into `status`.
+- [ ] Add focused tests for any new domain producer before changing overview.
+
+### P1 - Live Status Diagnostics And Read-Only Throughput
+
+- [x] Identify the exact hot spot before changing concurrency or transport
+  behavior.
+- [ ] Correct outdated assumptions before implementation: `JsonHttpClient`
+  already uses `response.bytes()` plus `serde_json::from_slice`, compression is
+  enabled through reqwest features, and no explicit `Accept-Encoding: identity`
+  or `http1_only()` setting is present.
+- [ ] First implementation: preserve the first useful underlying HTTP/API error
+  when live status all-org or dashboard/datasource read-pass paths fall back to
+  `live-read-failed`.
+- [ ] Defer new all-org concurrency until diagnostics are clear and live smoke
+  can confirm rate-limit behavior.
+- [ ] Preserve deterministic output ordering after concurrent reads.
+- [ ] Keep write/apply/import requests serial.
+- [ ] Use a conservative default concurrency constant and document why it is
+  safe.
+- [ ] Add partial-failure tests that keep the first useful diagnostic visible.
+- [ ] Run `cargo test --manifest-path rust/Cargo.toml --quiet http`.
+- [ ] Run `cargo test --manifest-path rust/Cargo.toml --quiet sync_live`.
+- [ ] Run `cargo test --manifest-path rust/Cargo.toml --quiet dashboard`.
+- [ ] Run `cargo test --manifest-path rust/Cargo.toml --quiet status`.
+- [ ] Run live smoke against a fixed local Grafana container before changing
+  default concurrency.
+
+### P2 - Dashboard v2 Adapter Boundary
+
+- [ ] Add focused tests proving v2 rejection coverage for raw import,
+  provisioning import, dashboard plan raw/source, and dependency preflight.
+- [ ] Centralize v2 detection so raw-to-prompt, validate/import, plan, and
+  provisioning lanes share one rejection rule.
+- [ ] Keep dashboard v2 rejected in classic prompt/raw/provisioning lanes until
+  a dedicated adapter exists.
+- [ ] Anchor fixtures to Grafana source testdata for datasource variables,
+  selected current datasource handling, library panels, and v2 rejection.
+- [ ] Keep provisioning as a derived projection, not the source-of-truth
+  dashboard contract.
+- [ ] Keep live library-panel `__elements` lookup limited to live export /
+  import-handoff paths.
+- [ ] Add adapter tests before allowing any v2-shaped import/export path.
 
 ### P2 - Dashboard Directory Re-layering
 
-- [ ] Continue moving inspect/governance/report files into clearer
-  inspect/governance boundaries only when imports remain manageable.
-- [ ] Keep `commands/dashboard/mod.rs` as the public facade and avoid changing
-  CLI command paths.
-- [ ] Use `git mv` for tracked file moves.
+- [ ] Do not split files only because they are large.
+- [ ] Use a fresh inventory before any later move.
+- [ ] Choose exactly one mixed-responsibility boundary per commit.
+- [ ] Use `git mv` for tracked moves.
+- [ ] Keep `commands/dashboard/mod.rs` as the public facade.
+- [ ] Keep public CLI/help/docs unchanged unless the task explicitly targets
+  those surfaces.
 - [ ] Run focused dashboard suites and parser/help tests.
 - [ ] Run full Rust tests after the move.
 
