@@ -321,7 +321,9 @@ DIFF_OUTPUT_FORMAT_CHOICES = ("text", "json")
 INSPECT_OUTPUT_FORMAT_CHOICES = (
     "text",
     "table",
+    "csv",
     "json",
+    "yaml",
     "report-table",
     "report-csv",
     "report-json",
@@ -333,6 +335,7 @@ INSPECT_OUTPUT_FORMAT_CHOICES = (
     "report-dependency-json",
     "governance",
     "governance-json",
+    "queries-json",
 )
 VARIABLE_OUTPUT_FORMAT_CHOICES = ("table", "csv", "json")
 SCREENSHOT_OUTPUT_FORMAT_CHOICES = ("png", "jpeg", "pdf")
@@ -575,6 +578,7 @@ class SummaryHelpFullAction(argparse.Action):
             examples = (
                 SUMMARY_LIVE_HELP_FULL_EXAMPLES
                 if getattr(namespace, "import_dir", None) is None
+                and getattr(namespace, "input_dir", None) is None
                 else SUMMARY_EXPORT_HELP_FULL_EXAMPLES
             )
         if examples:
@@ -1160,12 +1164,49 @@ def add_summary_cli_args(parser: argparse.ArgumentParser) -> None:
     """Add summary cli args implementation for live and export analysis."""
     add_common_cli_args(parser)
     parser.add_argument(
+        "--input-dir",
         "--import-dir",
+        dest="input_dir",
         default=None,
         help=(
-            "Analyze dashboards from this raw export directory. "
-            f"Point this to the {RAW_EXPORT_SUBDIR}/ export directory explicitly. "
+            "Analyze dashboards from this directory instead of live Grafana. "
+            f"Use {RAW_EXPORT_SUBDIR}/ export directory explicitly, a dashboard export root, "
+            "a provisioning tree, or a Git Sync dashboard tree. "
             "Omit this flag to inspect live Grafana instead."
+        ),
+    )
+    parser.add_argument(
+        "--local",
+        action="store_true",
+        help="Analyze dashboards from the latest artifact workspace dashboard run instead of live Grafana.",
+    )
+    parser.add_argument(
+        "--run",
+        choices=("latest", "timestamp"),
+        default=None,
+        help="Analyze dashboards from an artifact workspace dashboard run selected by latest or timestamp.",
+    )
+    parser.add_argument(
+        "--run-id",
+        default=None,
+        help="Analyze dashboards from this explicit artifact workspace run id.",
+    )
+    parser.add_argument(
+        "--input-type",
+        choices=("raw", "source"),
+        default=None,
+        help=(
+            "When --input-dir points at a dashboard export root that contains multiple variants, "
+            "select raw/ or source/prompt dashboards for summary."
+        ),
+    )
+    parser.add_argument(
+        "--input-format",
+        choices=("raw", "provisioning", "git-sync"),
+        default="raw",
+        help=(
+            "Interpret --input-dir as raw export files, Grafana file-provisioning artifacts, "
+            "or a repo-backed Git Sync dashboard tree."
         ),
     )
     parser.add_argument(
@@ -1173,6 +1214,22 @@ def add_summary_cli_args(parser: argparse.ArgumentParser) -> None:
         type=int,
         default=DEFAULT_PAGE_SIZE,
         help=f"Dashboard search page size (default: {DEFAULT_PAGE_SIZE}).",
+    )
+    parser.add_argument(
+        "--concurrency",
+        type=int,
+        default=8,
+        help="Maximum parallel dashboard fetch workers when summary reads live Grafana (default: 8).",
+    )
+    parser.add_argument(
+        "--org-id",
+        default=None,
+        help="Summarize dashboards from this Grafana organization ID when reading live Grafana.",
+    )
+    parser.add_argument(
+        "--all-orgs",
+        action="store_true",
+        help="Enumerate all visible Grafana organizations and summarize dashboards across them.",
     )
     parser.add_argument(
         "--help-full",
@@ -1194,9 +1251,9 @@ def add_summary_cli_args(parser: argparse.ArgumentParser) -> None:
         default=None,
         help=(
             "Single-flag output selector for summary output. "
-            "Use text, table, json, report-table, report-csv, report-json, "
-            "report-tree, report-tree-table, dependency, dependency-json, "
-            "governance, or governance-json. "
+            "Use text, table, csv, json, yaml, report-tree, report-tree-table, "
+            "dependency, dependency-json, governance, governance-json, "
+            "or queries-json. "
             "Use this instead of the legacy output flags. "
             "This cannot be combined with hidden legacy output flags."
         ),
@@ -1205,7 +1262,7 @@ def add_summary_cli_args(parser: argparse.ArgumentParser) -> None:
         "--report-columns",
         default=None,
         help=(
-            "With report-table, report-csv, or report-tree-table --output-format values, "
+            "With report-table, report-csv, report-tree-table, or table-like --report values, "
             "render only these comma-separated report columns. "
             "Supported values: %s. Snake_case aliases like %s are also accepted."
             % (
@@ -1222,10 +1279,16 @@ def add_summary_cli_args(parser: argparse.ArgumentParser) -> None:
         ),
     )
     parser.add_argument(
+        "--list-columns",
+        action="store_true",
+        help="Print supported --report-columns values and exit.",
+    )
+    parser.add_argument(
         "--report-filter-datasource",
         default=None,
         help=(
-            "With report-like --output-format values, only include query report rows whose datasource label, "
+            "With table, csv, report-tree-table, dependency, dependency-json, governance, governance-json, "
+            "or queries-json output-format values, only include query report rows whose datasource label, "
             "uid, type, or family exactly matches this value."
         ),
     )
@@ -1233,7 +1296,8 @@ def add_summary_cli_args(parser: argparse.ArgumentParser) -> None:
         "--report-filter-panel-id",
         default=None,
         help=(
-            "With report-like --output-format values, only include query report rows whose panel id "
+            "With table, csv, report-tree-table, dependency, dependency-json, governance, governance-json, "
+            "or queries-json output-format values, only include query report rows whose panel id "
             "exactly matches this value."
         ),
     )
@@ -1250,12 +1314,28 @@ def add_summary_cli_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--no-header",
         action="store_true",
-        help="With table-like --output-format values, omit the per-section table header rows.",
+        help="With table-like --output-format values, such as table, csv, or report-tree-table, "
+        "omit the per-section table header rows.",
     )
     parser.add_argument(
         "--output-file",
         default=None,
         help="Write summary output to this file while still printing to stdout.",
+    )
+    parser.add_argument(
+        "--also-stdout",
+        action="store_true",
+        help="Accepted for Rust CLI compatibility; Python summary already prints stdout when --output-file is set.",
+    )
+    parser.add_argument(
+        "--interactive",
+        action="store_true",
+        help="Open the interactive summary workbench over the summarized dashboard set.",
+    )
+    parser.add_argument(
+        "--progress",
+        action="store_true",
+        help="Show concise per-dashboard live summary progress while fetching dashboards.",
     )
 
 
@@ -2019,16 +2099,49 @@ def add_analyze_cli_args(parser: argparse.ArgumentParser) -> None:
         help="Analyze dashboards from this directory instead of live Grafana.",
     )
     parser.add_argument(
+        "--local",
+        action="store_true",
+        help="Analyze dashboards from the latest artifact workspace dashboard run instead of live Grafana.",
+    )
+    parser.add_argument(
+        "--run",
+        choices=("latest", "timestamp"),
+        default=None,
+        help="Analyze dashboards from an artifact workspace dashboard run selected by latest or timestamp.",
+    )
+    parser.add_argument(
+        "--run-id",
+        default=None,
+        help="Analyze dashboards from this explicit artifact workspace run id.",
+    )
+    parser.add_argument(
+        "--input-type",
+        choices=("raw", "source"),
+        default=None,
+        help="When --input-dir points at a dashboard export root, select raw/ or source/prompt dashboards.",
+    )
+    parser.add_argument(
         "--input-format",
-        choices=("raw", "provisioning"),
+        choices=("raw", "provisioning", "git-sync"),
         default="raw",
-        help="Interpret --input-dir as raw export files or Grafana file-provisioning artifacts.",
+        help="Interpret --input-dir as raw export files, Grafana file-provisioning artifacts, or a Git Sync dashboard tree.",
     )
     parser.add_argument(
         "--page-size",
         type=int,
         default=DEFAULT_PAGE_SIZE,
         help="Dashboard search page size when analyze reads live Grafana.",
+    )
+    parser.add_argument(
+        "--concurrency",
+        type=int,
+        default=8,
+        help="Maximum parallel dashboard fetch workers when analyze reads live Grafana.",
+    )
+    parser.add_argument(
+        "--org-id",
+        default=None,
+        help="Analyze dashboards from this Grafana organization ID when reading live Grafana.",
     )
     parser.add_argument(
         "--all-orgs",
@@ -2039,6 +2152,11 @@ def add_analyze_cli_args(parser: argparse.ArgumentParser) -> None:
         "--report-columns",
         default=None,
         help="Limit the query report to selected columns for table-like output.",
+    )
+    parser.add_argument(
+        "--list-columns",
+        action="store_true",
+        help="Print supported --report-columns values and exit.",
     )
     parser.add_argument(
         "--report-filter-datasource",
@@ -2065,6 +2183,16 @@ def add_analyze_cli_args(parser: argparse.ArgumentParser) -> None:
         "--output-file",
         default=None,
         help="Write analysis output to this file.",
+    )
+    parser.add_argument(
+        "--also-stdout",
+        action="store_true",
+        help="Accepted for Rust CLI compatibility; Python analysis already prints stdout when --output-file is set.",
+    )
+    parser.add_argument(
+        "--progress",
+        action="store_true",
+        help="Show concise per-dashboard live analysis progress while fetching dashboards.",
     )
 
 
@@ -2503,12 +2631,28 @@ def publish_command(args: argparse.Namespace) -> int:
 
 def analyze_command(args: argparse.Namespace) -> int:
     """Analyze dashboards from live Grafana or a local export tree."""
-    if getattr(args, "input_dir", None):
+    if bool(getattr(args, "list_columns", False)):
+        print("\n".join(SUPPORTED_REPORT_COLUMN_VALUES))
+        return 0
+    if (
+        getattr(args, "input_dir", None)
+        or getattr(args, "local", False)
+        or getattr(args, "run", None)
+        or getattr(args, "run_id", None)
+    ):
         inspect_args = argparse.Namespace(
             import_dir=args.input_dir,
+            local=bool(getattr(args, "local", False)),
+            run=getattr(args, "run", None),
+            run_id=getattr(args, "run_id", None),
+            profile=getattr(args, "profile", None),
+            config=getattr(args, "config", None),
+            input_type=getattr(args, "input_type", None),
+            input_format=getattr(args, "input_format", "raw"),
             report=None,
             output_format=args.output_format,
             output_file=getattr(args, "output_file", None),
+            also_stdout=bool(getattr(args, "also_stdout", False)),
             report_columns=getattr(args, "report_columns", None),
             report_filter_datasource=getattr(args, "report_filter_datasource", None),
             report_filter_panel_id=getattr(args, "report_filter_panel_id", None),
@@ -2531,11 +2675,12 @@ def analyze_command(args: argparse.Namespace) -> int:
         report_columns=getattr(args, "report_columns", None),
         report_filter_datasource=getattr(args, "report_filter_datasource", None),
         report_filter_panel_id=getattr(args, "report_filter_panel_id", None),
-        progress=False,
+        progress=bool(getattr(args, "progress", False)),
+        concurrency=getattr(args, "concurrency", 8),
         help_full=False,
         no_header=bool(getattr(args, "no_header", False)),
         output_file=getattr(args, "output_file", None),
-        also_stdout=False,
+        also_stdout=bool(getattr(args, "also_stdout", False)),
         interactive=bool(getattr(args, "interactive", False)),
     )
     return inspect_live(inspect_args)
@@ -3116,6 +3261,43 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
     args = parser.parse_args(argv)
     if getattr(args, "command", None) == "browse":
         args.input = getattr(args, "input_dir", None)
+    if getattr(args, "command", None) == "summary":
+        args.import_dir = getattr(args, "input_dir", None)
+        artifact_selected = bool(
+            getattr(args, "local", False)
+            or getattr(args, "run", None)
+            or getattr(args, "run_id", None)
+        )
+        if args.import_dir and artifact_selected:
+            parser.error("--input-dir cannot be combined with --local, --run, or --run-id.")
+        if getattr(args, "run", None) and getattr(args, "run_id", None):
+            parser.error("--run cannot be combined with --run-id.")
+        if getattr(args, "also_stdout", False) and not getattr(args, "output_file", None):
+            parser.error("--also-stdout requires --output-file.")
+        if args.import_dir and (getattr(args, "org_id", None) or getattr(args, "all_orgs", False)):
+            parser.error("--org-id and --all-orgs are only supported when summary reads live Grafana.")
+        if artifact_selected and (getattr(args, "org_id", None) or getattr(args, "all_orgs", False)):
+            parser.error("--org-id and --all-orgs are only supported when summary reads live Grafana.")
+        if getattr(args, "org_id", None) and getattr(args, "all_orgs", False):
+            parser.error("--org-id cannot be combined with --all-orgs.")
+    if getattr(args, "command", None) == "analyze":
+        artifact_selected = bool(
+            getattr(args, "local", False)
+            or getattr(args, "run", None)
+            or getattr(args, "run_id", None)
+        )
+        if getattr(args, "input_dir", None) and artifact_selected:
+            parser.error("--input-dir cannot be combined with --local, --run, or --run-id.")
+        if getattr(args, "run", None) and getattr(args, "run_id", None):
+            parser.error("--run cannot be combined with --run-id.")
+        if getattr(args, "also_stdout", False) and not getattr(args, "output_file", None):
+            parser.error("--also-stdout requires --output-file.")
+        if (getattr(args, "input_dir", None) or artifact_selected) and (
+            getattr(args, "org_id", None) or getattr(args, "all_orgs", False)
+        ):
+            parser.error("--org-id and --all-orgs are only supported when analyze reads live Grafana.")
+        if getattr(args, "org_id", None) and getattr(args, "all_orgs", False):
+            parser.error("--org-id cannot be combined with --all-orgs.")
     _normalize_output_format_args(args, parser)
     _validate_import_routing_args(args, parser)
     _parse_dashboard_list_output_columns(args, parser)
@@ -3446,11 +3628,17 @@ def _build_inspection_workflow_deps() -> dict[str, Any]:
 
 def inspect_live(args: argparse.Namespace) -> int:
     """Inspect live Grafana dashboards by reusing the raw-export inspection pipeline."""
+    if bool(getattr(args, "list_columns", False)):
+        print("\n".join(SUPPORTED_REPORT_COLUMN_VALUES))
+        return 0
     return run_inspect_live(args, _build_inspection_workflow_deps())
 
 
 def inspect_export(args: argparse.Namespace) -> int:
     """Inspect one raw export directory and summarize dashboards, folders, and datasources."""
+    if bool(getattr(args, "list_columns", False)):
+        print("\n".join(SUPPORTED_REPORT_COLUMN_VALUES))
+        return 0
     return run_inspect_export(args, _build_inspection_workflow_deps())
 
 
@@ -4017,7 +4205,13 @@ def main(argv: Optional[list[str]] = None) -> int:
         if args.command == "list":
             return list_dashboards(args)
         if args.command == "summary":
-            if getattr(args, "import_dir", None):
+            if (
+                getattr(args, "input_dir", None)
+                or getattr(args, "import_dir", None)
+                or getattr(args, "local", False)
+                or getattr(args, "run", None)
+                or getattr(args, "run_id", None)
+            ):
                 return inspect_export(args)
             return inspect_live(args)
         if args.command == "variables":

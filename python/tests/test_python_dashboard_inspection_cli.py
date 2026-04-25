@@ -2,6 +2,7 @@ import argparse
 import importlib
 import io
 import json
+import os
 import re
 import tempfile
 import unittest
@@ -478,7 +479,158 @@ class DashboardInspectionTests(unittest.TestCase):
 
             self.assertEqual(result, 0)
             self.assertTrue(output_file.exists())
+            self.assertEqual(output, "")
+            self.assertIn("Dashboards: 1", output_file.read_text(encoding="utf-8"))
+
+    def test_dashboard_inspection_summary_export_root_defaults_to_raw_variant(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            export_root = Path(tmpdir)
+            raw_dir = export_root / exporter.RAW_EXPORT_SUBDIR
+            prompt_dir = export_root / exporter.PROMPT_EXPORT_SUBDIR
+            raw_dir.mkdir()
+            prompt_dir.mkdir()
+            self.write_summary_fixture(
+                raw_dir,
+                dashboards=[
+                    {
+                        "path": Path("General") / "CPU_Main__cpu-main.json",
+                        "dashboard": {
+                            "id": None,
+                            "uid": "cpu-main",
+                            "title": "CPU Main",
+                            "panels": [],
+                        },
+                    }
+                ],
+            )
+
+            result, output = self.run_inspect(
+                exporter.parse_args(
+                    [
+                        "summary",
+                        "--import-dir",
+                        str(export_root),
+                    ]
+                )
+            )
+
+            self.assertEqual(result, 0)
+            self.assertIn("Dashboards: 1", output)
+            self.assertIn("Folder paths:", output)
+
+    def test_dashboard_inspection_inspect_export_output_file_can_also_stdout(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            import_dir = Path(tmpdir)
+            self.write_summary_fixture(
+                import_dir,
+                dashboards=[
+                    {
+                        "path": Path("General") / "CPU_Main__cpu-main.json",
+                        "dashboard": {
+                            "id": None,
+                            "uid": "cpu-main",
+                            "title": "CPU Main",
+                            "panels": [],
+                        },
+                    }
+                ],
+            )
+            output_file = import_dir / "summary.txt"
+            result, output = self.run_inspect(
+                exporter.parse_args(
+                    [
+                        "summary",
+                        "--import-dir",
+                        str(import_dir),
+                        "--output-file",
+                        str(output_file),
+                        "--also-stdout",
+                    ]
+                )
+            )
+
+            self.assertEqual(result, 0)
             self.assertEqual(output_file.read_text(encoding="utf-8"), output)
+            self.assertIn("Dashboards: 1", output)
+
+    def test_dashboard_inspection_summary_interactive_fails_explicitly(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            import_dir = Path(tmpdir)
+            self.write_summary_fixture(
+                import_dir,
+                dashboards=[
+                    {
+                        "path": Path("General") / "CPU_Main__cpu-main.json",
+                        "dashboard": {
+                            "id": None,
+                            "uid": "cpu-main",
+                            "title": "CPU Main",
+                            "panels": [],
+                        },
+                    }
+                ],
+            )
+
+            with self.assertRaisesRegex(exporter.GrafanaError, "interactive mode is not implemented"):
+                self.run_inspect(
+                    exporter.parse_args(
+                        [
+                            "summary",
+                            "--import-dir",
+                            str(import_dir),
+                            "--interactive",
+                        ]
+                    )
+                )
+
+    def test_dashboard_inspection_summary_local_reads_latest_artifact_run(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            config_path = root / "grafana-util.yaml"
+            scope_root = root / ".grafana-util" / "artifacts" / "default"
+            raw_dir = scope_root / "runs" / "run-001" / "dashboards" / "raw"
+            raw_dir.mkdir(parents=True)
+            exporter.write_json_document({"run_id": "run-001"}, scope_root / "latest-run.json")
+            self.write_summary_fixture(
+                raw_dir,
+                dashboards=[
+                    {
+                        "path": Path("General") / "CPU_Main__cpu-main.json",
+                        "dashboard": {
+                            "id": None,
+                            "uid": "cpu-main",
+                            "title": "CPU Main",
+                            "panels": [],
+                        },
+                    }
+                ],
+            )
+
+            with mock.patch.dict(
+                os.environ,
+                {"GRAFANA_UTIL_CONFIG": str(config_path)},
+            ):
+                result, output = self.run_inspect(
+                    exporter.parse_args(
+                        [
+                            "summary",
+                            "--local",
+                        ]
+                    )
+                )
+
+            self.assertEqual(result, 0)
+            self.assertIn("Dashboards: 1", output)
+            self.assertIn("Folder paths:", output)
+
+    def test_dashboard_inspection_summary_list_columns_does_not_require_input(self):
+        stdout = io.StringIO()
+        args = exporter.parse_args(["summary", "--list-columns"])
+        with redirect_stdout(stdout):
+            result = exporter.inspect_live(args)
+
+        self.assertEqual(result, 0)
+        self.assertIn("dashboardUid", stdout.getvalue())
 
     def test_dashboard_inspection_inspect_export_renders_json(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -552,6 +704,116 @@ class DashboardInspectionTests(unittest.TestCase):
             self.assertEqual(payload["orphanedDatasources"][0]["name"], "Unused Main")
             self.assertEqual(payload["dashboards"][0]["folderPath"], "General")
             self.assertFalse(payload["dashboards"][0]["mixedDatasource"])
+
+    def test_dashboard_inspection_inspect_export_renders_csv_summary_output(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            import_dir = Path(tmpdir)
+            self.write_summary_fixture(
+                import_dir,
+                dashboards=[
+                    {
+                        "path": Path("General") / "CPU_Main__cpu-main.json",
+                        "dashboard": {
+                            "id": None,
+                            "uid": "cpu-main",
+                            "title": "CPU Main",
+                            "panels": [{"id": 1, "type": "timeseries", "targets": []}],
+                        },
+                    }
+                ],
+                datasources=[],
+            )
+            args = exporter.parse_args(
+                ["summary", "--import-dir", str(import_dir), "--output-format", "csv"]
+            )
+            result, output = self.run_inspect(args)
+
+            self.assertEqual(result, 0)
+            self.assertIn("NAME,VALUE", output.splitlines()[0])
+            self.assertIn("dashboard_count,1", output)
+            self.assertIn("folder_count,1", output)
+
+    def test_dashboard_inspection_inspect_export_renders_yaml_summary_output(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            import_dir = Path(tmpdir)
+            self.write_summary_fixture(
+                import_dir,
+                dashboards=[
+                    {
+                        "path": Path("General") / "CPU_Main__cpu-main.json",
+                        "dashboard": {
+                            "id": None,
+                            "uid": "cpu-main",
+                            "title": "CPU Main",
+                            "panels": [{"id": 1, "type": "timeseries", "targets": []}],
+                        },
+                    }
+                ],
+                datasources=[],
+            )
+            args = exporter.parse_args(
+                ["summary", "--import-dir", str(import_dir), "--output-format", "yaml"]
+            )
+            result, output = self.run_inspect(args)
+
+            self.assertEqual(result, 0)
+            self.assertIn("summary:", output)
+            self.assertIn("dashboardCount: 1", output)
+            self.assertIn("folderCount: 1", output)
+
+    def test_dashboard_inspection_inspect_export_renders_queries_json_output(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            import_dir = Path(tmpdir)
+            self.write_summary_fixture(
+                import_dir,
+                dashboards=[
+                    {
+                        "path": Path("General") / "CPU_Main__cpu-main.json",
+                        "dashboard": {
+                            "id": None,
+                            "uid": "cpu-main",
+                            "title": "CPU Main",
+                            "panels": [
+                                {
+                                    "id": 1,
+                                    "type": "timeseries",
+                                    "datasource": {"uid": "prom-main", "type": "prometheus"},
+                                    "targets": [{"refId": "A", "expr": "up"}],
+                                }
+                            ],
+                        },
+                    }
+                ],
+                datasources=[
+                    {
+                        "uid": "prom-main",
+                        "name": "Prometheus Main",
+                        "type": "prometheus",
+                        "access": "proxy",
+                        "url": "http://prometheus:9090",
+                        "isDefault": "true",
+                        "org": "Main Org.",
+                        "orgId": "1",
+                    }
+                ],
+            )
+            args = exporter.parse_args(
+                [
+                    "summary",
+                    "--import-dir",
+                    str(import_dir),
+                    "--output-format",
+                    "queries-json",
+                ]
+            )
+            result, output = self.run_inspect(args)
+            payload = json.loads(output)
+
+            self.assertEqual(result, 0)
+            self.assertEqual(payload["summary"]["queryRecordCount"], 1)
+            self.assertEqual(payload["summary"]["dashboardCount"], 1)
+            self.assertEqual(len(payload["queries"]), 1)
+            self.assertEqual(payload["queries"][0]["datasource"], "prom-main")
 
     def test_dashboard_inspection_inspect_export_renders_table_sections(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1475,7 +1737,7 @@ class DashboardInspectionTests(unittest.TestCase):
         self.assertIn("file", help_text)
         self.assertIn("datasource label,", help_text)
         self.assertIn("uid, type,", help_text)
-        self.assertIn("or family exactly matches this value", help_text)
+        self.assertIn("family exactly matches this value.", help_text)
         self.assertIn(
             "dashboard_uid,folder_path,folder_full_path,folder_level,folder_uid,parent_folder_uid,file",
             exporter.SUMMARY_EXPORT_HELP_FULL_EXAMPLES,
@@ -1642,7 +1904,7 @@ class DashboardInspectionTests(unittest.TestCase):
         self.assertIn("dashboard_uid", help_text)
         self.assertIn("datasource label,", help_text)
         self.assertIn("uid, type,", help_text)
-        self.assertIn("or family exactly matches this value", help_text)
+        self.assertIn("family exactly matches this value.", help_text)
 
     def test_dashboard_inspection_inspect_live_help_lists_supported_report_columns_and_filter_matching(
         self,
@@ -1659,7 +1921,7 @@ class DashboardInspectionTests(unittest.TestCase):
         self.assertIn("dashboard_uid", help_text)
         self.assertIn("datasource label,", help_text)
         self.assertIn("uid, type,", help_text)
-        self.assertIn("or family exactly matches this value", help_text)
+        self.assertIn("family exactly matches this value.", help_text)
 
     def test_dashboard_inspection_inspect_live_renders_report_json_from_mocked_client(
         self,
@@ -1737,11 +1999,168 @@ class DashboardInspectionTests(unittest.TestCase):
         self.assertEqual(payload["queries"][0]["folderLevel"], "2")
         self.assertEqual(payload["queries"][0]["metrics"], ["up"])
 
+    def test_dashboard_inspection_inspect_live_with_org_id_uses_scoped_client(self):
+        scoped_client = FakeDashboardWorkflowClient(
+            org={"id": 2, "name": "Ops"},
+            summaries=[
+                {
+                    "uid": "ops-main",
+                    "title": "Ops Main",
+                    "folderUid": "",
+                    "folderTitle": "General",
+                }
+            ],
+            dashboards={
+                "ops-main": {
+                    "dashboard": {
+                        "id": 2,
+                        "uid": "ops-main",
+                        "title": "Ops Main",
+                        "panels": [],
+                    },
+                    "meta": {},
+                }
+            },
+            datasources=[],
+        )
+        base_client = FakeDashboardWorkflowClient(
+            orgs=[{"id": 2, "name": "Ops"}],
+            org_clients={"2": scoped_client},
+            headers={"Authorization": "Basic test"},
+        )
+        args = exporter.parse_args(
+            [
+                "summary",
+                "--org-id",
+                "2",
+                "--output-format",
+                "json",
+                "--concurrency",
+                "2",
+            ]
+        )
+        stdout = io.StringIO()
+        with mock.patch.object(exporter, "build_client", return_value=base_client):
+            with redirect_stdout(stdout):
+                result = exporter.inspect_live(args)
+
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(result, 0)
+        self.assertEqual(payload["summary"]["dashboardCount"], 1)
+        self.assertEqual(payload["dashboards"][0]["uid"], "ops-main")
+
+    def test_dashboard_inspection_inspect_live_with_all_orgs_merges_scoped_clients(self):
+        main_client = FakeDashboardWorkflowClient(
+            org={"id": 1, "name": "Main Org."},
+            summaries=[
+                {
+                    "uid": "main",
+                    "title": "Main",
+                    "folderUid": "",
+                    "folderTitle": "General",
+                }
+            ],
+            dashboards={
+                "main": {
+                    "dashboard": {"uid": "main", "title": "Main", "panels": []},
+                    "meta": {},
+                }
+            },
+            datasources=[],
+        )
+        ops_client = FakeDashboardWorkflowClient(
+            org={"id": 2, "name": "Ops"},
+            summaries=[
+                {
+                    "uid": "ops",
+                    "title": "Ops",
+                    "folderUid": "",
+                    "folderTitle": "General",
+                }
+            ],
+            dashboards={
+                "ops": {
+                    "dashboard": {"uid": "ops", "title": "Ops", "panels": []},
+                    "meta": {},
+                }
+            },
+            datasources=[],
+        )
+        base_client = FakeDashboardWorkflowClient(
+            orgs=[{"id": 1, "name": "Main Org."}, {"id": 2, "name": "Ops"}],
+            org_clients={"1": main_client, "2": ops_client},
+            headers={"Authorization": "Basic test"},
+        )
+        args = exporter.parse_args(["summary", "--all-orgs", "--output-format", "json"])
+        stdout = io.StringIO()
+        with mock.patch.object(exporter, "build_client", return_value=base_client):
+            with redirect_stdout(stdout):
+                result = exporter.inspect_live(args)
+
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(result, 0)
+        self.assertEqual(payload["summary"]["dashboardCount"], 2)
+        self.assertEqual({item["uid"] for item in payload["dashboards"]}, {"main", "ops"})
+
+    def test_dashboard_inspection_inspect_export_accepts_provisioning_input_format(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            dashboards_dir = root / "provisioning" / "dashboards" / "platform"
+            dashboards_dir.mkdir(parents=True)
+            exporter.write_json_document(
+                {"uid": "cpu-main", "title": "CPU Main", "panels": []},
+                dashboards_dir / "cpu.json",
+            )
+            args = exporter.parse_args(
+                [
+                    "summary",
+                    "--input-dir",
+                    str(root / "provisioning"),
+                    "--input-format",
+                    "provisioning",
+                    "--output-format",
+                    "json",
+                ]
+            )
+            result, output = self.run_inspect(args)
+
+        payload = json.loads(output)
+        self.assertEqual(result, 0)
+        self.assertEqual(payload["summary"]["dashboardCount"], 1)
+        self.assertEqual(payload["dashboards"][0]["uid"], "cpu-main")
+
+    def test_dashboard_inspection_inspect_export_accepts_git_sync_input_format(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            raw_dir = root / "dashboards" / "git-sync" / "raw" / "Team"
+            raw_dir.mkdir(parents=True)
+            exporter.write_json_document(
+                {"uid": "git-main", "title": "Git Main", "panels": []},
+                raw_dir / "git-main.json",
+            )
+            args = exporter.parse_args(
+                [
+                    "summary",
+                    "--input-dir",
+                    str(root),
+                    "--input-format",
+                    "git-sync",
+                    "--output-format",
+                    "json",
+                ]
+            )
+            result, output = self.run_inspect(args)
+
+        payload = json.loads(output)
+        self.assertEqual(result, 0)
+        self.assertEqual(payload["summary"]["dashboardCount"], 1)
+        self.assertEqual(payload["dashboards"][0]["uid"], "git-main")
+
     def test_dashboard_inspection_inspect_export_validation_errors(self):
         cases = [
             (
                 ["summary", "--import-dir", "dashboards/raw", "--no-header"],
-                "--no-header is only supported with --table, table-like --report, or compatible --output-format values",
+                "--no-header is only supported with --table, table, csv, or tree-table report output.",
             ),
             (
                 [
@@ -1782,7 +2201,7 @@ class DashboardInspectionTests(unittest.TestCase):
                     "--report-columns",
                     "dashboardUid,datasource",
                 ],
-                "--report-columns is only supported with --report or report-like --output-format",
+                "--report-columns is only supported together with table, csv, tree-table, or queries-json output.",
             ),
             (
                 [
@@ -1794,7 +2213,7 @@ class DashboardInspectionTests(unittest.TestCase):
                     "--report-columns",
                     "dashboardUid,datasource",
                 ],
-                "--report-columns is only supported with report-table, report-csv, report-tree-table, or the equivalent --report modes",
+                "--report-columns is only supported with table, csv, or tree-table output.",
             ),
             (
                 [
@@ -1816,7 +2235,7 @@ class DashboardInspectionTests(unittest.TestCase):
                     "--report-filter-datasource",
                     "prom-main",
                 ],
-                "--report-filter-datasource is only supported with --report or report-like --output-format",
+                "--report-filter-datasource is only supported together with table, csv, tree-table, dependency, dependency-json, governance, governance-json, or queries-json output.",
             ),
             (
                 [
@@ -1826,7 +2245,7 @@ class DashboardInspectionTests(unittest.TestCase):
                     "--report-filter-panel-id",
                     "7",
                 ],
-                "--report-filter-panel-id is only supported with --report or report-like --output-format",
+                "--report-filter-panel-id is only supported together with table, csv, tree-table, dependency, dependency-json, governance, governance-json, or queries-json output.",
             ),
             (
                 [

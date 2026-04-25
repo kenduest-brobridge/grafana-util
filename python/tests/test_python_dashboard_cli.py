@@ -876,7 +876,7 @@ class ExporterTests(unittest.TestCase):
         self.assertIn("folderLevel", help_text)
         self.assertIn("dashboard_uid", help_text)
         self.assertIn("datasource label, uid, type,", help_text)
-        self.assertIn("or family exactly matches this value", help_text)
+        self.assertIn("family exactly matches this value.", help_text)
         self.assertNotIn("\n  --json", help_text)
         self.assertNotIn("\n  --table", help_text)
         self.assertNotIn("\n  --report ", help_text)
@@ -940,7 +940,7 @@ class ExporterTests(unittest.TestCase):
         self.assertIn("folderLevel", help_text)
         self.assertIn("dashboard_uid", help_text)
         self.assertIn("datasource label, uid, type,", help_text)
-        self.assertIn("or family exactly matches this value", help_text)
+        self.assertIn("family exactly matches this value.", help_text)
         self.assertNotIn("\n  --report ", help_text)
         self.assertNotIn("\n  --json", help_text)
         self.assertNotIn("\n  --table", help_text)
@@ -1394,6 +1394,42 @@ class ExporterTests(unittest.TestCase):
 
         self.assertTrue(args.list_columns)
 
+    def test_dashboard_parse_args_supports_summary_artifact_selectors(self):
+        args = exporter.parse_args(
+            [
+                "summary",
+                "--local",
+                "--run",
+                "latest",
+                "--output-format",
+                "queries-json",
+                "--list-columns",
+                "--interactive",
+                "--also-stdout",
+                "--output-file",
+                "summary.txt",
+            ]
+        )
+
+        self.assertTrue(args.local)
+        self.assertEqual(args.run, "latest")
+        self.assertEqual(args.output_format, "queries-json")
+        self.assertTrue(args.list_columns)
+        self.assertTrue(args.interactive)
+        self.assertTrue(args.also_stdout)
+        self.assertEqual(args.output_file, "summary.txt")
+
+    def test_dashboard_parse_args_rejects_summary_input_dir_with_local(self):
+        with self.assertRaises(SystemExit):
+            exporter.parse_args(
+                [
+                    "summary",
+                    "--input-dir",
+                    "dashboards/raw",
+                    "--local",
+                ]
+            )
+
     def test_dashboard_parse_args_supports_list_csv_and_json_modes(self):
         csv_args = exporter.parse_args(["list", "--csv"])
         json_args = exporter.parse_args(["list", "--json"])
@@ -1749,6 +1785,112 @@ class ExporterTests(unittest.TestCase):
 
         self.assertEqual(args.command, "summary")
         self.assertEqual(args.output_format, "report-tree-table")
+        self.assertIsNone(args.report)
+        self.assertFalse(args.json)
+        self.assertFalse(args.table)
+
+    def test_dashboard_parse_args_supports_inspect_export_output_format_csv(self):
+        args = exporter.parse_args(
+            [
+                "summary",
+                "--import-dir",
+                "dashboards/raw",
+                "--output-format",
+                "csv",
+            ]
+        )
+
+        self.assertEqual(args.command, "summary")
+        self.assertEqual(args.output_format, "csv")
+        self.assertIsNone(args.report)
+        self.assertFalse(args.json)
+        self.assertFalse(args.table)
+
+    def test_dashboard_parse_args_supports_summary_rust_parity_flags(self):
+        args = exporter.parse_args(
+            [
+                "summary",
+                "--input-dir",
+                "dashboards/raw",
+                "--input-type",
+                "source",
+                "--input-format",
+                "git-sync",
+                "--concurrency",
+                "4",
+                "--progress",
+            ]
+        )
+
+        self.assertEqual(args.command, "summary")
+        self.assertEqual(args.input_dir, "dashboards/raw")
+        self.assertEqual(args.import_dir, "dashboards/raw")
+        self.assertEqual(args.input_type, "source")
+        self.assertEqual(args.input_format, "git-sync")
+        self.assertEqual(args.concurrency, 4)
+        self.assertTrue(args.progress)
+
+    def test_dashboard_parse_args_supports_summary_live_org_flags(self):
+        org_args = exporter.parse_args(["summary", "--org-id", "2"])
+        all_args = exporter.parse_args(["summary", "--all-orgs"])
+
+        self.assertEqual(org_args.org_id, "2")
+        self.assertFalse(org_args.all_orgs)
+        self.assertTrue(all_args.all_orgs)
+        self.assertIsNone(all_args.org_id)
+
+    def test_dashboard_parse_args_supports_analyze_summary_parity_flags(self):
+        args = exporter.parse_args(
+            [
+                "analyze",
+                "--input-dir",
+                "dashboards",
+                "--input-type",
+                "source",
+                "--input-format",
+                "git-sync",
+                "--concurrency",
+                "3",
+                "--progress",
+            ]
+        )
+
+        self.assertEqual(args.command, "analyze")
+        self.assertEqual(args.input_type, "source")
+        self.assertEqual(args.input_format, "git-sync")
+        self.assertEqual(args.concurrency, 3)
+        self.assertTrue(args.progress)
+
+    def test_dashboard_parse_args_supports_inspect_export_output_format_yaml(self):
+        args = exporter.parse_args(
+            [
+                "summary",
+                "--import-dir",
+                "dashboards/raw",
+                "--output-format",
+                "yaml",
+            ]
+        )
+
+        self.assertEqual(args.command, "summary")
+        self.assertEqual(args.output_format, "yaml")
+        self.assertIsNone(args.report)
+        self.assertFalse(args.json)
+        self.assertFalse(args.table)
+
+    def test_dashboard_parse_args_supports_inspect_export_output_format_queries_json(self):
+        args = exporter.parse_args(
+            [
+                "summary",
+                "--import-dir",
+                "dashboards/raw",
+                "--output-format",
+                "queries-json",
+            ]
+        )
+
+        self.assertEqual(args.command, "summary")
+        self.assertEqual(args.output_format, "queries-json")
         self.assertIsNone(args.report)
         self.assertFalse(args.json)
         self.assertFalse(args.table)
