@@ -38,11 +38,20 @@
 
 ## Model Routing
 
-- Use mini models only for low-risk inventory, wording, small documentation edits, simple test triage, changelog or commit-message drafting, and narrow mechanical changes with clear validation.
-- Use the default model with medium reasoning for routine Rust work, focused test cleanup, generated-doc refreshes, small CLI help edits, and scoped docs updates.
-- Use high reasoning for architecture, refactor, schema, migration, Rust/Python parity, Grafana API compatibility, command-surface changes, and changes that affect shared CLI/docs contracts.
-- Use xhigh reasoning where available for critical validator runs or large autonomous changes that cross Rust behavior, artifact contracts, generated docs, tests, and real export/import/provisioning compatibility at the same time.
-- Do not use mini models for command-surface, schema-contract, generated-doc, migration, compatibility, or architecture decisions.
+- Goal: choose the cheapest model that can safely complete the task. Do not default to the strongest model when a cheaper tier is enough.
+- Default for normal repo work: `model="gpt-5.5"` with `reasoning_effort="medium"`. Use this unless the task clearly fits a cheaper bucket or clearly needs stronger reasoning.
+- Use `gpt-5.4-mini` with `reasoning_effort="low"` for low-risk mechanical work such as wording-only edits, small single-file fixes, obvious comment/help updates, simple unit tests, fixture refreshes with an already-clear schema, and narrow boilerplate.
+- Raise `gpt-5.4-mini` to `reasoning_effort="medium"` only when the task is still small but requires reading nearby code to avoid pattern drift.
+- Use `gpt-5.4` with `reasoning_effort="medium"` for cost-sensitive normal implementation such as clear-spec features, module-local refactors, known-interface work, straightforward validation logic, routine command behavior updates, and focused CI/test fixes.
+- Raise `gpt-5.4` to `reasoning_effort="high"` when several files are involved, abstractions are inconsistent, backward compatibility matters, or the failure needs real diagnosis instead of a mechanical patch.
+- Use `gpt-5.5` with `reasoning_effort="high"` for architecture, cross-module refactors, Rust/Python parity, schema or artifact compatibility, migration, Grafana API compatibility, command-surface changes, shared CLI/docs contracts, security-sensitive logic, and unknown-root-cause debugging.
+- Use `gpt-5.5` with `reasoning_effort="xhigh"` only when high is insufficient because the problem is still unresolved or poorly bounded, spans multiple systems, or crosses Rust behavior, artifact contracts, generated docs, tests, and real export/import/provisioning compatibility at the same time. State why `high` is insufficient before choosing `xhigh`.
+- Do not use `gpt-5.4-mini` for command-surface, schema-contract, generated-doc, migration, compatibility, or architecture decisions.
+- Do not use `xhigh` for routine docs, formatting, simple test additions, boilerplate, or a localized bugfix with a clear root cause.
+- Preferred cost discipline: think and validate with `gpt-5.5`, implement bounded work with `gpt-5.4` or `gpt-5.4-mini`, and escalate only after the cheaper tier shows it is insufficient.
+- Escalate model tier when the work expands from local to cross-file, when the root cause is not clear after focused inspection, or when compatibility and validation risk become material.
+- Escalate reasoning effort when requirements are ambiguous, when public behavior changes, when several modules interact, or when test failures imply hidden contracts.
+- For large tasks, use a planner/worker/validator split: planner on `gpt-5.5` with `high`, worker on `gpt-5.4` or `gpt-5.4-mini` for bounded implementation, validator on `gpt-5.5` with `high` for diff review, compatibility, docs, and contract checks.
 - When using workers, split by disjoint write scope and keep the main agent responsible for final integration, contract review, and validation.
 
 ## Validation And Commits
