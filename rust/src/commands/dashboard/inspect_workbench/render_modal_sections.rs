@@ -1,5 +1,4 @@
 #![cfg(feature = "tui")]
-#[path = "inspect_workbench_render_modal_sections/viewer_rows.rs"]
 mod viewer_rows;
 
 use ratatui::layout::{Constraint, Direction, Layout, Position, Rect};
@@ -7,12 +6,8 @@ use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Clear, List, ListItem, Paragraph};
 
-use super::super::super::inspect_workbench_state::{
-    InspectPane, InspectWorkbenchState, SearchDirection, SearchPromptState,
-};
-use super::super::inspect_workbench_render_helpers::{
-    item_badge_label, key_chip, pane_block, plain,
-};
+use super::render_helpers::{item_badge_label, key_chip, pane_block, plain};
+use super::state::{InspectPane, InspectWorkbenchState, SearchDirection, SearchPromptState};
 use viewer_rows::viewer_rows;
 
 pub(crate) fn render_detail_panel(

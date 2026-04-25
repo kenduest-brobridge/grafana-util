@@ -11,11 +11,11 @@ use std::time::Duration;
 
 use crate::common::Result;
 
-use super::inspect_workbench_render::render_frame;
-use super::inspect_workbench_state::{
+use super::render::render_frame;
+use super::state::{
     handle_search_key, InspectPane, InspectWorkbenchState, SearchDirection, SearchState,
 };
-use super::inspect_workbench_support::InspectWorkbenchDocument;
+use super::support::InspectWorkbenchDocument;
 
 struct TerminalSession {
     terminal: Terminal<CrosstermBackend<Stdout>>,

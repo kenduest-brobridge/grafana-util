@@ -61,9 +61,11 @@ mod inspect_render;
 mod inspect_report;
 mod inspect_summary;
 mod inspect_workbench;
-mod inspect_workbench_render;
-mod inspect_workbench_state;
-mod inspect_workbench_support;
+#[cfg(feature = "tui")]
+#[allow(unused_imports)]
+pub(crate) use inspect_workbench::state as inspect_workbench_state;
+#[cfg(feature = "tui")]
+pub(crate) use inspect_workbench::support as inspect_workbench_support;
 mod list;
 mod live;
 mod live_project_status;

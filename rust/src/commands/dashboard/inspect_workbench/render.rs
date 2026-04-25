@@ -5,20 +5,12 @@ use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{List, ListItem};
 
-use super::inspect_workbench_state::{InspectPane, InspectWorkbenchState};
-
-#[path = "inspect_workbench_render_helpers.rs"]
-mod inspect_workbench_render_helpers;
-#[path = "inspect_workbench_render_modal.rs"]
-mod inspect_workbench_render_modal;
-
-use self::inspect_workbench_render_helpers::{
+use super::render_helpers::{
     compact_count_label, control_line, group_color, item_color, item_row_text, pane_block,
     slice_visible,
 };
-use self::inspect_workbench_render_modal::{
-    render_detail_panel, render_full_detail_viewer, render_search_prompt,
-};
+use super::render_modal::{render_detail_panel, render_full_detail_viewer, render_search_prompt};
+use super::state::{InspectPane, InspectWorkbenchState};
 
 pub(crate) fn render_frame(frame: &mut ratatui::Frame, state: &mut InspectWorkbenchState) {
     let outer = Layout::default()
@@ -47,7 +39,7 @@ pub(crate) fn render_frame(frame: &mut ratatui::Frame, state: &mut InspectWorkbe
         .collect::<Vec<_>>();
     header_lines.push(Line::from(vec![
         tui_shell::focus_label("Focus "),
-        inspect_workbench_render_helpers::key_chip(
+        super::render_helpers::key_chip(
             match state.focus {
                 InspectPane::Groups => "Modes",
                 InspectPane::Items => "Items",

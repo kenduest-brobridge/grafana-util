@@ -2,12 +2,11 @@
 #![cfg_attr(not(test), allow(dead_code))]
 use crate::interactive_browser::BrowserItem;
 
-use super::inspect_governance::ExportInspectionGovernanceDocument;
-use super::inspect_report::ExportInspectionQueryReport;
-use super::inspect_summary::ExportInspectionSummary;
+use super::super::inspect_governance::ExportInspectionGovernanceDocument;
+use super::super::inspect_report::ExportInspectionQueryReport;
+use super::super::inspect_summary::ExportInspectionSummary;
 
-#[path = "inspect_workbench_content.rs"]
-mod inspect_workbench_content;
+use super::content;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct InspectWorkbenchDocument {
@@ -125,11 +124,11 @@ fn build_inspect_workbench_groups(
             views: vec![
                 InspectWorkbenchView {
                     label: "Dashboard Summaries".to_string(),
-                    items: inspect_workbench_content::build_dashboard_items(governance),
+                    items: content::build_dashboard_items(governance),
                 },
                 InspectWorkbenchView {
                     label: "Datasource Usage".to_string(),
-                    items: inspect_workbench_content::build_datasource_coverage_items(governance),
+                    items: content::build_datasource_coverage_items(governance),
                 },
             ],
         },
@@ -140,13 +139,11 @@ fn build_inspect_workbench_groups(
             views: vec![
                 InspectWorkbenchView {
                     label: "Finding Details".to_string(),
-                    items: inspect_workbench_content::build_finding_items(governance),
+                    items: content::build_finding_items(governance),
                 },
                 InspectWorkbenchView {
                     label: "Dashboard Summaries".to_string(),
-                    items: inspect_workbench_content::build_dashboard_finding_summary_items(
-                        governance,
-                    ),
+                    items: content::build_dashboard_finding_summary_items(governance),
                 },
             ],
         },
@@ -157,11 +154,11 @@ fn build_inspect_workbench_groups(
             views: vec![
                 InspectWorkbenchView {
                     label: "Dashboard Context".to_string(),
-                    items: inspect_workbench_content::build_query_items(report, false),
+                    items: content::build_query_items(report, false),
                 },
                 InspectWorkbenchView {
                     label: "Datasource Context".to_string(),
-                    items: inspect_workbench_content::build_query_items(report, true),
+                    items: content::build_query_items(report, true),
                 },
             ],
         },
@@ -172,11 +169,11 @@ fn build_inspect_workbench_groups(
             views: vec![
                 InspectWorkbenchView {
                     label: "Usage Coverage".to_string(),
-                    items: inspect_workbench_content::build_datasource_coverage_items(governance),
+                    items: content::build_datasource_coverage_items(governance),
                 },
                 InspectWorkbenchView {
                     label: "Finding Coverage".to_string(),
-                    items: inspect_workbench_content::build_datasource_governance_items(governance),
+                    items: content::build_datasource_governance_items(governance),
                 },
             ],
         },

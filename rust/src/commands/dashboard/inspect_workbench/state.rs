@@ -14,14 +14,11 @@
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::widgets::ListState;
 
-use super::inspect_workbench_support::{InspectWorkbenchDocument, InspectWorkbenchGroup};
+use super::support::{InspectWorkbenchDocument, InspectWorkbenchGroup};
 
-#[path = "inspect_workbench_state/detail.rs"]
 mod detail;
-#[path = "inspect_workbench_modal_state.rs"]
-mod inspect_workbench_modal_state;
 
-pub(crate) use inspect_workbench_modal_state::{
+pub(crate) use super::modal_state::{
     InspectFullDetailState, InspectWorkbenchModalState, SearchDirection, SearchPromptState,
     SearchState,
 };
