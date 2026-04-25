@@ -1,6 +1,5 @@
 use std::collections::BTreeSet;
 use std::fs;
-use std::path::Path;
 
 use reqwest::Method;
 use serde_json::{Map, Value};
@@ -34,6 +33,11 @@ use super::{
     collect_permission_export_documents, collect_permission_export_documents_with_fetcher,
     write_yaml_document, PermissionExportTarget,
 };
+
+#[path = "export_scope/document_write.rs"]
+mod document_write;
+
+use document_write::write_history_document;
 
 pub(crate) struct ScopeExportResult {
     pub(crate) exported_count: usize,
@@ -479,18 +483,4 @@ where
         root_index: Some(root_index),
         org_summary: Some(org_summary),
     })
-}
-
-fn write_history_document<T: serde::Serialize>(
-    payload: &T,
-    output_path: &Path,
-    overwrite: bool,
-) -> Result<()> {
-    if output_path.exists() && !overwrite {
-        return Err(message(format!(
-            "Refusing to overwrite existing file: {}. Use --overwrite.",
-            output_path.display()
-        )));
-    }
-    write_json_document(payload, output_path)
 }
