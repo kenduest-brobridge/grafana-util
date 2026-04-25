@@ -13,6 +13,7 @@ use super::super::render::{format_import_progress_line, format_import_verbose_li
 use super::super::target::{
     build_dashboard_target_review, build_dashboard_target_review_reason,
     dashboard_target_review_is_blocked, dashboard_target_review_is_warning,
+    dashboard_target_review_ownership_label,
 };
 use super::apply_backend::LiveImportBackend;
 use super::apply_prepare::PreparedImportRun;
@@ -161,7 +162,8 @@ pub(super) fn run_live_import<B: LiveImportBackend>(
                 let review = build_dashboard_target_review(&existing_dashboard)?;
                 if dashboard_target_review_is_blocked(&review) {
                     return Err(message(format!(
-                        "Refusing to overwrite provisioned dashboard uid={uid}: {}",
+                        "Refusing to overwrite {} dashboard uid={uid}: {}",
+                        dashboard_target_review_ownership_label(&review),
                         build_dashboard_target_review_reason(&review)
                     )));
                 }

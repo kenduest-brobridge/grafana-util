@@ -102,9 +102,110 @@ fn import_dashboards_with_dry_run_surfaces_target_review_evidence() {
     .unwrap();
 
     assert_eq!(report.dashboard_records.len(), 1);
+    assert_eq!(report.dashboard_records[0][2], "blocked-existing");
+    assert!(report.dashboard_records[0][6].contains("target=blocked"));
+    assert!(report.dashboard_records[0][6].contains("ownership=git-sync-managed"));
+    assert!(report.dashboard_records[0][6].contains("provisionedExternalId=dashboards/cpu.json"));
+
+    let value: Value = serde_json::from_str(
+        &test_support::import::render_import_dry_run_json(
+            &report.mode,
+            &report.folder_statuses,
+            &report.dashboard_records,
+            &report.input_dir,
+            report.skipped_missing_count,
+            report.skipped_folder_mismatch_count,
+        )
+        .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(value["summary"]["targetWarningCount"], json!(0));
+    assert_eq!(value["summary"]["targetBlockedCount"], json!(1));
+}
+
+#[test]
+fn import_dashboards_with_dry_run_warns_on_unknown_managed_metadata() {
+    let temp = tempdir().unwrap();
+    let raw_dir = temp.path().join("raw");
+    fs::create_dir_all(&raw_dir).unwrap();
+    fs::write(
+        raw_dir.join(EXPORT_METADATA_FILENAME),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-dashboard-export-index",
+            "schemaVersion": TOOL_SCHEMA_VERSION,
+            "variant": "raw",
+            "dashboardCount": 1,
+            "indexFile": "index.json",
+            "format": "grafana-web-import-preserve-uid"
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        raw_dir.join("dash.json"),
+        serde_json::to_string_pretty(&json!({
+            "dashboard": {"id": 7, "uid": "abc", "title": "CPU"}
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let args = ImportArgs {
+        common: make_common_args("http://127.0.0.1:3000".to_string()),
+        org_id: None,
+        use_export_org: false,
+        only_org_id: Vec::new(),
+        create_missing_orgs: false,
+        input_dir: raw_dir,
+        local: false,
+        run: None,
+        run_id: None,
+        input_format: DashboardImportInputFormat::Raw,
+        import_folder_uid: None,
+        ensure_folders: false,
+        replace_existing: true,
+        update_existing_only: false,
+        require_matching_folder_path: false,
+        require_matching_export_org: false,
+        strict_schema: false,
+        target_schema_version: None,
+        import_message: "sync dashboards".to_string(),
+        interactive: false,
+        dry_run: true,
+        table: false,
+        json: true,
+        output_format: None,
+        no_header: false,
+        output_columns: Vec::new(),
+        list_columns: false,
+        progress: false,
+        verbose: false,
+    };
+
+    let report = test_support::import::collect_import_dry_run_report_with_request(
+        |_method, path, _params, _payload| match path {
+            "/api/datasources" => Ok(Some(json!([]))),
+            "/api/plugins" => Ok(Some(json!([]))),
+            "/api/search" => Ok(Some(json!([{"uid": "abc", "folderUid": "infra"}]))),
+            "/api/dashboards/uid/abc" => Ok(Some(json!({
+                "dashboard": {"id": 7, "uid": "abc", "title": "CPU"},
+                "meta": {
+                    "folderUid": "infra",
+                    "managedBy": {"kind": "plugin", "id": "custom-owner"}
+                }
+            }))),
+            "/api/folders/infra" => Ok(Some(json!({
+                "uid": "infra",
+                "title": "Infra"
+            }))),
+            _ => Err(test_support::message(format!("unexpected path {path}"))),
+        },
+        &args,
+    )
+    .unwrap();
+
     assert_eq!(report.dashboard_records[0][2], "update");
     assert!(report.dashboard_records[0][6].contains("target=warn"));
-    assert!(report.dashboard_records[0][6].contains("provisionedExternalId=dashboards/cpu.json"));
+    assert!(report.dashboard_records[0][6].contains("ownership=managed-unknown"));
 
     let value: Value = serde_json::from_str(
         &test_support::import::render_import_dry_run_json(

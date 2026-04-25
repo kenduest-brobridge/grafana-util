@@ -420,6 +420,85 @@ fn dashboard_plan_text_includes_review_narrative() {
         .any(|line| line.contains("Blocked reason: target-org-missing")));
 }
 
+#[test]
+fn dashboard_plan_blocks_git_sync_managed_update_targets() {
+    let mut input = sample_plan_input(false);
+    input.orgs[0].local_dashboards[0].dashboard = json!({
+        "uid": "cpu-main",
+        "title": "CPU Overview",
+        "panels": [{"id": 1}]
+    });
+    input.orgs[0].live_dashboards[0].evidence = vec![
+        "ownership=git-sync-managed".to_string(),
+        "repository=ops".to_string(),
+    ];
+
+    let report = build_dashboard_plan(input);
+    let action = report
+        .actions
+        .iter()
+        .find(|action| action.dashboard_uid == "cpu-main")
+        .unwrap();
+
+    assert_eq!(action.action, "blocked-target");
+    assert_eq!(action.status, "blocked");
+    assert_eq!(
+        action.blocked_reason.as_deref(),
+        Some("target-provisioned-or-managed")
+    );
+    assert_eq!(report.summary.blocked, 1);
+}
+
+#[test]
+fn dashboard_plan_warns_on_unknown_managed_update_targets() {
+    let mut input = sample_plan_input(false);
+    input.orgs[0].local_dashboards[0].dashboard = json!({
+        "uid": "cpu-main",
+        "title": "CPU Overview",
+        "panels": [{"id": 1}]
+    });
+    input.orgs[0].live_dashboards[0].evidence = vec![
+        "ownership=managed-unknown".to_string(),
+        "managedBy{kind=plugin}".to_string(),
+    ];
+
+    let report = build_dashboard_plan(input);
+    let action = report
+        .actions
+        .iter()
+        .find(|action| action.dashboard_uid == "cpu-main")
+        .unwrap();
+
+    assert_eq!(action.action, "would-update");
+    assert_eq!(action.status, "warning");
+    assert_eq!(report.summary.warning, 2);
+}
+
+#[test]
+fn dashboard_plan_blocks_git_sync_managed_delete_targets() {
+    let mut input = sample_plan_input(true);
+    input.orgs[0].live_dashboards[1].evidence = vec![
+        "ownership=git-sync-managed".to_string(),
+        "repository=ops".to_string(),
+    ];
+
+    let report = build_dashboard_plan(input);
+    let action = report
+        .actions
+        .iter()
+        .find(|action| action.dashboard_uid == "orphan")
+        .unwrap();
+
+    assert_eq!(action.action, "blocked-target");
+    assert_eq!(action.status, "blocked");
+    assert_eq!(
+        action.blocked_reason.as_deref(),
+        Some("target-provisioned-or-managed")
+    );
+    assert_eq!(report.summary.delete, 0);
+    assert_eq!(report.summary.blocked, 1);
+}
+
 fn permission_entry(
     subject: &str,
     permission: i64,

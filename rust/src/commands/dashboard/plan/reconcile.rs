@@ -13,7 +13,10 @@ use crate::review_contract::{
     REVIEW_STATUS_SAME, REVIEW_STATUS_WARNING,
 };
 
-use super::super::import_target::build_dashboard_target_review;
+use super::super::import_target::{
+    build_dashboard_target_review, dashboard_target_evidence_blocks_direct_write,
+    dashboard_target_evidence_warns_direct_write,
+};
 use super::super::{
     build_datasource_catalog, build_folder_path, collect_datasource_refs, extract_dashboard_object,
     lookup_datasource, FolderInventoryItem, DEFAULT_FOLDER_TITLE, DEFAULT_FOLDER_UID,
@@ -344,12 +347,11 @@ pub(super) fn build_org_actions(org: &OrgPlanInput, prune: bool) -> Vec<Dashboar
 
         let target_review_blocked = live
             .as_ref()
-            .map(|dashboard| {
-                dashboard
-                    .evidence
-                    .iter()
-                    .any(|value| value.starts_with("provisioned=true"))
-            })
+            .map(|dashboard| dashboard_target_evidence_blocks_direct_write(&dashboard.evidence))
+            .unwrap_or(false);
+        let target_review_warning = live
+            .as_ref()
+            .map(|dashboard| dashboard_target_evidence_warns_direct_write(&dashboard.evidence))
             .unwrap_or(false);
 
         let mut action = if missing_target || would_create_target || live.is_none() {
@@ -382,6 +384,8 @@ pub(super) fn build_org_actions(org: &OrgPlanInput, prune: bool) -> Vec<Dashboar
             action = REVIEW_ACTION_BLOCKED_TARGET.to_string();
             status = REVIEW_STATUS_BLOCKED.to_string();
             blocked_reason = Some(REVIEW_REASON_TARGET_PROVISIONED_OR_MANAGED.to_string());
+        } else if target_review_warning && action != REVIEW_ACTION_SAME {
+            status = REVIEW_STATUS_WARNING.to_string();
         } else if action != REVIEW_ACTION_SAME
             && (!dependency_hints.is_empty()
                 || review_hints
@@ -435,10 +439,8 @@ pub(super) fn build_org_actions(org: &OrgPlanInput, prune: bool) -> Vec<Dashboar
         if live_matched.get(index).copied().unwrap_or(false) {
             continue;
         }
-        let blocked = live
-            .evidence
-            .iter()
-            .any(|value| value.starts_with("provisioned=true"));
+        let blocked = dashboard_target_evidence_blocks_direct_write(&live.evidence);
+        let warned = dashboard_target_evidence_warns_direct_write(&live.evidence);
         actions.push(DashboardPlanAction {
             action_id: build_action_id(
                 org.target_org_id
@@ -458,13 +460,17 @@ pub(super) fn build_org_actions(org: &OrgPlanInput, prune: bool) -> Vec<Dashboar
             target_org_id: org.target_org_id.clone(),
             target_org_name: org.target_org_name.clone(),
             match_basis: "live-only".to_string(),
-            action: if prune {
+            action: if prune && blocked {
+                REVIEW_ACTION_BLOCKED_TARGET.to_string()
+            } else if prune {
                 REVIEW_ACTION_WOULD_DELETE.to_string()
             } else {
                 REVIEW_ACTION_EXTRA_REMOTE.to_string()
             },
             status: if blocked {
                 REVIEW_STATUS_BLOCKED.to_string()
+            } else if warned {
+                REVIEW_STATUS_WARNING.to_string()
             } else if prune {
                 REVIEW_STATUS_READY.to_string()
             } else {
