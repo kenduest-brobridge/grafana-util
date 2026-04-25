@@ -1,8 +1,8 @@
 //! Access plan output contract types shared by CLI renderers and future TUI callers.
 
 use crate::review_contract::{
-    build_review_mutation_envelope, review_action_group, review_operation_kind_rank,
-    ReviewMutationAction, ReviewMutationEnvelope,
+    build_review_mutation_envelope, ReviewMutationAction, ReviewMutationActionInput,
+    ReviewMutationEnvelope,
 };
 use serde::Serialize;
 use serde_json::{Map, Value};
@@ -79,51 +79,36 @@ pub struct AccessPlanDocument {
     pub actions: Vec<AccessPlanAction>,
 }
 
-#[derive(Debug, Clone)]
-pub(crate) struct AccessPlanReviewActionProjection {
-    pub action_id: String,
-    pub action: String,
-    pub domain: String,
-    pub resource_kind: String,
-    pub identity: String,
-    pub status: String,
-    pub order_group: String,
-    pub kind_order: usize,
-    pub blocked_reason: Option<String>,
-    pub details: Option<String>,
-    pub review_hints: Vec<String>,
-    pub raw: Value,
-}
+pub(crate) type AccessPlanReviewActionProjection = ReviewMutationAction;
 
 #[derive(Debug, Clone)]
 pub(crate) struct AccessPlanReviewProjection {
     pub domains: Vec<&'static str>,
-    pub actions: Vec<AccessPlanReviewActionProjection>,
+    pub actions: Vec<ReviewMutationAction>,
 }
 
 impl AccessPlanAction {
     #[cfg_attr(not(test), allow(dead_code))]
-    fn to_review_projection(&self) -> AccessPlanReviewActionProjection {
+    fn to_review_projection(&self) -> ReviewMutationAction {
         let raw = match serde_json::to_value(self) {
             Ok(Value::Object(object)) => Value::Object(object),
             Ok(other) => other,
             Err(_) => Value::Null,
         };
-        AccessPlanReviewActionProjection {
+        ReviewMutationActionInput {
             action_id: self.action_id.clone(),
             action: self.action.clone(),
             domain: self.domain.clone(),
             resource_kind: self.resource_kind.clone(),
             identity: self.identity.clone(),
             status: self.status.clone(),
-            order_group: review_action_group(&self.action).to_string(),
-            kind_order: review_operation_kind_rank(&self.domain, &self.action),
             blocked_reason: self.blocked_reason.clone(),
             details: (!self.changed_fields.is_empty())
                 .then(|| format!("fields={}", self.changed_fields.join(","))),
             review_hints: self.review_hints.clone(),
             raw,
         }
+        .into()
     }
 }
 
@@ -144,24 +129,7 @@ impl AccessPlanDocument {
     pub(crate) fn build_review_envelope(&self) -> ReviewMutationEnvelope {
         let projection = self.build_review_projection();
         build_review_mutation_envelope(
-            projection
-                .actions
-                .into_iter()
-                .map(|action| ReviewMutationAction {
-                    action_id: action.action_id,
-                    action: action.action,
-                    domain: action.domain,
-                    resource_kind: action.resource_kind,
-                    identity: action.identity,
-                    status: action.status,
-                    order_group: action.order_group,
-                    kind_order: action.kind_order,
-                    blocked_reason: action.blocked_reason,
-                    details: action.details,
-                    review_hints: action.review_hints,
-                    raw: action.raw,
-                })
-                .collect(),
+            projection.actions.into_iter().collect(),
             &projection.domains,
         )
     }

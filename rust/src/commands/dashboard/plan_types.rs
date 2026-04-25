@@ -7,8 +7,8 @@ use std::path::PathBuf;
 
 use super::FolderInventoryItem;
 use crate::review_contract::{
-    build_review_mutation_envelope, review_action_group, review_action_rank,
-    review_operation_kind_rank, ReviewMutationAction,
+    build_review_mutation_envelope, review_action_rank, ReviewMutationAction,
+    ReviewMutationActionInput,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -112,25 +112,9 @@ pub(super) struct DashboardPlanReport {
 }
 
 #[derive(Debug, Clone)]
-pub(super) struct DashboardPlanReviewActionProjection {
-    pub(super) action_id: String,
-    pub(super) action: String,
-    pub(super) domain: String,
-    pub(super) resource_kind: String,
-    pub(super) identity: String,
-    pub(super) status: String,
-    pub(super) order_group: String,
-    pub(super) kind_order: usize,
-    pub(super) blocked_reason: Option<String>,
-    pub(super) details: Option<String>,
-    pub(super) review_hints: Vec<String>,
-    pub(super) raw: Value,
-}
-
-#[derive(Debug, Clone)]
 pub(super) struct DashboardPlanReviewProjection {
     pub(super) domains: Vec<String>,
-    pub(super) actions: Vec<DashboardPlanReviewActionProjection>,
+    pub(super) actions: Vec<ReviewMutationAction>,
 }
 
 impl DashboardPlanAction {
@@ -146,27 +130,26 @@ impl DashboardPlanAction {
         }
     }
 
-    fn to_review_projection(&self) -> DashboardPlanReviewActionProjection {
+    fn to_review_projection(&self) -> ReviewMutationAction {
         let raw = match serde_json::to_value(self) {
             Ok(Value::Object(object)) => Value::Object(object),
             Ok(other) => other,
             Err(_) => Value::Null,
         };
-        DashboardPlanReviewActionProjection {
+        ReviewMutationActionInput {
             action_id: self.action_id.clone(),
             action: self.action.clone(),
             domain: self.domain.clone(),
             resource_kind: self.resource_kind.clone(),
             identity: self.review_identity(),
             status: self.status.clone(),
-            order_group: review_action_group(&self.action).to_string(),
-            kind_order: review_operation_kind_rank(&self.domain, &self.action),
             blocked_reason: self.blocked_reason.clone(),
             details: (!self.changed_fields.is_empty())
                 .then(|| format!("fields={}", self.changed_fields.join(","))),
             review_hints: self.review_hints.clone(),
             raw,
         }
+        .into()
     }
 }
 
@@ -203,27 +186,8 @@ impl DashboardPlanReport {
             .iter()
             .map(String::as_str)
             .collect::<Vec<_>>();
-        let review = build_review_mutation_envelope(
-            projection
-                .actions
-                .into_iter()
-                .map(|action| ReviewMutationAction {
-                    action_id: action.action_id,
-                    action: action.action,
-                    domain: action.domain,
-                    resource_kind: action.resource_kind,
-                    identity: action.identity,
-                    status: action.status,
-                    order_group: action.order_group,
-                    kind_order: action.kind_order,
-                    blocked_reason: action.blocked_reason,
-                    details: action.details,
-                    review_hints: action.review_hints,
-                    raw: action.raw,
-                })
-                .collect(),
-            &domain_refs,
-        );
+        let review =
+            build_review_mutation_envelope(projection.actions.into_iter().collect(), &domain_refs);
         Value::Object(Map::from_iter(vec![
             (
                 "actions".to_string(),

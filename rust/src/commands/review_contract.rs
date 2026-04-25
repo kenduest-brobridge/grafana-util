@@ -117,6 +117,41 @@ pub(crate) struct ReviewMutationAction {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct ReviewMutationActionInput {
+    pub action_id: String,
+    pub action: String,
+    pub domain: String,
+    pub resource_kind: String,
+    pub identity: String,
+    pub status: String,
+    pub blocked_reason: Option<String>,
+    pub details: Option<String>,
+    pub review_hints: Vec<String>,
+    pub raw: Value,
+}
+
+impl From<ReviewMutationActionInput> for ReviewMutationAction {
+    fn from(input: ReviewMutationActionInput) -> Self {
+        let order_group = review_action_group(&input.action).to_string();
+        let kind_order = review_operation_kind_rank(&input.domain, &input.action);
+        ReviewMutationAction {
+            action_id: input.action_id,
+            action: input.action,
+            domain: input.domain,
+            resource_kind: input.resource_kind,
+            identity: input.identity,
+            status: input.status,
+            order_group,
+            kind_order,
+            blocked_reason: input.blocked_reason,
+            details: input.details,
+            review_hints: input.review_hints,
+            raw: input.raw,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct ReviewMutationDomain {
     pub id: String,
     pub checked: usize,
