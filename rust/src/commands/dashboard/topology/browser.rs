@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 
 use crate::interactive_browser::BrowserItem;
 
-use super::topology_build::compare_topology_nodes;
+use super::build::compare_topology_nodes;
 use super::{ImpactAlertResource, ImpactDashboard, ImpactDocument, TopologyDocument, TopologyNode};
 
 fn sort_impact_resources(resources: &mut Vec<&ImpactAlertResource>) {

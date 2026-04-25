@@ -11,19 +11,16 @@ use super::review_source::{resolve_dashboard_review_artifacts, DashboardReviewSo
 use super::{
     write_json_document, ImpactArgs, ImpactOutputFormat, TopologyArgs, TopologyOutputFormat,
 };
-#[path = "topology_build.rs"]
-mod topology_build;
-pub(crate) use topology_build::{build_impact_document, build_topology_document};
+mod build;
+pub(crate) use build::{build_impact_document, build_topology_document};
 #[cfg(any(feature = "tui", test))]
-#[path = "topology_browser.rs"]
-mod topology_browser;
+mod browser;
 #[cfg(any(feature = "tui", test))]
-pub(crate) use topology_browser::{build_impact_browser_items, build_topology_browser_items};
-#[path = "topology_render.rs"]
-mod topology_render;
+pub(crate) use browser::{build_impact_browser_items, build_topology_browser_items};
+mod render;
 #[cfg(test)]
-use topology_render::build_impact_summary_lines;
-pub(crate) use topology_render::{
+use render::build_impact_summary_lines;
+pub(crate) use render::{
     render_impact_text, render_topology_dot, render_topology_mermaid, render_topology_text,
 };
 mod types;

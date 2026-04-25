@@ -9,7 +9,6 @@ use crate::common::{message, Result};
 
 use super::{ParsedAlertResource, TopologyDocument, TopologyEdge, TopologyNode, TopologySummary};
 
-#[path = "topology_build/impact.rs"]
 mod impact;
 
 pub(crate) use impact::build_impact_document;
