@@ -65,8 +65,8 @@ First-priority handling order:
 
 - [ ] Continue dashboard inspect/governance/report splits across one stable
   responsibility boundary at a time.
-- [ ] Keep mutation review envelope, dashboard v2 adapter, and shared status
-  producer trait deferred until the earlier boundaries prove stable.
+- [ ] Keep mutation review envelope, dashboard v2 adapter, and broader shared
+  status producer adoption deferred until the earlier boundaries prove stable.
 
 ## Active Execution Queue
 
@@ -75,22 +75,19 @@ changes priority.
 
 - [ ] Continue dashboard inspect/governance/report code splits only where a
   stable responsibility boundary is obvious. Report model, query-report
-  collection, and query analyzer moves are done; keep
-  `commands/dashboard/mod.rs` as the facade for later moves.
+  collection, query analyzer, inspect governance report internals, and
+  governance gate rules are done; keep `commands/dashboard/mod.rs` as the
+  facade for later moves.
 - [ ] Keep the mutation review envelope adapter work later and only introduce a shared adapter once two or more domains prove the same review shape.
 - [ ] Keep dashboard v2 as a future adapter boundary. Continue rejecting v2-shaped input in the classic prompt lane and keep prompt export parity guarded with fixtures and tests.
-- [ ] Keep the shared status producer trait deferred. `StatusReading` is already
-  useful, but dashboard, datasource, and access still do not prove one common
-  trait interface.
 
 Detailed execution items:
 
 - Dashboard inspect/governance/report re-layering:
   - [ ] Use the first-pass inventory of inspect, governance, report, topology,
     impact, and policy modules before each later move.
-  - [ ] Choose exactly one next boundary, preferably a stable inspect or
-    governance responsibility that keeps imports simpler than the current
-    layout.
+  - [ ] Choose exactly one next boundary, preferably `governance_gate*` if it
+    remains separable from inspect governance report internals.
   - [ ] Use `git mv` for tracked moves and keep `commands/dashboard/mod.rs`
     as the facade.
   - [ ] Keep public CLI/help unchanged; if help changes accidentally, back out
@@ -199,10 +196,8 @@ Relevant areas:
 
 Action:
 
-- [ ] Delay a shared trait until at least dashboard, datasource, and access prove the same producer interface.
-- [ ] Re-check this only after dashboard, datasource, and access converge on
-  input collection, optional output, freshness stamping, and multi-org
-  transport boundaries.
+- [ ] Keep live producer collection, freshness stamping, and multi-org
+  transport outside the shared trait until those inputs converge.
 
 ## P1 - HTTP Transport Efficiency
 
@@ -251,22 +246,27 @@ Dashboard, datasource, access, alert, and workspace mutation flows each have rev
 
 Current baseline:
 
-- A shared internal `ReviewAction` adapter exists for dashboard/access plan
-  projections without changing public JSON contracts.
+- Shared internal `ReviewAction` and `ReviewBlockedReason` adapters exist for
+  dashboard/access plan projections without changing public JSON contracts.
 
 Action:
 
 - [ ] Introduce a shared `ReviewRisk` concept.
 - [ ] Introduce a shared `ReviewRequest` concept.
 - [ ] Introduce a shared `ReviewApplyResult` concept.
-- [ ] Introduce a shared `ReviewBlockedReason` concept.
 - [ ] Keep domain-specific payloads behind a shared review wrapper.
 - [ ] Avoid changing public JSON contracts until a migration path is defined.
 - [ ] Start with one internal model or adapter. Do not force all domains to adopt the envelope in the first commit.
 
 Current blocker:
 
-- Dashboard/access/workspace already prove a shared action/status/blocked-reason shape through the internal review adapter. `ReviewRisk`, `ReviewRequest`, and `ReviewApplyResult` still need one more domain-pair evidence pass because current risk records are dashboard-governance shaped and live apply request/result structs are sync/Grafana API shaped, not yet domain-neutral public contracts.
+- Dashboard/access now prove a shared action/status/blocked-reason shape
+  through internal review adapters. `ReviewRisk`, `ReviewRequest`, and
+  `ReviewApplyResult` still need cautious evidence handling. Current risk
+  records are dashboard-governance shaped; request structs are split between
+  datasource import planning and lower-level request closures; apply-result
+  evidence exists in alert apply and sync live apply, but the wiring points are
+  runtime/API modules outside the current plan/review-type adapter boundary.
 
 Validation:
 
