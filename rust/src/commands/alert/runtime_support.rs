@@ -7,6 +7,7 @@
 //!   shape across execution paths.
 
 use crate::common::{message, tool_version, value_as_object, Result};
+use crate::review_contract::{review_apply_result_entry, ReviewApplyResult};
 use reqwest::Method;
 use serde_json::{json, Map, Value};
 
@@ -461,8 +462,7 @@ where
         .and_then(Value::as_array)
         .ok_or_else(|| message("Alert plan document is missing rows."))?;
 
-    let mut results = Vec::new();
-    let mut applied_count = 0usize;
+    let mut apply_result = ReviewApplyResult::new("apply");
     for row in rows {
         let row = row_object(row, "Alert plan row")?;
         let action = row
@@ -494,22 +494,16 @@ where
             }
             _ => unreachable!(),
         };
-        applied_count += 1;
-        results.push(json!({
-            "kind": kind,
-            "identity": identity,
-            "action": action,
-            "response": response,
-        }));
+        apply_result.push_result(review_apply_result_entry(kind, identity, action, response));
     }
 
-    Ok(json!({
-        "kind": "grafana-util-alert-apply-result",
-        "mode": "apply",
-        "allowPolicyReset": allow_policy_reset,
-        "appliedCount": applied_count,
-        "results": results,
-    }))
+    Ok(apply_result.into_value_with_fields([
+        (
+            "kind",
+            Value::String("grafana-util-alert-apply-result".to_string()),
+        ),
+        ("allowPolicyReset", Value::Bool(allow_policy_reset)),
+    ]))
 }
 
 pub fn init_alert_runtime_layout(root: &Path) -> Result<Value> {

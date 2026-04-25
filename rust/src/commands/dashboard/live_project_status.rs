@@ -20,7 +20,7 @@ use crate::project_status::{
     status_finding, ProjectDomainStatus, ProjectStatusFinding, PROJECT_STATUS_PARTIAL,
     PROJECT_STATUS_READY,
 };
-use crate::project_status_model::{StatusReading, StatusRecordCount};
+use crate::project_status_model::{StatusProducer, StatusReading, StatusRecordCount};
 
 use super::DEFAULT_PAGE_SIZE;
 
@@ -337,6 +337,12 @@ pub(crate) fn build_live_dashboard_domain_status_from_inputs(
     inputs: &LiveDashboardProjectStatusInputs,
 ) -> ProjectDomainStatus {
     build_live_dashboard_domain_status(&inputs.dashboard_summaries, &inputs.datasources)
+}
+
+impl StatusProducer for &LiveDashboardProjectStatusInputs {
+    fn status_reading(self) -> Option<StatusReading> {
+        Some(build_live_dashboard_domain_status_from_inputs(self).into())
+    }
 }
 
 pub(crate) fn build_live_dashboard_read_failed_domain_status(

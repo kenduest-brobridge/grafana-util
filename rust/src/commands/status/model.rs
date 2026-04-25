@@ -82,6 +82,25 @@ impl From<StatusRecordCount> for ProjectStatusFinding {
     }
 }
 
+impl From<ProjectDomainStatus> for StatusReading {
+    fn from(value: ProjectDomainStatus) -> Self {
+        Self {
+            id: value.id,
+            scope: value.scope,
+            mode: value.mode,
+            status: value.status,
+            reason_code: value.reason_code,
+            primary_count: value.primary_count,
+            source_kinds: value.source_kinds,
+            signal_keys: value.signal_keys,
+            blockers: value.blockers.into_iter().map(Into::into).collect(),
+            warnings: value.warnings.into_iter().map(Into::into).collect(),
+            next_actions: value.next_actions,
+            freshness: value.freshness,
+        }
+    }
+}
+
 impl StatusReading {
     pub fn into_project_domain_status_reading(self) -> ProjectDomainStatusReading {
         ProjectDomainStatusReading {
@@ -151,5 +170,31 @@ mod tests {
         let record_again = StatusRecordCount::from(finding);
         assert_eq!(record_again, record);
         let _ = PROJECT_STATUS_READY;
+    }
+
+    #[test]
+    fn project_domain_status_round_trips_through_status_reading() {
+        let original = StatusReading {
+            id: "dashboard".to_string(),
+            scope: "live".to_string(),
+            mode: "live-dashboard-read".to_string(),
+            status: PROJECT_STATUS_READY.to_string(),
+            reason_code: PROJECT_STATUS_READY.to_string(),
+            primary_count: 2,
+            source_kinds: vec!["live-dashboard-search".to_string()],
+            signal_keys: vec!["live.dashboardCount".to_string()],
+            blockers: Vec::new(),
+            warnings: vec![StatusRecordCount::new(
+                "live-dashboard-root-scope",
+                1,
+                "live.rootDashboardCount",
+            )],
+            next_actions: vec!["re-run live dashboard read".to_string()],
+            freshness: Default::default(),
+        };
+        let domain = original.clone().into_project_domain_status();
+        let reading = StatusReading::from(domain);
+
+        assert_eq!(reading, original);
     }
 }

@@ -220,6 +220,68 @@ pub(crate) struct ReviewMutationEnvelope {
     pub summary: ReviewMutationSummary,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct ReviewApplyResult {
+    pub mode: String,
+    pub results: Vec<Value>,
+}
+
+impl ReviewApplyResult {
+    pub(crate) fn new(mode: impl Into<String>) -> Self {
+        Self {
+            mode: mode.into(),
+            results: Vec::new(),
+        }
+    }
+
+    pub(crate) fn from_results(mode: impl Into<String>, results: Vec<Value>) -> Self {
+        Self {
+            mode: mode.into(),
+            results,
+        }
+    }
+
+    pub(crate) fn push_result(&mut self, result: Value) {
+        self.results.push(result);
+    }
+
+    pub(crate) fn into_value(self) -> Value {
+        let extra_fields: [(String, Value); 0] = [];
+        self.into_value_with_fields(extra_fields)
+    }
+
+    pub(crate) fn into_value_with_fields<K: Into<String>, const N: usize>(
+        self,
+        extra_fields: [(K, Value); N],
+    ) -> Value {
+        let mut object = Map::new();
+        for (key, value) in extra_fields {
+            object.insert(key.into(), value);
+        }
+        object.insert("mode".to_string(), Value::String(self.mode));
+        object.insert(
+            "appliedCount".to_string(),
+            Value::Number((self.results.len() as i64).into()),
+        );
+        object.insert("results".to_string(), Value::Array(self.results));
+        Value::Object(object)
+    }
+}
+
+pub(crate) fn review_apply_result_entry(
+    kind: impl Into<String>,
+    identity: impl Into<String>,
+    action: impl Into<String>,
+    response: Value,
+) -> Value {
+    Value::Object(Map::from_iter(vec![
+        ("kind".to_string(), Value::String(kind.into())),
+        ("identity".to_string(), Value::String(identity.into())),
+        ("action".to_string(), Value::String(action.into())),
+        ("response".to_string(), response),
+    ]))
+}
+
 fn collect_blocked_reasons(actions: &[ReviewMutationAction]) -> Vec<String> {
     let mut reasons = BTreeSet::new();
     for action in actions {
@@ -375,5 +437,43 @@ pub(crate) fn build_review_mutation_envelope(
         domains,
         blocked_reasons,
         summary,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn review_apply_result_preserves_common_evidence_shape_with_domain_fields() {
+        let mut result = ReviewApplyResult::new("apply");
+        result.push_result(review_apply_result_entry(
+            "grafana-alert-rule",
+            "cpu-high",
+            "create",
+            json!({"uid": "cpu-high"}),
+        ));
+
+        let document = result.into_value_with_fields([
+            ("kind", json!("grafana-util-alert-apply-result")),
+            ("allowPolicyReset", json!(false)),
+        ]);
+
+        assert_eq!(
+            document,
+            json!({
+                "kind": "grafana-util-alert-apply-result",
+                "mode": "apply",
+                "allowPolicyReset": false,
+                "appliedCount": 1,
+                "results": [{
+                    "kind": "grafana-alert-rule",
+                    "identity": "cpu-high",
+                    "action": "create",
+                    "response": {"uid": "cpu-high"}
+                }]
+            })
+        );
     }
 }

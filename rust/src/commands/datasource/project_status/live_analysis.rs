@@ -3,7 +3,7 @@ use std::collections::BTreeSet;
 
 use crate::common::string_field;
 use crate::project_status::{ProjectDomainStatus, PROJECT_STATUS_PARTIAL, PROJECT_STATUS_READY};
-use crate::project_status_model::{StatusReading, StatusRecordCount};
+use crate::project_status_model::{StatusProducer, StatusReading, StatusRecordCount};
 
 const DATASOURCE_DOMAIN_ID: &str = "datasource";
 const DATASOURCE_SCOPE: &str = "live";
@@ -273,7 +273,21 @@ pub(crate) fn datasource_live_project_status_source_kinds(
 pub(crate) fn build_datasource_live_project_status_from_inputs(
     inputs: &LiveDatasourceProjectStatusInputs,
 ) -> Option<ProjectDomainStatus> {
-    build_datasource_live_project_status(DatasourceLiveProjectStatusInputs {
+    inputs.project_domain_status()
+}
+
+impl StatusProducer for &LiveDatasourceProjectStatusInputs {
+    fn status_reading(self) -> Option<StatusReading> {
+        build_datasource_live_project_status_reading(datasource_live_project_status_inputs_view(
+            self,
+        ))
+    }
+}
+
+fn datasource_live_project_status_inputs_view(
+    inputs: &LiveDatasourceProjectStatusInputs,
+) -> DatasourceLiveProjectStatusInputs<'_> {
+    DatasourceLiveProjectStatusInputs {
         datasource_list: Some(&inputs.datasource_list),
         datasource_read: None,
         org_list: if inputs.org_list.is_empty() {
@@ -282,12 +296,20 @@ pub(crate) fn build_datasource_live_project_status_from_inputs(
             Some(&inputs.org_list)
         },
         current_org: inputs.current_org.as_ref(),
-    })
+    }
 }
 
+#[allow(dead_code)]
 pub(crate) fn build_datasource_live_project_status(
     inputs: DatasourceLiveProjectStatusInputs<'_>,
 ) -> Option<ProjectDomainStatus> {
+    build_datasource_live_project_status_reading(inputs)
+        .map(StatusReading::into_project_domain_status)
+}
+
+fn build_datasource_live_project_status_reading(
+    inputs: DatasourceLiveProjectStatusInputs<'_>,
+) -> Option<StatusReading> {
     if inputs.datasource_list.is_none() && inputs.datasource_read.is_none() {
         return None;
     }
@@ -606,26 +628,23 @@ pub(crate) fn build_datasource_live_project_status(
         (PROJECT_STATUS_READY, DATASOURCE_REASON_READY)
     };
 
-    Some(
-        StatusReading {
-            id: DATASOURCE_DOMAIN_ID.to_string(),
-            scope: DATASOURCE_SCOPE.to_string(),
-            mode: DATASOURCE_MODE.to_string(),
-            status: status.to_string(),
-            reason_code: reason_code.to_string(),
-            primary_count: datasource_count,
-            source_kinds,
-            signal_keys: DATASOURCE_SIGNAL_KEYS
-                .iter()
-                .map(|item| (*item).to_string())
-                .collect(),
-            blockers: Vec::new(),
-            warnings,
-            next_actions,
-            freshness: Default::default(),
-        }
-        .into_project_domain_status(),
-    )
+    Some(StatusReading {
+        id: DATASOURCE_DOMAIN_ID.to_string(),
+        scope: DATASOURCE_SCOPE.to_string(),
+        mode: DATASOURCE_MODE.to_string(),
+        status: status.to_string(),
+        reason_code: reason_code.to_string(),
+        primary_count: datasource_count,
+        source_kinds,
+        signal_keys: DATASOURCE_SIGNAL_KEYS
+            .iter()
+            .map(|item| (*item).to_string())
+            .collect(),
+        blockers: Vec::new(),
+        warnings,
+        next_actions,
+        freshness: Default::default(),
+    })
 }
 
 pub(crate) fn build_live_datasource_read_failed_domain_status(

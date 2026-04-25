@@ -1,17 +1,18 @@
-use serde_json::{json, Value};
+use serde_json::Value;
 
+use crate::review_contract::{review_apply_result_entry, ReviewApplyResult};
 use crate::sync::live::SyncApplyOperation;
 
 pub(crate) fn normalize_live_apply_result(
     operation: &SyncApplyOperation,
     response: Value,
 ) -> Value {
-    json!({
-        "kind": operation.kind.as_str(),
-        "identity": operation.identity.as_str(),
-        "action": operation.action.as_str(),
-        "response": response,
-    })
+    review_apply_result_entry(
+        operation.kind.as_str(),
+        operation.identity.as_str(),
+        operation.action.as_str(),
+        response,
+    )
 }
 
 pub(crate) fn append_live_apply_result(results: &mut Vec<Value>, result: Value) {
@@ -19,11 +20,7 @@ pub(crate) fn append_live_apply_result(results: &mut Vec<Value>, result: Value) 
 }
 
 pub(crate) fn finish_live_apply_response(results: Vec<Value>) -> Value {
-    json!({
-        "mode": "live-apply",
-        "appliedCount": results.len(),
-        "results": results,
-    })
+    ReviewApplyResult::from_results("live-apply", results).into_value()
 }
 
 #[cfg(test)]

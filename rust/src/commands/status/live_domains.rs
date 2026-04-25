@@ -19,6 +19,7 @@ use crate::grafana_api::{DashboardResourceClient, DatasourceResourceClient};
 use crate::http::JsonHttpClient;
 use crate::project_status::ProjectDomainStatus;
 use crate::project_status_freshness::ProjectStatusFreshnessSample;
+use crate::project_status_model::StatusProducer;
 use crate::project_status_support::project_status_live;
 use crate::sync::{
     build_live_promotion_domain_status_transport, build_live_promotion_project_status,
@@ -72,7 +73,9 @@ fn build_live_dashboard_status_from_read_pass(
                 dashboard_summaries: dashboard_summaries.clone(),
                 datasources: datasources.clone(),
             };
-            let status = build_live_dashboard_domain_status_from_inputs(&inputs);
+            let status = (&inputs)
+                .project_domain_status()
+                .unwrap_or_else(|| build_live_dashboard_domain_status_from_inputs(&inputs));
             let mut freshness_samples =
                 project_status_live::dashboard_project_status_freshness_samples(&inputs);
             let dashboard_version_timestamp = if freshness_samples.is_empty() {
