@@ -10,14 +10,19 @@ use std::path::Path;
 use crate::common::{message, render_json_value, Result};
 
 use super::governance_gate_rules as rules;
-#[cfg(all(feature = "tui", not(test)))]
-use super::governance_gate_tui::run_governance_gate_interactive;
 use super::review_source::{resolve_dashboard_review_artifacts, DashboardReviewSourceArgs};
 use super::{
     load_governance_policy, write_json_document, GovernanceGateArgs, GovernanceGateOutputFormat,
 };
 #[cfg(test)]
 use crate::interactive_browser::run_interactive_browser;
+
+#[cfg(feature = "tui")]
+pub(crate) mod tui;
+#[cfg(all(feature = "tui", not(test)))]
+use tui::run_governance_gate_interactive;
+#[cfg(test)]
+pub(crate) use tui::{build_governance_gate_tui_groups, build_governance_gate_tui_items};
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub(crate) struct DashboardGovernanceGateSummary {
@@ -442,7 +447,7 @@ pub(crate) fn run_dashboard_governance_gate(args: &GovernanceGateArgs) -> Result
             run_interactive_browser(
                 "Dashboard Governance Gate",
                 &summary_lines,
-                &super::governance_gate_tui::build_governance_gate_tui_items(&result, "all"),
+                &build_governance_gate_tui_items(&result, "all"),
             )?;
             return if result.ok {
                 Ok(())

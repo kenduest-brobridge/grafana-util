@@ -40,7 +40,6 @@ mod facade_support;
 mod files;
 mod governance_gate;
 mod governance_gate_rules;
-mod governance_gate_tui;
 mod governance_policy;
 mod help;
 mod history;

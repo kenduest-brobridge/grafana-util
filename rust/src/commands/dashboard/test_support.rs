@@ -26,12 +26,10 @@ pub(super) use crate::dashboard::files::{
     resolve_dashboard_export_root, write_dashboard, write_json_document,
 };
 pub(super) use crate::dashboard::governance_gate::{
+    build_governance_gate_tui_groups, build_governance_gate_tui_items,
     evaluate_dashboard_governance_gate, render_dashboard_governance_gate_result,
     run_dashboard_governance_gate, DashboardGovernanceGateFinding, DashboardGovernanceGateResult,
     DashboardGovernanceGateSummary,
-};
-pub(super) use crate::dashboard::governance_gate_tui::{
-    build_governance_gate_tui_groups, build_governance_gate_tui_items,
 };
 pub(super) use crate::dashboard::governance_policy::{
     load_builtin_governance_policy, load_governance_policy, load_governance_policy_file,

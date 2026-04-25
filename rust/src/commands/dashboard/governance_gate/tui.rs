@@ -19,7 +19,7 @@ use crate::common::Result;
 use crate::interactive_browser::BrowserItem;
 use crate::tui_shell;
 
-use super::governance_gate::{build_browser_item, finding_sort_key, DashboardGovernanceGateResult};
+use super::{build_browser_item, finding_sort_key, DashboardGovernanceGateResult};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum FindingsPane {
