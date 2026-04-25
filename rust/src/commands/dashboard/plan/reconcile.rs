@@ -384,10 +384,9 @@ pub(super) fn build_org_actions(org: &OrgPlanInput, prune: bool) -> Vec<Dashboar
             action = REVIEW_ACTION_BLOCKED_TARGET.to_string();
             status = REVIEW_STATUS_BLOCKED.to_string();
             blocked_reason = Some(REVIEW_REASON_TARGET_PROVISIONED_OR_MANAGED.to_string());
-        } else if target_review_warning && action != REVIEW_ACTION_SAME {
-            status = REVIEW_STATUS_WARNING.to_string();
         } else if action != REVIEW_ACTION_SAME
-            && (!dependency_hints.is_empty()
+            && (target_review_warning
+                || !dependency_hints.is_empty()
                 || review_hints
                     .iter()
                     .any(|hint| hint.starts_with("missing-folder-uid=")))
