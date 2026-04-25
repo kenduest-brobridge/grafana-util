@@ -43,6 +43,18 @@ build_flavor_label() {
   printf '%s\n' "default"
 }
 
+configure_archive_tool() {
+  local ar_tool="${ZIGBUILD_AR:-}"
+
+  if [[ -z "${ar_tool}" ]]; then
+    ar_tool="$(command -v ar || true)"
+  fi
+
+  if [[ -n "${ar_tool}" ]]; then
+    export AR_x86_64_unknown_linux_gnu="${AR_x86_64_unknown_linux_gnu:-${ar_tool}}"
+  fi
+}
+
 run_zigbuild() {
   local cargo_args=(
     zigbuild
@@ -96,6 +108,7 @@ main() {
   output_dir="$(resolve_output_dir)"
   flavor_label="$(build_flavor_label)"
 
+  configure_archive_tool
   run_zigbuild
   copy_artifact "${output_dir}"
   print_summary "${output_dir}" "${flavor_label}"

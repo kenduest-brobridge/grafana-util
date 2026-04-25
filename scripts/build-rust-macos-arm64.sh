@@ -29,7 +29,11 @@ mkdir -p "${OUTPUT_DIR}"
 
 (
   cd "${RUST_DIR}"
-  RUSTFLAGS="${BUILD_RUSTFLAGS}" cargo build --release "${FEATURE_ARGS[@]}"
+  if [[ "${BUILD_BROWSER}" != "0" ]]; then
+    RUSTFLAGS="${BUILD_RUSTFLAGS}" cargo build --release "${FEATURE_ARGS[@]}"
+  else
+    RUSTFLAGS="${BUILD_RUSTFLAGS}" cargo build --release
+  fi
 )
 
 cp "${RUST_DIR}/target/release/grafana-util" "${OUTPUT_DIR}/grafana-util"
