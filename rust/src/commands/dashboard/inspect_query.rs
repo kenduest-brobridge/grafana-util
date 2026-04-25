@@ -2,7 +2,7 @@
 //!
 //! This module stays as the stable public facade while the family-specific registry
 //! and dispatcher live in a dedicated sibling module.
-#[path = "inspect_analyzer_registry.rs"]
+#[path = "inspect/analyzer/registry.rs"]
 mod inspect_analyzer_registry;
 
 #[allow(unused_imports)]

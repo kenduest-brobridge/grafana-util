@@ -12,11 +12,11 @@
 //! same row builders instead of separate code paths.
 //!
 //! Shortest modification path for maintainers:
-//! - adjust query extraction in `inspect.rs`, `inspect_query.rs`, and
-//!   `inspect_query_report.rs`
+//! - adjust query extraction in `inspect.rs`, `inspect_query.rs`,
+//!   `inspect/analyzer/*.rs`, and `inspect/query_report.rs`
 //! - adjust live staging in `inspect_live.rs`
-//! - adjust summary/report/governance shape in `inspect_summary.rs`, `inspect_report.rs`,
-//!   and `inspect_governance.rs`
+//! - adjust summary/report/governance shape in `inspect_summary.rs`,
+//!   `inspect_report_model.rs`, and `inspect_governance.rs`
 //! - adjust rendering in `inspect_render.rs`
 //! - adjust inspect regressions in `inspect_live_rust_tests.rs` first, then
 //!   `dashboard_rust_tests.rs` when a behavior spans multiple paths
@@ -28,7 +28,7 @@ mod inspect_orchestration;
 mod inspect_output;
 #[path = "inspect_paths.rs"]
 mod inspect_paths;
-#[path = "inspect_query_report.rs"]
+#[path = "inspect/query_report.rs"]
 mod inspect_query_report;
 
 use serde_json::{Map, Value};

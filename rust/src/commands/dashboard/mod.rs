@@ -53,10 +53,15 @@ mod import_interactive_render;
 mod import_interactive_review;
 mod import_interactive_state;
 mod inspect;
+#[path = "inspect/analyzer/flux.rs"]
 mod inspect_analyzer_flux;
+#[path = "inspect/analyzer/loki.rs"]
 mod inspect_analyzer_loki;
+#[path = "inspect/analyzer/prometheus.rs"]
 mod inspect_analyzer_prometheus;
+#[path = "inspect/analyzer/search.rs"]
 mod inspect_analyzer_search;
+#[path = "inspect/analyzer/sql.rs"]
 mod inspect_analyzer_sql;
 mod inspect_dependency_render;
 mod inspect_family;
@@ -65,6 +70,7 @@ mod inspect_live;
 mod inspect_live_tui;
 mod inspect_query;
 mod inspect_render;
+#[path = "inspect_report_model.rs"]
 mod inspect_report;
 mod inspect_summary;
 mod inspect_workbench;
