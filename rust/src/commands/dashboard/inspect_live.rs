@@ -4,16 +4,18 @@
 //! offline inspect pipeline, so the exported files and the live request path can share the
 //! same summary/report/governance builders.
 use reqwest::Method;
-use serde_json::{Map, Value};
+use serde_json::Value;
 use std::path::{Path, PathBuf};
 
-use crate::common::{string_field, value_as_object, Result};
+use crate::common::{value_as_object, Result};
 use crate::grafana_api::{DashboardResourceClient, DatasourceResourceClient};
 use crate::http::JsonHttpClient;
 
 mod fetch;
+mod inventory;
 mod staging;
 pub(crate) use fetch::snapshot_live_dashboard_export_with_fetcher;
+use inventory::collect_folder_inventory_from_summaries;
 #[cfg(test)]
 pub(crate) use staging::prepare_inspect_export_import_dir;
 pub(crate) use staging::{
@@ -34,10 +36,7 @@ use super::inspect_governance::build_export_inspection_governance_document;
 #[cfg(feature = "tui")]
 use super::inspect_live_tui::run_inspect_live_interactive as run_inspect_live_tui;
 use super::live::build_datasource_inventory_record;
-use super::{
-    FolderInventoryItem, DATASOURCE_INVENTORY_FILENAME, DEFAULT_FOLDER_TITLE, DEFAULT_ORG_ID,
-    DEFAULT_ORG_NAME, FOLDER_INVENTORY_FILENAME, RAW_EXPORT_SUBDIR,
-};
+use super::{DATASOURCE_INVENTORY_FILENAME, FOLDER_INVENTORY_FILENAME, RAW_EXPORT_SUBDIR};
 
 pub(crate) fn build_review_live_export_args(
     common: &crate::dashboard::CommonCliArgs,
@@ -82,81 +81,6 @@ fn build_live_export_args(args: &InspectLiveArgs, output_dir: PathBuf) -> Export
     );
     export_args.progress = args.progress;
     export_args
-}
-
-fn collect_folder_inventory_from_summaries(
-    dashboard: &DashboardResourceClient<'_>,
-    summaries: &[Map<String, Value>],
-) -> Result<Vec<FolderInventoryItem>> {
-    let mut seen = std::collections::BTreeSet::new();
-    let mut folders = Vec::new();
-    for summary in summaries {
-        let folder_uid = string_field(summary, "folderUid", "");
-        if folder_uid.is_empty() {
-            continue;
-        }
-        let org_id = summary
-            .get("orgId")
-            .map(|value| match value {
-                Value::String(text) => text.clone(),
-                _ => value.to_string(),
-            })
-            .unwrap_or_else(|| DEFAULT_ORG_ID.to_string());
-        let key = format!("{org_id}:{folder_uid}");
-        if seen.contains(&key) {
-            continue;
-        }
-        let Some(folder) = dashboard.fetch_folder_if_exists(&folder_uid)? else {
-            continue;
-        };
-        let org = string_field(summary, "orgName", DEFAULT_ORG_NAME);
-        let mut parent_path = Vec::new();
-        let mut previous_parent_uid = None;
-        if let Some(parents) = folder.get("parents").and_then(Value::as_array) {
-            for parent in parents {
-                let Some(parent_object) = parent.as_object() else {
-                    continue;
-                };
-                let parent_uid = string_field(parent_object, "uid", "");
-                let parent_title = string_field(parent_object, "title", "");
-                if parent_uid.is_empty() || parent_title.is_empty() {
-                    continue;
-                }
-                parent_path.push(parent_title.clone());
-                let parent_key = format!("{org_id}:{parent_uid}");
-                if !seen.contains(&parent_key) {
-                    folders.push(FolderInventoryItem {
-                        uid: parent_uid.clone(),
-                        title: parent_title,
-                        path: parent_path.join(" / "),
-                        parent_uid: previous_parent_uid.clone(),
-                        org: org.clone(),
-                        org_id: org_id.clone(),
-                    });
-                    seen.insert(parent_key);
-                }
-                previous_parent_uid = Some(parent_uid);
-            }
-        }
-        let folder_title = string_field(&folder, "title", DEFAULT_FOLDER_TITLE);
-        parent_path.push(folder_title.clone());
-        folders.push(FolderInventoryItem {
-            uid: folder_uid.clone(),
-            title: folder_title,
-            path: parent_path.join(" / "),
-            parent_uid: previous_parent_uid,
-            org,
-            org_id: org_id.clone(),
-        });
-        seen.insert(key);
-    }
-    folders.sort_by(|left, right| {
-        left.org_id
-            .cmp(&right.org_id)
-            .then(left.path.cmp(&right.path))
-            .then(left.uid.cmp(&right.uid))
-    });
-    Ok(folders)
 }
 
 #[cfg(feature = "tui")]
