@@ -76,7 +76,7 @@ changes priority.
 
 - [ ] Continue dashboard inspect/governance/report code splits only where a
   stable responsibility boundary is obvious. Report model, query-report
-  collection, query analyzer, inspect governance report internals,
+  collection, query-report output rendering, query analyzer, inspect governance report internals,
   inspect-summary projection, dependency output rendering, topology impact,
   governance gate rules/TUI, and governance gate runner/output support are
   done; keep `commands/dashboard/mod.rs` as the facade for later moves.
@@ -161,8 +161,9 @@ changes stay reviewable and do not blur lane boundaries.
   dashboard JSON deployment should go through the Git repository / PR path, not
   direct dashboard API import or workspace apply.
 - [ ] Detect and surface dashboard ownership/provenance in live inventory and
-  preflight evidence: API-managed, file-provisioned, or Git Sync-managed. Mark
-  Git Sync targets as read-only for direct live dashboard writes by default.
+  preflight evidence: API-managed, file-provisioned, or Git Sync-managed. Live
+  inventory/review output now exposes provenance for non-write paths; keep Git
+  Sync targets read-only for direct live dashboard writes by default.
 - [ ] Add Git Sync-friendly layout support in dashboard export/convert,
   workspace scan/preview, and dashboard plan so repo trees can be reviewed
   without pretending they are ordinary live API targets.
