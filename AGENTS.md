@@ -38,9 +38,11 @@
 
 ## Model Routing
 
-- Reserve highest-reasoning frontier runs, such as GPT-5.4 with xhigh/extreme reasoning, for changes that cross CLI behavior, artifact contracts, generated docs, tests, and real export compatibility at the same time.
-- Use that heavier model tier for architecture decisions where a wrong assumption can ripple across command surface, schema contracts, workspace/review flows, or raw/prompt/provisioning lane semantics.
-- Prefer normal GPT-5.4 reasoning or worker models for single-file Rust fixes, focused test cleanup, docs edits, generated-doc refreshes, and other narrow tasks with clear local context.
+- Use mini models only for low-risk inventory, wording, small documentation edits, simple test triage, changelog or commit-message drafting, and narrow mechanical changes with clear validation.
+- Use the default model with medium reasoning for routine Rust work, focused test cleanup, generated-doc refreshes, small CLI help edits, and scoped docs updates.
+- Use high reasoning for architecture, refactor, schema, migration, Rust/Python parity, Grafana API compatibility, command-surface changes, and changes that affect shared CLI/docs contracts.
+- Use xhigh reasoning where available for critical validator runs or large autonomous changes that cross Rust behavior, artifact contracts, generated docs, tests, and real export/import/provisioning compatibility at the same time.
+- Do not use mini models for command-surface, schema-contract, generated-doc, migration, compatibility, or architecture decisions.
 - When using workers, split by disjoint write scope and keep the main agent responsible for final integration, contract review, and validation.
 
 ## Validation And Commits

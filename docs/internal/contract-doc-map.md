@@ -37,6 +37,73 @@ Use three layers:
   [`scripts/contracts/command-reference-index.json`](scripts/contracts/command-reference-index.json)
   and [`scripts/contracts/handbook-nav.json`](scripts/contracts/handbook-nav.json)
 
+## Runtime Output Contract Inventory
+
+Runtime output contracts are executable regression gates for machine-readable
+JSON produced by commands or persisted artifact workflows. They are owned by
+`scripts/contracts/output-contracts.json` and the matching checked-in fixtures
+under `scripts/contracts/output-fixtures/`.
+
+Current runtime output-contract artifacts:
+
+| Contract name | Runtime `kind` | Golden fixture | Ownership note |
+| --- | --- | --- | --- |
+| `sync-plan` | `grafana-utils-sync-plan` | `sync-plan.json` | Workspace preview JSON output shape |
+| `sync-preflight` | `grafana-utils-sync-preflight` | `sync-preflight.json` | Workspace preflight/test JSON output shape |
+| `sync-source-bundle` | `grafana-utils-sync-source-bundle` | `sync-source-bundle.json` | Workspace source-bundle artifact shape |
+| `datasource-export-index` | `grafana-utils-datasource-export-index` | `datasource-export-index.json` | Datasource masked-recovery export index shape |
+| `dashboard-summary-governance` | `grafana-utils-dashboard-summary-governance` | `dashboard-summary-governance.json` | Dashboard summary governance JSON shape |
+| `dashboard-dependencies-topology` | `grafana-utils-dashboard-dependencies-topology` | `dashboard-dependencies-topology.json` | Dashboard dependency topology JSON shape |
+| `dashboard-impact` | `grafana-utils-dashboard-impact` | `dashboard-impact.json` | Dashboard impact JSON shape |
+| `dashboard-policy-gate` | `grafana-utils-dashboard-policy-gate` | `dashboard-policy-gate.json` | Dashboard policy gate JSON shape |
+
+These files are runtime contracts because the registry validates concrete
+output fixtures for root fields, fixed values, nested paths, path types,
+collection item types, collection minimums, enum values, and forbidden fields.
+They do not automatically become published schema/help contracts just because
+they have stable golden coverage.
+
+## Public Schema And Help Contract Inventory
+
+Public schema/help contracts are authored in `schemas/manifests/**` and
+projected into generated artifacts. The manifest layer owns the published
+contract description; generated files are checkable outputs, not policy sources.
+
+Authoring sources:
+
+- `schemas/manifests/change/contracts.json`
+- `schemas/manifests/change/routes.json`
+- `schemas/manifests/status/contracts.json`
+- `schemas/manifests/status/routes.json`
+- `schemas/manifests/dashboard-history/contracts.json`
+- `schemas/manifests/dashboard-history/routes.json`
+- `schemas/manifests/diff/contracts.json`
+- `schemas/manifests/diff/routes.json`
+
+Generated public artifacts:
+
+- JSON Schemas under `schemas/jsonschema/change/`
+- JSON Schemas under `schemas/jsonschema/status/`
+- JSON Schemas under `schemas/jsonschema/dashboard-history/`
+- JSON Schemas under `schemas/jsonschema/diff/`
+- schema-help files under `schemas/help/change/`
+- schema-help files under `schemas/help/status/`
+- schema-help files under `schemas/help/dashboard-history/`
+- schema-help files under `schemas/help/diff/`
+
+Current manifest families:
+
+| Family | Contract IDs | Generated artifact role |
+| --- | --- | --- |
+| `change` | `sync-summary`, `sync-plan`, `sync-plan-reviewed`, `sync-apply-intent`, `sync-apply-live-result`, `sync-audit`, `sync-preflight`, `alert-sync-plan`, `sync-bundle-preflight`, `sync-promotion-preflight`, `sync-source-bundle` | Workspace/change JSON schema and `--help-schema` text |
+| `status` | `project-status` | Project status JSON schema and status schema help |
+| `dashboard-history` | `dashboard-history-list`, `dashboard-history-inventory`, `dashboard-history-restore`, `dashboard-history-export`, `dashboard-history-diff` | Dashboard history JSON schemas and help text |
+| `diff` | `grafana-util-dashboard-diff`, `grafana-util-alert-diff`, `grafana-util-datasource-diff` | Cross-domain diff JSON schemas and help text |
+
+Treat `schemas/jsonschema/**` and `schemas/help/**` as generated projections.
+When they drift, update the manifest source or generator and regenerate; do not
+hand-edit the generated artifact as the ownership fix.
+
 ## Ownership Rules
 
 - Command-surface contracts own public CLI routing.
@@ -73,16 +140,24 @@ Use three layers:
     schema/help output.
 
 - Stable public artifacts need a promotion gate.
-  - Promote an artifact only when its command surface, docs-entrypoint
-    navigation, schema/help manifest, and runtime output contract all agree on
-    the same shape.
-  - A stable public artifact should have golden coverage for its runtime output,
-    manifest coverage for its published schema/help contract, and docs routing
-    coverage through `command-surface.json` and `docs-entrypoints.json` when the
-    command path is public.
+  - Promote an output-contract artifact into schema manifests only when it is
+    intentionally documented as a public `--help-schema` or schema-help surface,
+    not merely because a fixture exists.
+  - Before promotion, confirm the output shape has a stable `kind` /
+    `schemaVersion` discriminator, documented top-level fields, documented
+    nested sections that scripts may consume, and a compatibility expectation
+    for additive versus breaking changes.
+  - The promotion patch should add or update manifest coverage in
+    `schemas/manifests/**/contracts.json`, route coverage in the matching
+    `routes.json`, generated schema/help artifacts through `make schema`, and
+    runtime golden coverage in `scripts/contracts/output-contracts.json` when
+    behavior-sensitive output fields need regression checks.
+  - Public command paths should also have command-surface and docs-entrypoint
+    evidence when the schema/help surface is discoverable from CLI or docs
+    navigation.
   - If the artifact is still under active shape churn, keep it in the runtime
-    golden / manifest layer and do not describe it as a stable public contract
-    yet.
+    golden layer only and do not describe it as a stable public schema/help
+    contract yet.
   - Use `make contract-promotion-report` as an informational evidence matrix
     across runtime golden, schema/help manifest, public CLI route,
     docs-entrypoint, generated-docs, and artifact-workspace lanes. Structural
@@ -142,8 +217,9 @@ Promotion rule:
   behavior-sensitive fields that need golden regression checks.
 - Add or update schema manifest coverage when the same output is documented as a
   published `--help-schema` or schema/help surface.
-- Treat an output as stable public surface only after both lanes have coverage
-  or there is an explicit reason that one lane does not apply.
+- Treat an output as a stable public schema/help surface only after both lanes
+  have coverage, or after the maintainer doc records why one lane does not
+  apply.
 
 ## Maintainer Rules
 
