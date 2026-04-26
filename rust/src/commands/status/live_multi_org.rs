@@ -1,13 +1,12 @@
 use serde_json::{Map, Value};
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 
 use crate::common::{message, Result};
 use crate::http::JsonHttpClient;
 use crate::project_status::{
-    ProjectDomainStatus, ProjectStatusFinding, PROJECT_STATUS_BLOCKED, PROJECT_STATUS_PARTIAL,
-    PROJECT_STATUS_READY,
+    ProjectDomainStatus, PROJECT_STATUS_BLOCKED, PROJECT_STATUS_PARTIAL, PROJECT_STATUS_READY,
 };
-use crate::project_status_model::{StatusReading, StatusRecordCount};
+use crate::project_status_model::{merge_status_record_counts, StatusReading, StatusRecordCount};
 use crate::project_status_support::build_live_project_status_client_from_api;
 
 use super::{
@@ -64,23 +63,6 @@ pub(super) fn build_scoped_live_org_clients(
         .collect()
 }
 
-fn merge_project_status_findings(findings: &[ProjectStatusFinding]) -> Vec<ProjectStatusFinding> {
-    let mut merged = BTreeMap::<(String, String), usize>::new();
-    for finding in findings {
-        *merged
-            .entry((finding.kind.clone(), finding.source.clone()))
-            .or_default() += finding.count;
-    }
-    merged
-        .into_iter()
-        .map(|((kind, source), count)| ProjectStatusFinding {
-            kind,
-            count,
-            source,
-        })
-        .collect()
-}
-
 fn merge_live_domain_statuses(statuses: Vec<ProjectDomainStatus>) -> Result<ProjectDomainStatus> {
     let aggregate = statuses
         .iter()
@@ -92,17 +74,15 @@ fn merge_live_domain_statuses(statuses: Vec<ProjectDomainStatus>) -> Result<Proj
             )
         })
         .ok_or_else(|| message("Expected at least one per-org domain status to aggregate."))?;
-    let blockers = merge_project_status_findings(
-        &statuses
+    let blockers = merge_status_record_counts(
+        statuses
             .iter()
-            .flat_map(|status| status.blockers.iter().cloned())
-            .collect::<Vec<_>>(),
+            .flat_map(|status| status.blockers.iter().cloned().map(StatusRecordCount::from)),
     );
-    let warnings = merge_project_status_findings(
-        &statuses
+    let warnings = merge_status_record_counts(
+        statuses
             .iter()
-            .flat_map(|status| status.warnings.iter().cloned())
-            .collect::<Vec<_>>(),
+            .flat_map(|status| status.warnings.iter().cloned().map(StatusRecordCount::from)),
     );
     let freshness = build_live_overall_freshness(&statuses);
     let reason_code = if statuses
@@ -152,8 +132,8 @@ fn merge_live_domain_statuses(statuses: Vec<ProjectDomainStatus>) -> Result<Proj
         primary_count: statuses.iter().map(|status| status.primary_count).sum(),
         source_kinds,
         signal_keys,
-        blockers: blockers.into_iter().map(StatusRecordCount::from).collect(),
-        warnings: warnings.into_iter().map(StatusRecordCount::from).collect(),
+        blockers,
+        warnings,
         next_actions,
         freshness,
     }

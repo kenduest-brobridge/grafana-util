@@ -7,6 +7,7 @@
 //!   no orchestration.
 
 use serde::Serialize;
+use std::collections::BTreeMap;
 
 use crate::project_status::{
     ProjectDomainStatus, ProjectDomainStatusReading, ProjectStatusFinding, ProjectStatusFreshness,
@@ -60,6 +61,23 @@ impl StatusRecordCount {
             source: source.to_string(),
         }
     }
+}
+
+pub(crate) fn merge_status_record_counts(
+    records: impl IntoIterator<Item = StatusRecordCount>,
+) -> Vec<StatusRecordCount> {
+    let mut merged = BTreeMap::<(String, String), usize>::new();
+    for record in records {
+        *merged.entry((record.kind, record.source)).or_default() += record.count;
+    }
+    merged
+        .into_iter()
+        .map(|((kind, source), count)| StatusRecordCount {
+            kind,
+            count,
+            source,
+        })
+        .collect()
 }
 
 impl From<ProjectStatusFinding> for StatusRecordCount {
@@ -127,7 +145,7 @@ impl StatusReading {
 
 #[cfg(test)]
 mod tests {
-    use super::{StatusReading, StatusRecordCount};
+    use super::{merge_status_record_counts, StatusReading, StatusRecordCount};
     use crate::project_status::{PROJECT_STATUS_BLOCKED, PROJECT_STATUS_READY};
 
     #[test]
@@ -170,6 +188,25 @@ mod tests {
         let record_again = StatusRecordCount::from(finding);
         assert_eq!(record_again, record);
         let _ = PROJECT_STATUS_READY;
+    }
+
+    #[test]
+    fn merge_status_record_counts_sums_matching_kind_and_source() {
+        let merged = merge_status_record_counts(vec![
+            StatusRecordCount::new("missing-alert-policy", 2, "live.policyCount"),
+            StatusRecordCount::new("missing-panel-links", 1, "live.rulePanelMissingCount"),
+            StatusRecordCount::new("missing-alert-policy", 3, "live.policyCount"),
+            StatusRecordCount::new("missing-alert-policy", 4, "live.rulePolicyUid"),
+        ]);
+
+        assert_eq!(
+            merged,
+            vec![
+                StatusRecordCount::new("missing-alert-policy", 5, "live.policyCount"),
+                StatusRecordCount::new("missing-alert-policy", 4, "live.rulePolicyUid"),
+                StatusRecordCount::new("missing-panel-links", 1, "live.rulePanelMissingCount"),
+            ]
+        );
     }
 
     #[test]
