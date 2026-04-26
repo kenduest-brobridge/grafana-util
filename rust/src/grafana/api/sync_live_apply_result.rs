@@ -37,6 +37,8 @@ mod tests {
             identity: "dash-uid".to_string(),
             action: REVIEW_ACTION_WOULD_UPDATE.to_string(),
             desired: serde_json::Map::new(),
+            ownership: String::new(),
+            provenance: Vec::new(),
         };
         let result = normalize_live_apply_result(&operation, json!({"status":"ok"}));
 

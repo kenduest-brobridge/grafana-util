@@ -500,6 +500,97 @@ fn execute_live_apply_with_request_supports_dashboard_upsert_and_delete() {
 }
 
 #[test]
+fn execute_live_apply_with_request_rejects_owned_dashboard_before_transport() {
+    let blocked_operations = vec![
+        json!({
+            "kind": "dashboard",
+            "identity": "file-create",
+            "action": "would-create",
+            "ownership": "file-provisioned",
+            "desired": {"title": "File Provisioned"}
+        }),
+        json!({
+            "kind": "dashboard",
+            "identity": "git-update",
+            "action": "would-update",
+            "provenance": ["ownership=git-sync-managed"],
+            "desired": {"title": "Git Sync Managed"}
+        }),
+        json!({
+            "kind": "dashboard",
+            "identity": "file-delete",
+            "action": "would-delete",
+            "provenance": ["ownership=file-provisioned"]
+        }),
+    ];
+
+    for raw_operation in blocked_operations {
+        let operations = load_apply_operations(vec![raw_operation]);
+        let mut calls = Vec::new();
+        let error = execute_live_apply_with_request(
+            |method, path, _, payload| {
+                calls.push((method.clone(), path.to_string(), payload.cloned()));
+                Err(crate::common::message(
+                    "request handler should not be called",
+                ))
+            },
+            &operations,
+            false,
+            false,
+        )
+        .expect_err("owned dashboard should be rejected before transport")
+        .to_string();
+
+        assert!(error.contains("Refusing live dashboard write"));
+        assert!(calls.is_empty());
+    }
+}
+
+#[test]
+fn execute_live_apply_with_request_allows_api_managed_and_managed_unknown_dashboard_ownership() {
+    let operations = load_apply_operations(vec![
+        json!({
+            "kind": "dashboard",
+            "identity": "api-main",
+            "action": "would-create",
+            "ownership": "api-managed",
+            "provenance": ["ownership=api-managed"],
+            "desired": {"title": "API Managed"}
+        }),
+        json!({
+            "kind": "dashboard",
+            "identity": "unknown-main",
+            "action": "would-update",
+            "ownership": "managed-unknown",
+            "provenance": ["ownership=managed-unknown"],
+            "desired": {"title": "Managed Unknown"}
+        }),
+    ]);
+    let mut calls = Vec::new();
+
+    let result = execute_live_apply_with_request(
+        |method, path, _, payload| {
+            calls.push((method.clone(), path.to_string(), payload.cloned()));
+            match (method, path) {
+                (Method::POST, "/api/dashboards/db") => Ok(Some(json!({"status": "success"}))),
+                _ => Err(crate::common::message("unexpected request")),
+            }
+        },
+        &operations,
+        false,
+        false,
+    )
+    .unwrap();
+
+    assert_eq!(result["appliedCount"], json!(2));
+    assert_eq!(calls.len(), 2);
+    assert_eq!(calls[0].0, Method::POST);
+    assert_eq!(calls[0].1, "/api/dashboards/db");
+    assert_eq!(calls[1].0, Method::POST);
+    assert_eq!(calls[1].1, "/api/dashboards/db");
+}
+
+#[test]
 fn execute_live_apply_with_request_supports_datasource_update_and_delete_uid_with_id_fallback() {
     let mut calls = Vec::new();
     let operations = load_apply_operations(vec![

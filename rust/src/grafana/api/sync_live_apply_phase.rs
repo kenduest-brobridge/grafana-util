@@ -50,6 +50,8 @@ mod tests {
             identity: identity.to_string(),
             action: action.to_string(),
             desired: serde_json::Map::new(),
+            ownership: String::new(),
+            provenance: Vec::new(),
         }
     }
 

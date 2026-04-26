@@ -15,6 +15,10 @@ pub(crate) struct SyncApplyOperation {
     pub action: String,
     #[serde(default)]
     pub desired: Map<String, Value>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub ownership: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub provenance: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

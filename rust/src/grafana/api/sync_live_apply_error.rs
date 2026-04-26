@@ -10,6 +10,20 @@ pub(crate) fn refuse_live_folder_delete(identity: &str) -> GrafanaCliError {
     ))
 }
 
+pub(crate) fn refuse_live_dashboard_ownership(
+    identity: &str,
+    evidence: &[String],
+) -> GrafanaCliError {
+    let evidence = if evidence.is_empty() {
+        "ownership evidence unavailable".to_string()
+    } else {
+        evidence.join(" ")
+    };
+    message(format!(
+        "Refusing live dashboard write for {identity}; target is managed outside direct API writes ({evidence})."
+    ))
+}
+
 pub(crate) fn unsupported_sync_resource_kind(kind: &str) -> GrafanaCliError {
     message(format!("Unsupported sync resource kind {kind}."))
 }
@@ -63,6 +77,14 @@ mod tests {
         assert_eq!(
             refuse_live_folder_delete("folder-1").to_string(),
             "Refusing live folder delete for folder-1 without --allow-folder-delete."
+        );
+        assert_eq!(
+            refuse_live_dashboard_ownership(
+                "dash-1",
+                &["ownership=file-provisioned".to_string()]
+            )
+            .to_string(),
+            "Refusing live dashboard write for dash-1; target is managed outside direct API writes (ownership=file-provisioned)."
         );
         assert_eq!(
             unsupported_sync_resource_kind("widget").to_string(),

@@ -3,15 +3,18 @@ use reqwest::Method;
 use serde_json::{Map, Value};
 
 use crate::common::Result;
+use crate::dashboard::import_target::dashboard_target_evidence_blocks_direct_write;
 use crate::review_contract::{REVIEW_ACTION_WOULD_DELETE, REVIEW_ACTION_WOULD_UPDATE};
 use crate::sync::live::SyncApplyOperation;
 
+use super::sync_live_apply_error::refuse_live_dashboard_ownership;
 use super::SyncLiveClient;
 
 pub(crate) fn apply_dashboard_operation_with_client(
     client: &SyncLiveClient<'_>,
     operation: &SyncApplyOperation,
 ) -> Result<Value> {
+    refuse_owned_dashboard_operation(operation)?;
     let action = operation.action.as_str();
     let identity = operation.identity.as_str();
     if action == REVIEW_ACTION_WOULD_DELETE {
@@ -33,6 +36,7 @@ pub(crate) fn apply_dashboard_operation_with_request<F>(
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
+    refuse_owned_dashboard_operation(operation)?;
     let action = operation.action.as_str();
     let identity = operation.identity.as_str();
     if action == REVIEW_ACTION_WOULD_DELETE {
@@ -55,6 +59,29 @@ where
         ))),
     )?
     .unwrap_or(Value::Null))
+}
+
+fn refuse_owned_dashboard_operation(operation: &SyncApplyOperation) -> Result<()> {
+    let evidence = dashboard_operation_ownership_evidence(operation);
+    if dashboard_target_evidence_blocks_direct_write(&evidence) {
+        return Err(refuse_live_dashboard_ownership(
+            operation.identity.as_str(),
+            &evidence,
+        ));
+    }
+    Ok(())
+}
+
+fn dashboard_operation_ownership_evidence(operation: &SyncApplyOperation) -> Vec<String> {
+    let mut evidence = operation.provenance.clone();
+    let ownership = operation.ownership.trim();
+    if !ownership.is_empty() {
+        let ownership_note = format!("ownership={ownership}");
+        if !evidence.iter().any(|value| value == &ownership_note) {
+            evidence.insert(0, ownership_note);
+        }
+    }
+    evidence
 }
 
 fn build_dashboard_body(identity: &str, desired: &Map<String, Value>) -> Map<String, Value> {

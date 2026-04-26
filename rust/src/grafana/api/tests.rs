@@ -339,6 +339,8 @@ fn sync_live_client_applies_alert_create_with_shared_transport() {
         .as_object()
         .expect("alert payload should be an object")
         .clone(),
+        ownership: String::new(),
+        provenance: Vec::new(),
     }];
 
     let result = execute_sync_live_apply_with_client(&client, &operations, false, false).unwrap();
@@ -362,6 +364,8 @@ fn sync_live_client_rejects_unsupported_apply_kind_before_transport() {
         identity: "panel-a".to_string(),
         action: "would-update".to_string(),
         desired: serde_json::Map::new(),
+        ownership: String::new(),
+        provenance: Vec::new(),
     }];
 
     let error = execute_sync_live_apply_with_client(&client, &operations, false, false)
@@ -371,6 +375,64 @@ fn sync_live_client_rejects_unsupported_apply_kind_before_transport() {
         error.to_string(),
         "Unsupported sync resource kind library-panel."
     );
+}
+
+#[test]
+fn sync_live_client_rejects_owned_dashboard_before_transport() {
+    for (ownership, provenance) in [
+        ("file-provisioned", Vec::<String>::new()),
+        ("", vec!["ownership=git-sync-managed".to_string()]),
+    ] {
+        let api = build_test_api("http://127.0.0.1:9".to_string());
+        let client = SyncLiveClient::new(&api);
+        let operations = vec![SyncApplyOperation {
+            kind: "dashboard".to_string(),
+            identity: "cpu-main".to_string(),
+            action: "would-delete".to_string(),
+            desired: serde_json::Map::new(),
+            ownership: ownership.to_string(),
+            provenance,
+        }];
+
+        let error = execute_sync_live_apply_with_client(&client, &operations, false, false)
+            .expect_err("owned dashboard should be rejected before transport");
+
+        assert!(error
+            .to_string()
+            .contains("Refusing live dashboard write for cpu-main"));
+    }
+}
+
+#[test]
+fn sync_live_client_allows_api_managed_dashboard_create() {
+    let responses = vec![http_response("200 OK", r#"{"status":"success"}"#)];
+    let (base_url, requests, handle) = spawn_sequence_server(responses);
+    let api = build_test_api(base_url);
+    let client = SyncLiveClient::new(&api);
+    let operations = vec![SyncApplyOperation {
+        kind: "dashboard".to_string(),
+        identity: "cpu-main".to_string(),
+        action: "would-create".to_string(),
+        desired: serde_json::json!({
+            "title": "CPU Main",
+            "folderUid": "platform",
+            "panels": []
+        })
+        .as_object()
+        .expect("dashboard payload should be an object")
+        .clone(),
+        ownership: "api-managed".to_string(),
+        provenance: vec!["ownership=api-managed".to_string()],
+    }];
+
+    let result = execute_sync_live_apply_with_client(&client, &operations, false, false).unwrap();
+
+    handle.join().unwrap();
+
+    assert_eq!(result["appliedCount"], json!(1));
+    let requests = requests.lock().unwrap().clone();
+    assert_eq!(requests.len(), 1);
+    assert!(requests[0].starts_with("POST /api/dashboards/db "));
 }
 
 #[test]
