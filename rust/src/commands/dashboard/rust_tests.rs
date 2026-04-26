@@ -71,6 +71,9 @@ mod inspect_live_tui_rust_tests;
 mod inspect_query_rust_tests;
 
 #[cfg(test)]
+#[path = "dashboard_export_import_inventory_rust_tests.rs"]
+mod dashboard_export_import_inventory_rust_tests;
+#[cfg(test)]
 #[path = "dashboard_export_import_topology_import_format_rust_tests.rs"]
 mod dashboard_export_import_topology_import_format_rust_tests;
 

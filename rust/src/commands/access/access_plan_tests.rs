@@ -235,6 +235,83 @@ fn all_plan_aggregates_present_bundles_and_reports_missing_resources() {
 }
 
 #[test]
+fn all_plan_ignores_dashboard_workspace_json_when_collecting_access_bundles() {
+    let temp_dir = tempdir().unwrap();
+    let dashboards_raw_dir = temp_dir.path().join("dashboards").join("raw");
+    let users_dir = temp_dir.path().join("access-users");
+    fs::create_dir_all(&dashboards_raw_dir).unwrap();
+    fs::create_dir_all(&users_dir).unwrap();
+    write_user_bundle(&users_dir);
+    fs::write(
+        dashboards_raw_dir.join("permissions.json"),
+        serde_json::to_string_pretty(&json!({
+            "kind": "dashboard-permissions",
+            "resources": [{
+                "uid": "cpu-main",
+                "role": "Viewer"
+            }]
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        dashboards_raw_dir.join("cpu-main.json"),
+        serde_json::to_string_pretty(&json!({
+            "dashboard": {
+                "uid": "cpu-main",
+                "title": "CPU Main"
+            }
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let args = AccessPlanArgs {
+        common: make_common(),
+        input_dir: Some(temp_dir.path().to_path_buf()),
+        local: false,
+        run: None,
+        run_id: None,
+        resource: AccessPlanResource::All,
+        prune: false,
+        output_columns: Vec::new(),
+        list_columns: false,
+        no_header: false,
+        show_same: false,
+        interactive: false,
+        output_format: PlanOutputFormat::Text,
+    };
+
+    let document = build_access_plan_document(
+        |method, path, _params, _payload| match (method, path) {
+            (Method::GET, "/api/org/users") => Ok(Some(json!([
+                {"userId": "1", "login": "alice", "email": "alice@example.com", "name": "Alice", "role": "Editor"}
+            ]))),
+            _ => panic!("unexpected path {path}"),
+        },
+        &args,
+    )
+    .unwrap();
+
+    assert_eq!(document.summary.resource_count, 4);
+    assert_eq!(document.summary.checked, 2);
+    assert_eq!(document.summary.same, 1);
+    assert_eq!(document.summary.create, 1);
+    assert_eq!(document.actions.len(), 2);
+    assert!(document
+        .resources
+        .iter()
+        .any(|resource| resource.resource_kind == "user" && resource.bundle_present));
+    assert!(document
+        .resources
+        .iter()
+        .any(|resource| resource.resource_kind == "team" && !resource.bundle_present));
+    assert!(document
+        .actions
+        .iter()
+        .all(|action| action.domain == "access" && action.resource_kind == "user"));
+}
+
+#[test]
 fn all_plan_errors_when_no_bundle_dirs_are_present() {
     let temp_dir = tempdir().unwrap();
     let args = AccessPlanArgs {

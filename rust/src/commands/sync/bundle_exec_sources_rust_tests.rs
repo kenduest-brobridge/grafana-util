@@ -480,6 +480,67 @@ fn run_sync_cli_bundle_ignores_dashboard_permissions_bundle() {
 }
 
 #[test]
+fn run_sync_cli_bundle_workspace_auto_discovery_ignores_dashboard_permissions_bundle() {
+    let temp = tempdir().unwrap();
+    let workspace_root = temp.path();
+    let dashboard_export_dir = workspace_root.join("dashboards").join("raw");
+    fs::create_dir_all(&dashboard_export_dir).unwrap();
+    fs::write(
+        dashboard_export_dir.join("cpu.json"),
+        serde_json::to_string_pretty(&json!({
+            "dashboard": {
+                "uid": "cpu-main",
+                "title": "CPU Main",
+                "panels": []
+            }
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        dashboard_export_dir.join("permissions.json"),
+        serde_json::to_string_pretty(&json!({
+            "kind": "dashboard-permissions",
+            "resources": [{
+                "uid": "cpu-main",
+                "role": "Viewer"
+            }]
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let output_file = workspace_root.join("bundle.json");
+
+    let result = run_sync_cli(SyncGroupCommand::Bundle(SyncBundleArgs {
+        workspace: Some(workspace_root.to_path_buf()),
+        dashboard_export_dir: None,
+        dashboard_provisioning_dir: None,
+        alert_export_dir: None,
+        datasource_export_file: None,
+        datasource_provisioning_file: None,
+        metadata_file: None,
+        output_file: Some(output_file.clone()),
+        also_stdout: false,
+        output_format: SyncOutputFormat::Json,
+    }));
+
+    assert!(result.is_ok(), "{result:?}");
+    let bundle: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&output_file).unwrap()).unwrap();
+    assert_eq!(bundle["summary"]["dashboardCount"], json!(1));
+    assert_eq!(bundle["dashboards"].as_array().unwrap().len(), 1);
+    assert_eq!(bundle["dashboards"][0]["uid"], json!("cpu-main"));
+    assert_eq!(
+        bundle["metadata"]["workspaceRoot"],
+        json!(workspace_root.display().to_string())
+    );
+    assert_eq!(
+        bundle["metadata"]["dashboardExportDir"],
+        json!(dashboard_export_dir.display().to_string())
+    );
+}
+
+#[test]
 fn run_sync_cli_bundle_supports_dashboard_provisioning_root() {
     let temp = tempdir().unwrap();
     let provisioning_root = temp.path().join("dashboards").join("provisioning");

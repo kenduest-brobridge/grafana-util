@@ -374,14 +374,28 @@ pub(crate) fn build_preserved_web_import_document(payload: &Value) -> Result<Val
     Ok(Value::Object(dashboard))
 }
 
+fn is_dashboard_permission_artifact(document: &Map<String, Value>) -> bool {
+    matches!(
+        document.get("kind").and_then(Value::as_str),
+        Some("grafana-utils-dashboard-permission-bundle")
+            | Some("grafana-utils-dashboard-permission-export")
+    )
+}
+
 /// extract dashboard object.
 pub(crate) fn extract_dashboard_object(
     document: &Map<String, Value>,
 ) -> Result<&Map<String, Value>> {
-    match document.get("dashboard") {
-        Some(value) => value_as_object(value, "Dashboard payload must be a JSON object."),
-        None => Ok(document),
+    let dashboard = match document.get("dashboard") {
+        Some(value) => value_as_object(value, "Dashboard payload must be a JSON object.")?,
+        None => document,
+    };
+    if is_dashboard_permission_artifact(dashboard) {
+        return Err(message(
+            "Dashboard payload points at a dashboard permissions artifact, not a dashboard JSON document.",
+        ));
     }
+    Ok(dashboard)
 }
 
 /// write dashboard.

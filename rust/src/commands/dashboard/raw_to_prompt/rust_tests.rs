@@ -219,6 +219,38 @@ fn raw_to_prompt_single_file_writes_sibling_prompt_json() {
 }
 
 #[test]
+fn raw_to_prompt_single_file_rejects_permission_bundle() {
+    let temp = tempdir().unwrap();
+    let input = temp.path().join("permissions.json");
+    write_json(
+        &input,
+        json!({
+            "kind": "grafana-utils-dashboard-permission-bundle",
+            "schemaVersion": 1,
+            "summary": {
+                "resourceCount": 0,
+                "dashboardCount": 0,
+                "folderCount": 0,
+                "permissionCount": 0
+            },
+            "resources": []
+        }),
+    );
+
+    let mut args = make_args();
+    args.input_file = vec![input];
+    args.log_file = Some(temp.path().join("raw-to-prompt.log"));
+
+    let error = run_raw_to_prompt(&args).unwrap_err().to_string();
+    assert!(error.contains("dashboard raw-to-prompt completed with 1 failure"));
+    let log = fs::read_to_string(temp.path().join("raw-to-prompt.log")).unwrap();
+    assert!(log.contains("permissions artifact"));
+
+    let log = fs::read_to_string(temp.path().join("permissions.prompt.json"));
+    assert!(log.is_err());
+}
+
+#[test]
 fn raw_to_prompt_plain_directory_requires_output_dir() {
     let temp = tempdir().unwrap();
     let input_dir = temp.path().join("raw-json");

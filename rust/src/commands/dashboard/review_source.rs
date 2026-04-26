@@ -530,6 +530,62 @@ mod tests {
     }
 
     #[test]
+    fn resolve_dashboard_review_artifacts_ignores_permission_bundle_in_raw_export() {
+        let temp = tempdir().unwrap();
+        let raw_dir = temp.path().join("raw");
+        write_basic_raw_export(&raw_dir, "cpu-main", "CPU Main", "prom-main");
+        fs::write(
+            raw_dir.join("permissions.json"),
+            serde_json::to_string_pretty(&json!({
+                "kind": "grafana-utils-dashboard-permission-bundle",
+                "schemaVersion": 1,
+                "summary": {
+                    "resourceCount": 1,
+                    "dashboardCount": 1,
+                    "folderCount": 0,
+                    "permissionCount": 1
+                },
+                "resources": [{
+                    "kind": "grafana-utils-dashboard-permission-export",
+                    "schemaVersion": 1,
+                    "resourceKind": "dashboard",
+                    "resource": {
+                        "uid": "cpu-main",
+                        "title": "CPU Main"
+                    },
+                    "permissions": [{
+                        "subjectType": "role",
+                        "subjectName": "Viewer",
+                        "permission": 1,
+                        "permissionName": "view"
+                    }]
+                }]
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        let common = make_common_args();
+
+        let artifacts = resolve_dashboard_review_artifacts(&DashboardReviewSourceArgs {
+            common: &common,
+            page_size: 500,
+            org_id: None,
+            all_orgs: false,
+            input_dir: Some(&raw_dir),
+            input_format: DashboardImportInputFormat::Raw,
+            input_type: Some(InspectExportInputType::Raw),
+            governance: None,
+            queries: None,
+            require_queries: false,
+        })
+        .unwrap();
+
+        assert_eq!(artifacts.governance["summary"]["dashboardCount"], json!(1));
+        assert_eq!(artifacts.queries["summary"]["dashboardCount"], json!(1));
+        assert_eq!(artifacts.queries["summary"]["queryRecordCount"], json!(1));
+    }
+
+    #[test]
     fn resolve_dashboard_review_artifacts_requires_queries_for_gate_artifacts() {
         let temp = tempdir().unwrap();
         let governance_path = temp.path().join("governance.json");

@@ -297,7 +297,7 @@ changes stay reviewable and do not blur lane boundaries.
 - [x] Update dashboard import/apply docs and command guidance so Git Sync
   folders route changes to Git while normal unmanaged folders can still use API
   import/apply.
-- [ ] Keep datasource, alert, access, and status workflows as direct product
+- [x] Keep datasource, alert, access, and status workflows as direct product
   differentiators; Grafana Git Sync mainly changes dashboard JSON ownership, not
   datasource/access/alert lifecycle management.
 - [x] Keep live library-panel `__elements` lookup limited to the live export / import-handoff path. Keep local raw-to-prompt conversion warning-only when a referenced library panel model is missing.
@@ -307,7 +307,7 @@ changes stay reviewable and do not blur lane boundaries.
   writes.
 - [x] Keep dashboard v2 as a separate future adapter boundary. Continue rejecting v2-shaped input in the classic prompt lane rather than mixing it into `raw/`, `prompt/`, or provisioning behavior.
 - [x] Treat provisioning as a derived projection that can be compared later against Grafana file provisioning. Do not rebase the dashboard contract on provisioning as if it were the source of truth.
-- [ ] Keep dashboard permissions adjacent to access evidence and access workflows, not as dashboard JSON fields or as an extension of the prompt export shape.
+- [x] Keep dashboard permissions adjacent to access evidence and access workflows, not as dashboard JSON fields or as an extension of the prompt export shape.
 - [ ] Split large dashboard modules by responsibility, not by line count alone. Favor focused export planning, prompt conversion, live preflight, and provisioning projection boundaries over arbitrary file carving.
 
 ## P1 - Status Producer Model

@@ -2,7 +2,12 @@
 #![allow(unused_imports)]
 
 use super::*;
-use crate::dashboard::{DashboardRepoLayoutKind, DashboardSourceKind};
+use crate::dashboard::{
+    resolve_dashboard_import_source, DashboardRepoLayoutKind, DashboardSourceKind,
+};
+use serde_json::{json, Value};
+use std::{fs, path::Path};
+use tempfile::tempdir;
 
 #[test]
 fn build_export_variant_dirs_returns_raw_and_prompt_dirs() {
@@ -339,4 +344,45 @@ fn build_preserved_web_import_document_clears_numeric_id() {
 
     assert_eq!(document["id"], Value::Null);
     assert_eq!(document["uid"], "abc");
+}
+
+#[test]
+fn build_preserved_web_import_document_rejects_permission_bundle() {
+    let error = build_preserved_web_import_document(&json!({
+        "kind": "grafana-utils-dashboard-permission-bundle",
+        "summary": {
+            "resourceCount": 0,
+            "dashboardCount": 0,
+            "folderCount": 0,
+            "permissionCount": 0
+        },
+        "resources": []
+    }))
+    .unwrap_err()
+    .to_string();
+
+    assert!(error.contains("permissions artifact"));
+}
+
+#[test]
+fn build_import_payload_rejects_permission_bundle() {
+    let error = build_import_payload(
+        &json!({
+            "kind": "grafana-utils-dashboard-permission-bundle",
+            "summary": {
+                "resourceCount": 0,
+                "dashboardCount": 0,
+                "folderCount": 0,
+                "permissionCount": 0
+            },
+            "resources": []
+        }),
+        None,
+        false,
+        "",
+    )
+    .unwrap_err()
+    .to_string();
+
+    assert!(error.contains("permissions artifact"));
 }
