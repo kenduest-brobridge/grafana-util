@@ -13,3 +13,10 @@
 - Baseline: Repo-backed Git Sync dashboard trees could be reviewed through local dashboard paths, but plan/discovery output did not explicitly label the input as Git Sync layout and v2/source parity tests still relied on scattered inline fixtures.
 - Current Update: Classified dashboard review inputs as `export` or `git-sync`, carried `inputLayout` through dashboard plan output, labeled workspace discovery Git Sync dashboard inputs, and anchored datasource-variable/library-panel/v2 boundary tests to a shared checked-in fixture bundle.
 - Result: Focused dashboard/discovery tests, formatter, live Rust smoke, and full Rust tests pass.
+
+## 2026-04-26 - Type dashboard ownership evidence
+- State: Done
+- Scope: Rust dashboard ownership evidence helpers, sync live dashboard write guard, focused ownership tests, and TODO trace. Public JSON fields, direct write policy, Python implementation, and generated docs are out of scope.
+- Baseline: `DashboardTargetOwnership` existed, but sync live write guards still rebuilt `ownership=...` evidence strings locally.
+- Current Update: Added typed ownership label parsing and evidence-note helpers, routed sync live dashboard ownership evidence through the dashboard target model, and covered duplicate insertion, unknown labels, and direct-write blocking behavior.
+- Result: Focused dashboard ownership, dashboard plan, and sync live tests pass.

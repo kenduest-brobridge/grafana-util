@@ -26,6 +26,13 @@ Current AI change log only.
 - Impact: `rust/src/commands/dashboard/import/compare.rs`, `rust/src/commands/sync/bundle_exec_sources_rust_tests.rs`, `todo.md`, and AI trace docs. Public JSON, generated docs, Python implementation, and dashboard v2 support are intentionally unchanged.
 - Rollback/Risk: low test-only boundary hardening. Rollback would remove the regression coverage while leaving existing provisioning behavior unchanged.
 
+## 2026-04-27 - Refresh dashboard directory re-layering inventory
+- Summary: recorded a fresh maintainer-only dashboard re-layering inventory so future file moves are evidence-led rather than based on file size.
+- Tests: no Rust tests were needed because this is docs/TODO inventory-only work. Workers ran targeted read-only inventory and one import/plan worker ran focused Rust filters while investigating.
+- Test Run: `make quality-ai-workflow`; `git diff --check`.
+- Impact: `docs/internal/dashboard-directory-relayering-inventory.md`, `todo.md`, and AI trace docs. No Rust code, public CLI/docs, generated docs, or runtime behavior changed.
+- Rollback/Risk: low documentation-only checkpoint. Rollback would remove the fresh inventory and leave the future re-layering TODO without current evidence.
+
 ## 2026-04-27 - Guard dashboard permissions as adjacent evidence
 - Summary: rejected dashboard permission bundle/export artifacts from shared dashboard JSON extraction and added workspace/access regressions so permission bundles remain adjacent evidence rather than dashboard JSON or prompt export input.
 - Tests: covered preserved-web-import and import-payload rejection for permission bundles, raw-to-prompt single-file rejection, review artifact resolution with raw `permissions.json`, sync workspace bundle auto-discovery ignoring dashboard permission bundles, and access `resource=all` ignoring dashboard workspace JSON.
@@ -82,10 +89,3 @@ Current AI change log only.
 - Test Run: `python3 -m unittest -v scripts.test_contract_promotion_report`; `python3 scripts/contract_promotion_report.py`; `python3 scripts/contract_promotion_report.py --strict-structure`; `make contract-promotion-report`; `make quality-output-contracts`; `make schema-check`; `make quality-ai-workflow`; `git diff --check`.
 - Impact: `scripts/contract_promotion_report.py`, `scripts/test_contract_promotion_report.py`, `docs/internal/contract-doc-map.md`, `todo.md`, and AI trace docs. Public CLI behavior, generated docs, schema artifacts, Rust implementation, and Python package behavior are intentionally unchanged.
 - Rollback/Risk: low script/reporting change. Rollback would restore the previous overlap report with less route and runtime-only evidence; the report remains informational and does not gate findings.
-
-## 2026-04-20 - Finish project status producer audit
-- Summary: audited remaining project-status producers across sync, datasource, alert, dashboard, access, and live status fallback paths, then normalized the last dashboard live read-failure fallback through `StatusReading`.
-- Tests: preserved live dashboard read failure status fields, blocker count derivation, and existing staged/live domain status evidence including health, version, discovery, and freshness paths.
-- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet dashboard --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet access --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet status --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet project_status --lib`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `make quality-architecture`; `make quality-ai-workflow`; `cargo test --manifest-path rust/Cargo.toml --quiet`; `git diff --check`.
-- Impact: `rust/src/grafana/api/project_status_live.rs`, `todo.md`, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are intentionally unchanged.
-- Rollback/Risk: low test-support normalization. Rollback would restore the direct fallback `ProjectDomainStatus` literal; the shared model derives the same blocker and warning counts from the same data.

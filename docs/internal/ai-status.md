@@ -26,6 +26,13 @@ Current AI-maintained status only.
 - Current Update: Added compare tests proving raw export wrappers and provisioning projections normalize to the same classic dashboard payload, and added a sync bundle guard that rejects explicit dual dashboard raw/provisioning inputs.
 - Result: Focused compare, source-loader, sync bundle, and import dry-run tests pass.
 
+## 2026-04-27 - Refresh dashboard directory re-layering inventory
+- State: Done
+- Scope: Maintainer-only dashboard directory inventory, hotspot summary, future move candidates, validation guidance, and TODO trace. Code moves, public CLI/docs, generated docs, and runtime behavior are out of scope.
+- Baseline: The dashboard directory re-layering TODO required a fresh inventory before any later move, and recent ownership/Git Sync/permission boundary work changed the best next candidates.
+- Current Update: Added `docs/internal/dashboard-directory-relayering-inventory.md` with mixed-responsibility files, stable boundaries, and candidate future moves for prompt-lane transform, export-org source discovery, and status live collector namespace cleanup.
+- Result: The inventory checkpoint is complete; actual `git mv` work remains gated behind one-boundary-per-commit guardrails.
+
 ## 2026-04-27 - Guard dashboard permissions as adjacent evidence
 - State: Done
 - Scope: Rust dashboard permission-artifact rejection, dashboard/raw-to-prompt/review regressions, sync/access workspace boundary tests, and TODO trace. Permission restore/apply behavior, public JSON changes, generated docs, and Python implementation are out of scope.
@@ -53,10 +60,3 @@ Current AI-maintained status only.
 - Baseline: Raw-to-prompt could still perform live library-panel model lookup when live datasource lookup was enabled, which blurred the boundary between local conversion and live export handoff.
 - Current Update: Removed raw-to-prompt live library-panel lookup, kept live datasource lookup intact, preserved warning-only local library-panel references with empty `__elements`, and retained live export `__elements` behavior.
 - Result: Focused raw-to-prompt and live export regression tests pass.
-
-## 2026-04-26 - Type dashboard ownership evidence
-- State: Done
-- Scope: Rust dashboard ownership evidence helpers, sync live dashboard write guard, focused ownership tests, and TODO trace. Public JSON fields, direct write policy, Python implementation, and generated docs are out of scope.
-- Baseline: `DashboardTargetOwnership` existed, but sync live write guards still rebuilt `ownership=...` evidence strings locally.
-- Current Update: Added typed ownership label parsing and evidence-note helpers, routed sync live dashboard ownership evidence through the dashboard target model, and covered duplicate insertion, unknown labels, and direct-write blocking behavior.
-- Result: Focused dashboard ownership, dashboard plan, and sync live tests pass.

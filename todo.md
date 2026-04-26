@@ -237,7 +237,7 @@ with narrow validation and a final full Rust test run when code changes.
 ### P2 - Dashboard Directory Re-layering
 
 - [ ] Do not split files only because they are large.
-- [ ] Use a fresh inventory before any later move.
+- [x] Use a fresh inventory before any later move.
 - [ ] Choose exactly one mixed-responsibility boundary per commit.
 - [ ] Use `git mv` for tracked moves.
 - [ ] Keep `commands/dashboard/mod.rs` as the public facade.
