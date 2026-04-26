@@ -181,7 +181,7 @@ with narrow validation and a final full Rust test run when code changes.
 - [ ] Add `risk` only after real risk evidence exists in at least two domains.
 - [ ] Avoid introducing public `ReviewRequest` until two mutation-review domains
   prove the same request fields.
-- [ ] Add adapter tests that assert action, status, reason, identity, ordering,
+- [x] Add adapter tests that assert action, status, reason, identity, ordering,
   and blocked-reason behavior.
 
 ### P1 - Status Producer Model
@@ -211,10 +211,10 @@ with narrow validation and a final full Rust test run when code changes.
 - [x] Use a conservative default concurrency constant and document why it is
   safe.
 - [x] Add partial-failure tests that keep the first useful diagnostic visible.
-- [ ] Run `cargo test --manifest-path rust/Cargo.toml --quiet http`.
-- [ ] Run `cargo test --manifest-path rust/Cargo.toml --quiet sync_live`.
-- [ ] Run `cargo test --manifest-path rust/Cargo.toml --quiet dashboard`.
-- [ ] Run `cargo test --manifest-path rust/Cargo.toml --quiet status`.
+- [x] Run `cargo test --manifest-path rust/Cargo.toml --quiet http`.
+- [x] Run `cargo test --manifest-path rust/Cargo.toml --quiet sync_live`.
+- [x] Run `cargo test --manifest-path rust/Cargo.toml --quiet dashboard`.
+- [x] Run `cargo test --manifest-path rust/Cargo.toml --quiet status`.
 - [ ] Run live smoke against a fixed local Grafana container before changing
   default concurrency.
 
@@ -364,10 +364,10 @@ Action:
 
 Validation:
 
-- [ ] Run `cargo test --manifest-path rust/Cargo.toml --quiet http`.
-- [ ] Run `cargo test --manifest-path rust/Cargo.toml --quiet sync_live`.
-- [ ] Run `cargo test --manifest-path rust/Cargo.toml --quiet dashboard`.
-- [ ] Run `cargo test --manifest-path rust/Cargo.toml --quiet status`.
+- [x] Run `cargo test --manifest-path rust/Cargo.toml --quiet http`.
+- [x] Run `cargo test --manifest-path rust/Cargo.toml --quiet sync_live`.
+- [x] Run `cargo test --manifest-path rust/Cargo.toml --quiet dashboard`.
+- [x] Run `cargo test --manifest-path rust/Cargo.toml --quiet status`.
 - [ ] Run live smoke against a fixed local Grafana container before changing concurrency defaults.
 
 ## P2 - Live Apply Safety
@@ -425,8 +425,8 @@ Action:
 
 Validation:
 
-- [ ] Run `make quality-architecture`.
-- [ ] Run `make quality-docs-surface`.
+- [x] Run `make quality-architecture`.
+- [x] Run `make quality-docs-surface`.
 - [ ] Run domain-focused Rust tests.
 
 ## General Guardrails
