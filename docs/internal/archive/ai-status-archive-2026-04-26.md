@@ -27,3 +27,10 @@
 - Baseline: Most domain producers already routed through `StatusReading`, but the remaining audit still needed to confirm whether any direct producer construction remained.
 - Current Update: Audited the producer lanes in workers and normalized the remaining dashboard live read-failure fallback in test support through `StatusReading` while preserving live evidence and public status fields.
 - Result: Focused dashboard/access/status/project_status tests, formatter, architecture, AI workflow, and full Rust tests pass.
+
+## 2026-04-20 - Add contract promotion report
+- State: Done
+- Scope: Contract promotion report behavior, unit coverage, maintainer docs, TODO tracking, and AI trace docs. Public CLI behavior, generated docs, schema artifacts, Rust implementation, and Python package behavior are out of scope.
+- Baseline: Contract ownership lanes were documented, but the promotion report still needed concrete matrix behavior for actual route shapes, runtime-only rows, informational findings, and test coverage.
+- Current Update: Expanded the report to read manifest route sections and quick lookups, normalize command evidence, show runtime-only rows and categorized informational findings, and documented how maintainers read the evidence matrix.
+- Result: Contract promotion report, report unit tests, output-contract checks, schema check, AI workflow, and diff checks pass.

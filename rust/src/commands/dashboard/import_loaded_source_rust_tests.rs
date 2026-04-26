@@ -55,6 +55,20 @@ fn write_combined_provisioning_export_root(export_root: &Path) -> PathBuf {
     provisioning_root
 }
 
+fn write_combined_raw_export_root_with_v2_resource(export_root: &Path) {
+    write_combined_export_root_metadata(export_root, &[("1", "Main Org", "org_1_Main_Org")]);
+    let raw_root = export_root.join("org_1_Main_Org/raw");
+    fs::create_dir_all(&raw_root).unwrap();
+    write_dashboard_v2_resource(&raw_root.join("v2.json"));
+}
+
+fn write_combined_provisioning_export_root_with_v2_resource(export_root: &Path) {
+    write_combined_export_root_metadata(export_root, &[("1", "Main Org", "org_1_Main_Org")]);
+    let dashboards_dir = export_root.join("org_1_Main_Org/provisioning/dashboards/team");
+    fs::create_dir_all(&dashboards_dir).unwrap();
+    write_dashboard_v2_resource(&dashboards_dir.join("v2.json"));
+}
+
 fn make_diff_args(input_dir: PathBuf, input_format: DashboardImportInputFormat) -> DiffArgs {
     DiffArgs {
         common: make_common_args("http://127.0.0.1:3000".to_string()),
@@ -127,6 +141,47 @@ fn collect_import_dry_run_report_rejects_provisioning_dashboard_v2_resource() {
     fs::create_dir_all(&dashboards_dir).unwrap();
     write_dashboard_v2_resource(&dashboards_dir.join("v2.json"));
     let mut args = make_import_args(provisioning_root);
+    args.input_format = DashboardImportInputFormat::Provisioning;
+    args.dry_run = true;
+
+    let error = collect_import_dry_run_report_with_request(
+        |_method, path, _params, _payload| {
+            Err(crate::common::message(format!("unexpected path {path}")))
+        },
+        &args,
+    )
+    .unwrap_err()
+    .to_string();
+
+    assert!(error.contains("Dashboard import does not support Grafana dashboard v2 resources yet"));
+}
+
+#[test]
+fn collect_import_dry_run_report_rejects_root_raw_export_with_dashboard_v2_resource() {
+    let temp = tempdir().unwrap();
+    let export_root = temp.path().join("export");
+    write_combined_raw_export_root_with_v2_resource(&export_root);
+    let mut args = make_import_args(export_root);
+    args.dry_run = true;
+
+    let error = collect_import_dry_run_report_with_request(
+        |_method, path, _params, _payload| {
+            Err(crate::common::message(format!("unexpected path {path}")))
+        },
+        &args,
+    )
+    .unwrap_err()
+    .to_string();
+
+    assert!(error.contains("Dashboard import does not support Grafana dashboard v2 resources yet"));
+}
+
+#[test]
+fn collect_import_dry_run_report_rejects_root_provisioning_export_with_dashboard_v2_resource() {
+    let temp = tempdir().unwrap();
+    let export_root = temp.path().join("export");
+    write_combined_provisioning_export_root_with_v2_resource(&export_root);
+    let mut args = make_import_args(export_root);
     args.input_format = DashboardImportInputFormat::Provisioning;
     args.dry_run = true;
 

@@ -25,6 +25,13 @@ Current AI-maintained status only.
 - Current Update: Added compare tests proving raw export wrappers and provisioning projections normalize to the same classic dashboard payload, and added a sync bundle guard that rejects explicit dual dashboard raw/provisioning inputs.
 - Result: Focused compare, source-loader, sync bundle, and import dry-run tests pass.
 
+## 2026-04-26 - Add dashboard v2 adapter boundary regressions
+- State: Done
+- Scope: Rust dashboard diff/import source-wrapper regression tests, focused validation, and TODO trace. Public JSON, generated docs, classic dashboard behavior, and actual v2 adapter support are out of scope.
+- Baseline: Classic raw/provisioning import and plan lanes already rejected dashboard v2 resources, but adapter-facing diff and root-export normalization paths still lacked dedicated regression coverage.
+- Current Update: Added diff-lane tests proving raw and provisioning compare entrypoints reject dashboard v2 input before any remote compare request runs, and added import source-wrapper tests proving root export normalization into temp raw/provisioning variants still rejects v2 payloads.
+- Result: Focused export-diff and import-loaded-source tests pass, and the remaining v2 adapter-boundary TODO is now satisfied.
+
 ## 2026-04-26 - Bound library-panel elements to live export
 - State: Done
 - Scope: Rust raw-to-prompt library-panel handling, live export prompt regression, focused tests, and TODO trace. Live export/import-handoff `__elements` support remains in scope; dashboard v2 import/export support and provisioning contract changes are out of scope.
@@ -52,10 +59,3 @@ Current AI-maintained status only.
 - Baseline: Dashboard export writes `raw/permissions.json`, but dashboard plan/import treat it as metadata and cannot compare exported folder ACLs against live Grafana.
 - Current Update: Added `dashboard plan --include-folder-permissions`, UID-first folder permission comparison, optional path fallback, permission detail rendering, command docs, and regression coverage.
 - Result: Focused dashboard plan/parser tests, docs surface, formatter, and full Rust tests pass.
-
-## 2026-04-20 - Add contract promotion report
-- State: Done
-- Scope: Contract promotion report behavior, unit coverage, maintainer docs, TODO tracking, and AI trace docs. Public CLI behavior, generated docs, schema artifacts, Rust implementation, and Python package behavior are out of scope.
-- Baseline: Contract ownership lanes were documented, but the promotion report still needed concrete matrix behavior for actual route shapes, runtime-only rows, informational findings, and test coverage.
-- Current Update: Expanded the report to read manifest route sections and quick lookups, normalize command evidence, show runtime-only rows and categorized informational findings, and documented how maintainers read the evidence matrix.
-- Result: Contract promotion report, report unit tests, output-contract checks, schema check, AI workflow, and diff checks pass.

@@ -25,6 +25,13 @@ Current AI change log only.
 - Impact: `rust/src/commands/dashboard/import/compare.rs`, `rust/src/commands/sync/bundle_exec_sources_rust_tests.rs`, `todo.md`, and AI trace docs. Public JSON, generated docs, Python implementation, and dashboard v2 support are intentionally unchanged.
 - Rollback/Risk: low test-only boundary hardening. Rollback would remove the regression coverage while leaving existing provisioning behavior unchanged.
 
+## 2026-04-26 - Add dashboard v2 adapter boundary regressions
+- Summary: added adapter-facing regression coverage so classic dashboard diff and root-export source-wrapper paths reject Grafana dashboard v2 resources before any remote compare or normalized temp import source can blur the future adapter boundary.
+- Tests: covered raw diff rejection, provisioning diff rejection, root raw export normalization rejection, and root provisioning export normalization rejection using the shared Grafana-source `v2-elements` fixture.
+- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet diff_dashboards_with_client_rejects_raw_dashboard_v2_resource_before_remote_compare`; `cargo test --manifest-path rust/Cargo.toml --quiet diff_dashboards_with_client_rejects_provisioning_dashboard_v2_resource_before_remote_compare`; `cargo test --manifest-path rust/Cargo.toml --quiet import_loaded_source_rust_tests`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`.
+- Impact: `rust/src/commands/dashboard/export_diff_rust_tests.rs`, `rust/src/commands/dashboard/import_loaded_source_rust_tests.rs`, `todo.md`, and AI trace docs. Public CLI/docs, generated artifacts, Python implementation, and actual dashboard v2 support are intentionally unchanged.
+- Rollback/Risk: low test-only boundary hardening. Rollback would remove the regression coverage and reopen a gap around future adapter entrypoints without changing current classic-lane behavior.
+
 ## 2026-04-26 - Bound library-panel elements to live export
 - Summary: removed raw-to-prompt live library-panel model lookup so `dashboard convert raw-to-prompt` keeps library-panel references warning-only with empty `__elements`, while live export/import-handoff remains the only path that fetches live library-panel models into prompt `__elements`.
 - Tests: updated raw-to-prompt live-lookup tests to prove datasource live lookup still works without library-panel inlining, preserved warning-only missing-model behavior, and kept the live export prompt `__elements` regression passing.
@@ -81,10 +88,3 @@ Current AI change log only.
 - Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet alert --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet runtime --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet sync --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet import --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet import_validation --lib`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `python3 scripts/rust_maintainability_report.py`; `cargo test --manifest-path rust/Cargo.toml --quiet`; `make quality-ai-workflow`; `git diff --check`.
 - Impact: `rust/src/commands/alert/runtime_support.rs`, `todo.md`, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are intentionally unchanged.
 - Rollback/Risk: low mechanical key centralization. Rollback would restore repeated raw alert runtime document keys; focused alert/runtime and full Rust tests cover the touched paths.
-
-## 2026-04-20 - Clean up dashboard import dependency schema keys
-- Summary: grouped dashboard import dependency availability, desired-spec, and preflight summary keys behind local schema namespaces while preserving ordinary Grafana raw payload reads.
-- Tests: preserved dependency preflight behavior for datasource/plugin availability, blocking summaries, routed import preflight, and dashboard plan relationships.
-- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet import --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet preflight --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet dashboard_plan --lib`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `python3 scripts/rust_maintainability_report.py`; `cargo test --manifest-path rust/Cargo.toml --quiet`; `make quality-ai-workflow`; `git diff --check`.
-- Impact: `rust/src/commands/dashboard/import_validation_dependencies.rs`, `todo.md`, and AI trace docs. Alert runtime schema cleanup, import directory moves, public CLI behavior, generated docs, Python implementation, and output contracts are intentionally unchanged.
-- Rollback/Risk: low mechanical key centralization. Rollback would restore repeated raw preflight strings; focused import/preflight/dashboard-plan tests cover the touched path.

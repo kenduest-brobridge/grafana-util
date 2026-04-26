@@ -232,7 +232,7 @@ with narrow validation and a final full Rust test run when code changes.
   dashboard contract.
 - [x] Keep live library-panel `__elements` lookup limited to live export /
   import-handoff paths.
-- [ ] Add adapter tests before allowing any v2-shaped import/export path.
+- [x] Add adapter tests before allowing any v2-shaped import/export path.
 
 ### P2 - Dashboard Directory Re-layering
 

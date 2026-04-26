@@ -291,6 +291,106 @@ fn diff_dashboards_with_client_supports_provisioning_dashboards_dir() {
     assert_eq!(count, 0);
 }
 
+fn write_dashboard_v2_resource(path: &Path) {
+    let cases: Vec<Value> = serde_json::from_str(include_str!(
+        "../../../../tests/fixtures/dashboard_grafana_source_parity_cases.json"
+    ))
+    .unwrap();
+    let document = cases
+        .into_iter()
+        .find(|case| case.get("name").and_then(Value::as_str) == Some("v2-elements"))
+        .and_then(|case| case.get("input").cloned())
+        .unwrap_or_else(|| panic!("missing Grafana source dashboard fixture case v2-elements"));
+    fs::write(path, serde_json::to_string_pretty(&document).unwrap()).unwrap();
+}
+
+#[test]
+fn diff_dashboards_with_client_rejects_raw_dashboard_v2_resource_before_remote_compare() {
+    let temp = tempdir().unwrap();
+    let raw_dir = temp.path().join("raw");
+    fs::create_dir_all(&raw_dir).unwrap();
+    fs::write(
+        raw_dir.join(EXPORT_METADATA_FILENAME),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-dashboard-export-index",
+            "schemaVersion": TOOL_SCHEMA_VERSION,
+            "variant": "raw",
+            "dashboardCount": 1,
+            "indexFile": "index.json",
+            "format": "grafana-web-import-preserve-uid"
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    write_dashboard_v2_resource(&raw_dir.join("v2.json"));
+    let args = DiffArgs {
+        common: make_common_args("http://127.0.0.1:3000".to_string()),
+        input_dir: raw_dir,
+        local: false,
+        run: None,
+        run_id: None,
+        input_format: test_support::DashboardImportInputFormat::Raw,
+        import_folder_uid: None,
+        context_lines: 3,
+        output_format: DiffOutputFormat::Text,
+    };
+
+    let error = diff_dashboards_with_request(
+        |_method, path, _params, _payload| {
+            Err(crate::common::message(format!("unexpected path {path}")))
+        },
+        &args,
+    )
+    .unwrap_err()
+    .to_string();
+
+    assert!(error.contains("Dashboard import does not support Grafana dashboard v2 resources yet"));
+}
+
+#[test]
+fn diff_dashboards_with_client_rejects_provisioning_dashboard_v2_resource_before_remote_compare() {
+    let temp = tempdir().unwrap();
+    let provisioning_root = temp.path().join("provisioning");
+    let dashboards_dir = provisioning_root.join("dashboards/team");
+    fs::create_dir_all(&dashboards_dir).unwrap();
+    fs::write(
+        provisioning_root.join(EXPORT_METADATA_FILENAME),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-dashboard-export-index",
+            "schemaVersion": TOOL_SCHEMA_VERSION,
+            "variant": "provisioning",
+            "dashboardCount": 1,
+            "indexFile": "index.json",
+            "format": "grafana-provisioning"
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    write_dashboard_v2_resource(&dashboards_dir.join("v2.json"));
+    let args = DiffArgs {
+        common: make_common_args("http://127.0.0.1:3000".to_string()),
+        input_dir: provisioning_root,
+        local: false,
+        run: None,
+        run_id: None,
+        input_format: test_support::DashboardImportInputFormat::Provisioning,
+        import_folder_uid: None,
+        context_lines: 3,
+        output_format: DiffOutputFormat::Text,
+    };
+
+    let error = diff_dashboards_with_request(
+        |_method, path, _params, _payload| {
+            Err(crate::common::message(format!("unexpected path {path}")))
+        },
+        &args,
+    )
+    .unwrap_err()
+    .to_string();
+
+    assert!(error.contains("Dashboard import does not support Grafana dashboard v2 resources yet"));
+}
+
 fn load_shared_diff_golden_fixture(domain: &str) -> Value {
     serde_json::from_str::<Vec<Value>>(include_str!(
         "../../../../tests/fixtures/shared_diff_golden_cases.json"
