@@ -125,7 +125,7 @@ fn workspace_root_browse_resolves_git_sync_raw_tree() {
     assert_eq!(document.summary.dashboard_count, 1);
     assert_eq!(
         document.summary.scope_label,
-        format!("Local export tree ({})", raw_dir.display())
+        format!("Local Git Sync review tree ({})", raw_dir.display())
     );
     assert_eq!(
         document.nodes.last().map(|node| node.title.as_str()),

@@ -262,8 +262,8 @@ mod workspace_discovery_rust_tests {
         );
         assert_eq!(discovered.workspace_root, Some(workspace.to_path_buf()));
         let provenance = render_discovery_provenance(&discovered).unwrap();
-        assert!(provenance.contains("dashboard-export="));
-        assert!(provenance.contains("dashboard-provisioning="));
+        assert!(provenance.contains("dashboard-export(git-sync)="));
+        assert!(provenance.contains("dashboard-provisioning(git-sync)="));
         assert!(provenance.contains("alert-export="));
         assert!(provenance.contains("datasource-provisioning="));
     }
@@ -329,11 +329,10 @@ mod workspace_discovery_rust_tests {
 
         let provenance = render_discovery_provenance(&discovered).unwrap();
         assert!(provenance.contains("Discovered change workspace root /tmp/grafana-oac-repo"));
-        assert!(
-            provenance.contains("dashboard-export=/tmp/grafana-oac-repo/dashboards/git-sync/raw")
-        );
+        assert!(provenance
+            .contains("dashboard-export(git-sync)=/tmp/grafana-oac-repo/dashboards/git-sync/raw"));
         assert!(provenance.contains(
-            "dashboard-provisioning=/tmp/grafana-oac-repo/dashboards/git-sync/provisioning"
+            "dashboard-provisioning(git-sync)=/tmp/grafana-oac-repo/dashboards/git-sync/provisioning"
         ));
         assert!(provenance.contains("datasource-provisioning=/tmp/grafana-oac-repo/datasources/provisioning/datasources.yaml"));
         assert!(provenance.contains("alert-export=/tmp/grafana-oac-repo/alerts/raw"));
@@ -394,7 +393,7 @@ mod workspace_discovery_rust_tests {
         assert_eq!(
             attached.text_lines.first(),
             Some(
-                &"Discovery: workspace-root=/tmp/grafana-oac-repo sources=dashboard-export"
+                &"Discovery: workspace-root=/tmp/grafana-oac-repo sources=dashboard-export(git-sync)"
                     .to_string()
             )
         );

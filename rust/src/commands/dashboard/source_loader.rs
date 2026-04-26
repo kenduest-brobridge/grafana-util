@@ -21,7 +21,8 @@ use super::{PROMPT_EXPORT_SUBDIR, RAW_EXPORT_SUBDIR};
 mod workspace;
 
 pub(crate) use workspace::{
-    infer_dashboard_workspace_root, resolve_dashboard_workspace_variant_dir,
+    classify_dashboard_workspace_layout, infer_dashboard_workspace_root,
+    resolve_dashboard_workspace_variant_dir, DashboardWorkspaceLayoutKind,
 };
 
 const PROVISIONING_EXPORT_SUBDIR: &str = "provisioning";
@@ -60,6 +61,7 @@ pub(crate) struct LoadedDashboardSource {
     pub(crate) workspace_root: PathBuf,
     pub(crate) input_dir: PathBuf,
     pub(crate) expected_variant: &'static str,
+    pub(crate) layout_kind: DashboardWorkspaceLayoutKind,
     pub(crate) resolved: ResolvedDashboardImportSource,
     pub(crate) temp_dir: Option<TempInspectDir>,
 }
@@ -70,6 +72,7 @@ impl fmt::Debug for LoadedDashboardSource {
             .field("workspace_root", &self.workspace_root)
             .field("input_dir", &self.input_dir)
             .field("expected_variant", &self.expected_variant)
+            .field("layout_kind", &self.layout_kind)
             .field("resolved", &self.resolved)
             .finish()
     }
@@ -106,6 +109,7 @@ fn resolve_root_export_source(
         workspace_root: infer_dashboard_workspace_root(input_dir),
         input_dir: dashboard_dir.clone(),
         expected_variant,
+        layout_kind: classify_dashboard_workspace_layout(input_dir, expected_variant),
         resolved,
         temp_dir: Some(temp_dir),
     })
@@ -134,10 +138,12 @@ fn resolve_worktree_source(
     {
         let resolved = resolve_dashboard_import_source(&workspace_dir, input_format)?;
         let input_dir = resolved.dashboard_dir.clone();
+        let layout_kind = classify_dashboard_workspace_layout(&input_dir, expected_variant);
         return Ok(LoadedDashboardSource {
             workspace_root,
             input_dir,
             expected_variant,
+            layout_kind,
             resolved,
             temp_dir: None,
         });
@@ -152,10 +158,12 @@ fn resolve_worktree_source(
 
     let resolved = resolve_dashboard_import_source(input_dir, input_format)?;
     let input_dir = resolved.dashboard_dir.clone();
+    let layout_kind = classify_dashboard_workspace_layout(&input_dir, expected_variant);
     Ok(LoadedDashboardSource {
         workspace_root,
         input_dir,
         expected_variant,
+        layout_kind,
         resolved,
         temp_dir: None,
     })

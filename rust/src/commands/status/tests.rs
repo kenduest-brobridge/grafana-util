@@ -466,7 +466,7 @@ fn project_status_live_text_renderer_includes_compact_discovery_summary() {
 
     let lines = render_project_status_text(&status);
     assert!(lines.iter().any(|line| line.contains(
-        "Discovery: workspace-root=/tmp/grafana-oac-repo sources=dashboard-export, dashboard-provisioning, datasource-provisioning, alert-export"
+        "Discovery: workspace-root=/tmp/grafana-oac-repo sources=dashboard-export(git-sync), dashboard-provisioning(git-sync), datasource-provisioning, alert-export"
     )));
 }
 

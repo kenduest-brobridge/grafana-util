@@ -215,7 +215,7 @@ with narrow validation and a final full Rust test run when code changes.
 - [x] Run `cargo test --manifest-path rust/Cargo.toml --quiet sync_live`.
 - [x] Run `cargo test --manifest-path rust/Cargo.toml --quiet dashboard`.
 - [x] Run `cargo test --manifest-path rust/Cargo.toml --quiet status`.
-- [ ] Run live smoke against a fixed local Grafana container before changing
+- [x] Run live smoke against a fixed local Grafana container before changing
   default concurrency.
 
 ### P2 - Dashboard v2 Adapter Boundary
@@ -226,7 +226,7 @@ with narrow validation and a final full Rust test run when code changes.
   provisioning lanes share one rejection rule.
 - [x] Keep dashboard v2 rejected in classic prompt/raw/provisioning lanes until
   a dedicated adapter exists.
-- [ ] Anchor fixtures to Grafana source testdata for datasource variables,
+- [x] Anchor fixtures to Grafana source testdata for datasource variables,
   selected current datasource handling, library panels, and v2 rejection.
 - [ ] Keep provisioning as a derived projection, not the source-of-truth
   dashboard contract.
@@ -291,7 +291,7 @@ changes stay reviewable and do not blur lane boundaries.
   preflight evidence: API-managed, file-provisioned, or Git Sync-managed. Live
   inventory/review output now exposes provenance for non-write paths; keep Git
   Sync targets read-only for direct live dashboard writes by default.
-- [ ] Add Git Sync-friendly layout support in dashboard export/convert,
+- [x] Add Git Sync-friendly layout support in dashboard export/convert,
   workspace scan/preview, and dashboard plan so repo trees can be reviewed
   without pretending they are ordinary live API targets.
 - [x] Update dashboard import/apply docs and command guidance so Git Sync
@@ -301,7 +301,7 @@ changes stay reviewable and do not blur lane boundaries.
   differentiators; Grafana Git Sync mainly changes dashboard JSON ownership, not
   datasource/access/alert lifecycle management.
 - [ ] Keep live library-panel `__elements` lookup limited to the live export / import-handoff path. Keep local raw-to-prompt conversion warning-only when a referenced library panel model is missing.
-- [ ] Keep prompt/export fixture parity anchored to Grafana source testdata for datasource variables, selected current datasource handling, library panels, and the classic-vs-v2 rejection boundary.
+- [x] Keep prompt/export fixture parity anchored to Grafana source testdata for datasource variables, selected current datasource handling, library panels, and the classic-vs-v2 rejection boundary.
 - [x] Extend the implemented dashboard import/plan ownership evidence into any
   remaining publish or workspace paths that still lack provenance before live
   writes.

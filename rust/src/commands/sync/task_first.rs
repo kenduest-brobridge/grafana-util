@@ -645,8 +645,8 @@ mod task_first_rust_tests {
         let discovered = discover_change_staged_inputs(Some(workspace)).unwrap();
         let provenance = render_discovery_provenance(&discovered).unwrap();
 
-        assert!(provenance.contains("dashboard-export="));
-        assert!(provenance.contains("dashboard-provisioning="));
+        assert!(provenance.contains("dashboard-export(git-sync)="));
+        assert!(provenance.contains("dashboard-provisioning(git-sync)="));
         assert!(provenance.contains("alert-export="));
         assert!(provenance.contains("datasource-provisioning="));
     }

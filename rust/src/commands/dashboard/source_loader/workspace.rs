@@ -1,5 +1,20 @@
 use std::path::{Component, Path, PathBuf};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum DashboardWorkspaceLayoutKind {
+    Export,
+    GitSync,
+}
+
+impl DashboardWorkspaceLayoutKind {
+    pub(crate) fn as_str(self) -> &'static str {
+        match self {
+            Self::Export => "export",
+            Self::GitSync => "git-sync",
+        }
+    }
+}
+
 /// Resolve a dashboard workspace root from a local path.
 pub(crate) fn infer_dashboard_workspace_root(input_dir: &Path) -> PathBuf {
     if let Some(workspace_root) = infer_workspace_root_from_layout_ancestors(input_dir) {
@@ -140,6 +155,48 @@ fn canonical_dashboard_variant_root(input_dir: &Path, variant_dir_name: &str) ->
         return Some(path_from_components(&components[..=dashboards_index + 1]));
     }
     None
+}
+
+fn variant_root_uses_git_sync_wrapper(path: &Path, variant_dir_name: &str) -> bool {
+    let components: Vec<Component<'_>> = path.components().collect();
+    let dashboards_index = components
+        .iter()
+        .position(|component| component.as_os_str() == "dashboards");
+    matches!(
+        dashboards_index,
+        Some(index)
+            if index + 2 < components.len()
+                && components[index + 1].as_os_str() == "git-sync"
+                && components[index + 2].as_os_str() == variant_dir_name
+    )
+}
+
+/// Classify whether a dashboard review path resolves to a plain export tree or a
+/// Git Sync-wrapped repo layout for the requested variant.
+pub(crate) fn classify_dashboard_workspace_layout(
+    input_dir: &Path,
+    variant_dir_name: &str,
+) -> DashboardWorkspaceLayoutKind {
+    let candidate = canonical_dashboard_variant_root(input_dir, variant_dir_name)
+        .or_else(|| {
+            if input_dir.is_dir()
+                && input_dir.file_name().and_then(|name| name.to_str()) == Some(variant_dir_name)
+            {
+                Some(input_dir.to_path_buf())
+            } else {
+                None
+            }
+        })
+        .or_else(|| resolve_dashboard_workspace_variant_dir(input_dir, variant_dir_name));
+    if candidate
+        .as_deref()
+        .map(|path| variant_root_uses_git_sync_wrapper(path, variant_dir_name))
+        .unwrap_or(false)
+    {
+        DashboardWorkspaceLayoutKind::GitSync
+    } else {
+        DashboardWorkspaceLayoutKind::Export
+    }
 }
 
 /// Resolve a dashboard variant root from a workspace, dashboards root, or repo root.

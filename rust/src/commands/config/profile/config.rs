@@ -129,6 +129,8 @@ mod tests {
 
     #[test]
     fn resolve_connection_settings_prefers_cli_and_falls_back_to_profile() {
+        let _env_guard = env_lock();
+        env::remove_var("GRAFANA_URL");
         let selected_profile = super::SelectedProfile {
             name: "prod".to_string(),
             source_path: PathBuf::from("./grafana-util.yaml"),

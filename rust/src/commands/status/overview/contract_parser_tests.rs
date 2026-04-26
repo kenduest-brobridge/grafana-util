@@ -111,7 +111,7 @@ fn overview_text_renderer_includes_compact_discovery_summary() {
 
     let lines = render_overview_text(&document).unwrap();
     assert!(lines.iter().any(|line| line.contains(
-        "Discovery: workspace-root=/tmp/grafana-oac-repo sources=dashboard-export, datasource-provisioning, alert-export"
+        "Discovery: workspace-root=/tmp/grafana-oac-repo sources=dashboard-export(git-sync), datasource-provisioning, alert-export"
     )));
 }
 

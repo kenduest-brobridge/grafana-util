@@ -70,20 +70,16 @@ fn make_diff_args(input_dir: PathBuf, input_format: DashboardImportInputFormat) 
 }
 
 fn write_dashboard_v2_resource(path: &Path) {
-    fs::write(
-        path,
-        serde_json::to_string_pretty(&json!({
-            "apiVersion": "dashboard.grafana.app/v2",
-            "kind": "Dashboard",
-            "metadata": {"name": "v2-main"},
-            "spec": {
-                "title": "V2 Main",
-                "elements": {}
-            }
-        }))
-        .unwrap(),
-    )
+    let cases: Vec<serde_json::Value> = serde_json::from_str(include_str!(
+        "../../../../tests/fixtures/dashboard_grafana_source_parity_cases.json"
+    ))
     .unwrap();
+    let document = cases
+        .into_iter()
+        .find(|case| case.get("name").and_then(serde_json::Value::as_str) == Some("v2-elements"))
+        .and_then(|case| case.get("input").cloned())
+        .unwrap_or_else(|| panic!("missing Grafana source dashboard fixture case v2-elements"));
+    fs::write(path, serde_json::to_string_pretty(&document).unwrap()).unwrap();
 }
 
 fn assert_temp_backed_source_is_owned_until_drop(resolved: LoadedImportSource, variant: &str) {

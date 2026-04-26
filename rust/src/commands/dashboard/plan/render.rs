@@ -67,7 +67,7 @@ fn plan_output_columns(selected: &[String]) -> Vec<&'static str> {
 
 pub(super) fn plan_summary_line(report: &DashboardPlanReport) -> String {
     format!(
-        "Dashboard plan: checked={} same={} create={} update={} extra={} delete={} blocked={} warning={} orgs={} prune={}",
+        "Dashboard plan: checked={} same={} create={} update={} extra={} delete={} blocked={} warning={} orgs={} prune={} layout={}",
         report.summary.checked,
         report.summary.same,
         report.summary.create,
@@ -77,12 +77,16 @@ pub(super) fn plan_summary_line(report: &DashboardPlanReport) -> String {
         report.summary.blocked,
         report.summary.warning,
         report.summary.org_count,
-        report.prune
+        report.prune,
+        report.input_layout
     )
 }
 
 pub(super) fn render_plan_text(report: &DashboardPlanReport, show_same: bool) -> Vec<String> {
-    let mut lines = Vec::new();
+    let mut lines = vec![format!(
+        "Input layout: {} ({})",
+        report.input_layout, report.input_type
+    )];
     for org in &report.orgs {
         lines.push(format!(
             "Org {} / {} -> {} / {}: checked={} same={} create={} update={} extra={} delete={} blocked={} warning={} action={}",

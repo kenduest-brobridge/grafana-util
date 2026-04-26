@@ -185,6 +185,9 @@ Examples:
   Build a dashboard plan from a prompt/source export root:
     grafana-util dashboard plan --profile prod --input-dir ./dashboards/prompt --input-type source --output-format json
 
+  Build a dashboard plan from a repo-backed Git Sync review tree:
+    grafana-util dashboard plan --url http://localhost:3000 --basic-user admin --basic-password admin --input-dir ./grafana-oac-repo --output-format table
+
   Review a combined all-org export root and show delete candidates:
     grafana-util dashboard plan --url http://localhost:3000 --basic-user admin --basic-password admin --input-dir ./dashboards --use-export-org --prune --output-format table"#;
 

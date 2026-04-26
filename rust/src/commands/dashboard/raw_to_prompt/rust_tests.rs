@@ -57,6 +57,18 @@ fn load_fixture(name: &str) -> serde_json::Value {
     serde_json::from_str(&fs::read_to_string(fixture_path(name)).unwrap()).unwrap()
 }
 
+fn load_grafana_source_fixture(name: &str) -> serde_json::Value {
+    let cases: Vec<serde_json::Value> = serde_json::from_str(include_str!(
+        "../../../../../tests/fixtures/dashboard_grafana_source_parity_cases.json"
+    ))
+    .unwrap();
+    cases
+        .into_iter()
+        .find(|case| case.get("name").and_then(serde_json::Value::as_str) == Some(name))
+        .and_then(|case| case.get("input").cloned())
+        .unwrap_or_else(|| panic!("missing Grafana source dashboard fixture case {name}"))
+}
+
 fn start_live_export_mock_server() -> (String, thread::JoinHandle<()>) {
     start_live_export_mock_server_with_library_model(json!({
         "id": 11,
@@ -147,6 +159,10 @@ fn write_fixture(path: &Path, name: &str) {
     write_json(path, load_fixture(name));
 }
 
+fn write_grafana_source_fixture(path: &Path, name: &str) {
+    write_json(path, load_grafana_source_fixture(name));
+}
+
 fn run_prompt_fixture(temp: &Path, name: &str) -> serde_json::Value {
     let input = temp.join(name);
     write_fixture(&input, name);
@@ -157,6 +173,19 @@ fn run_prompt_fixture(temp: &Path, name: &str) -> serde_json::Value {
     run_raw_to_prompt(&args).unwrap();
 
     let prompt_path = temp.join(name.replace(".json", ".prompt.json"));
+    serde_json::from_str(&fs::read_to_string(prompt_path).unwrap()).unwrap()
+}
+
+fn run_grafana_source_prompt_fixture(temp: &Path, name: &str) -> serde_json::Value {
+    let input = temp.join(format!("{name}.json"));
+    write_grafana_source_fixture(&input, name);
+
+    let mut args = make_args();
+    args.input_file = vec![input];
+
+    run_raw_to_prompt(&args).unwrap();
+
+    let prompt_path = temp.join(format!("{name}.prompt.json"));
     serde_json::from_str(&fs::read_to_string(prompt_path).unwrap()).unwrap()
 }
 
@@ -688,42 +717,8 @@ fn raw_to_prompt_preserves_datasource_placeholder_refs_without_inputs() {
 #[test]
 fn raw_to_prompt_maps_used_datasource_variable_current_to_prompt_input() {
     let temp = tempdir().unwrap();
-    let input = temp.path().join("kube-current.json");
-    write_json(
-        &input,
-        json!({
-            "uid": "kube-current",
-            "title": "Kube Current",
-            "templating": {
-                "list": [{
-                    "name": "datasource",
-                    "type": "datasource",
-                    "query": "prometheus",
-                    "current": {
-                        "text": "Prometheus Main",
-                        "value": "prom-main",
-                        "selected": true
-                    },
-                    "options": []
-                }]
-            },
-            "panels": [{
-                "id": 1,
-                "type": "timeseries",
-                "datasource": {"type": "prometheus", "uid": "$datasource"},
-                "targets": [{"datasource": {"type": "prometheus", "uid": "$datasource"}}]
-            }]
-        }),
-    );
-
-    let mut args = make_args();
-    args.input_file = vec![input.clone()];
-
-    run_raw_to_prompt(&args).unwrap();
-
-    let output = temp.path().join("kube-current.prompt.json");
-    let prompt: serde_json::Value =
-        serde_json::from_str(&fs::read_to_string(output).unwrap()).unwrap();
+    let prompt =
+        run_grafana_source_prompt_fixture(temp.path(), "selected-current-datasource-variable");
     let inputs = prompt["__inputs"].as_array().unwrap();
     assert_eq!(inputs.len(), 1);
     assert_eq!(inputs[0]["pluginId"], "prometheus");
@@ -790,7 +785,7 @@ fn raw_to_prompt_preserves_string_datasource_placeholder_refs_without_resolution
 #[test]
 fn raw_to_prompt_matches_datasource_variable_fixture_parity() {
     let temp = tempdir().unwrap();
-    let prompt = run_prompt_fixture(temp.path(), "datasource-variable.json");
+    let prompt = run_grafana_source_prompt_fixture(temp.path(), "datasource-variable");
 
     let inputs = prompt["__inputs"].as_array().unwrap();
     assert_eq!(inputs.len(), 1);
@@ -808,7 +803,8 @@ fn raw_to_prompt_matches_datasource_variable_fixture_parity() {
 #[test]
 fn raw_to_prompt_preserves_all_selected_datasource_variable_without_prompt_inputs() {
     let temp = tempdir().unwrap();
-    let prompt = run_prompt_fixture(temp.path(), "all-selected-single-datasource-variable.json");
+    let prompt =
+        run_grafana_source_prompt_fixture(temp.path(), "all-selected-single-datasource-variable");
 
     assert!(prompt["__inputs"].as_array().unwrap().is_empty());
     assert_eq!(
@@ -824,7 +820,7 @@ fn raw_to_prompt_preserves_all_selected_datasource_variable_without_prompt_input
 #[test]
 fn raw_to_prompt_maps_default_datasource_variable_to_prompt_input() {
     let temp = tempdir().unwrap();
-    let prompt = run_prompt_fixture(temp.path(), "default-datasource-variable.json");
+    let prompt = run_grafana_source_prompt_fixture(temp.path(), "default-datasource-variable");
 
     let inputs = prompt["__inputs"].as_array().unwrap();
     assert_eq!(inputs.len(), 1);
@@ -909,7 +905,7 @@ fn raw_to_prompt_resolves_string_datasource_ids_using_mapping() {
 fn raw_to_prompt_warns_for_library_panel_references_without_inlining_fixture() {
     let temp = tempdir().unwrap();
     let input = temp.path().join("with-library-panels.json");
-    write_fixture(&input, "with-library-panels.json");
+    write_grafana_source_fixture(&input, "with-library-panels");
     let log_file = temp.path().join("raw-to-prompt.log");
 
     let mut args = make_args();
@@ -1114,7 +1110,7 @@ fn raw_to_prompt_rejects_minimal_dashboard_v2_resource_spec_shape() {
 fn raw_to_prompt_rejects_dashboard_v2_fixture() {
     let temp = tempdir().unwrap();
     let input = temp.path().join("v2-elements.json");
-    write_fixture(&input, "v2-elements.json");
+    write_grafana_source_fixture(&input, "v2-elements");
 
     let mut args = make_args();
     args.input_file = vec![input];
@@ -1127,7 +1123,7 @@ fn raw_to_prompt_rejects_dashboard_v2_fixture() {
 fn raw_to_prompt_rejects_dashboard_k8s_wrapper_fixture() {
     let temp = tempdir().unwrap();
     let input = temp.path().join("k8s-wrapper.json");
-    write_fixture(&input, "k8s-wrapper.json");
+    write_grafana_source_fixture(&input, "k8s-wrapper");
 
     let mut args = make_args();
     args.input_file = vec![input];

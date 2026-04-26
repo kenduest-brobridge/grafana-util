@@ -123,6 +123,7 @@ fn sample_plan_input(prune: bool) -> DashboardPlanInput {
     DashboardPlanInput {
         scope: "current-org".to_string(),
         input_type: "raw".to_string(),
+        input_layout: "export".to_string(),
         prune,
         include_folder_permissions: false,
         folder_permission_match: "uid".to_string(),
@@ -147,6 +148,7 @@ fn sample_missing_org_input(org_action: &str) -> DashboardPlanInput {
     DashboardPlanInput {
         scope: "export-org".to_string(),
         input_type: "raw".to_string(),
+        input_layout: "export".to_string(),
         prune: false,
         orgs: vec![OrgPlanInput {
             source_org_id: Some("9".to_string()),
@@ -396,6 +398,7 @@ fn dashboard_plan_json_has_contract_shape() {
     assert_eq!(json["kind"], PLAN_KIND);
     assert_eq!(json["schemaVersion"], PLAN_SCHEMA_VERSION);
     assert_eq!(json["summary"]["checked"], 3);
+    assert_eq!(json["inputLayout"], json!("export"));
     assert_eq!(json["orgs"].as_array().unwrap().len(), 1);
     assert_eq!(json["actions"].as_array().unwrap().len(), 3);
     assert!(json["actions"][0]["actionId"]
@@ -421,6 +424,10 @@ fn dashboard_plan_table_and_text_render_are_stable() {
     assert!(table[0].contains("ACTION_ID"));
     assert!(table[0].contains("DASHBOARD_TITLE"));
     let text = render_plan_text(&report, false);
+    assert_eq!(
+        text.first().map(String::as_str),
+        Some("Input layout: export (raw)")
+    );
     assert!(text.iter().any(|line| line.contains("would-create")));
     assert!(text.iter().all(|line| !line.contains("action=same")));
 }
@@ -446,6 +453,7 @@ fn dashboard_plan_text_includes_review_narrative() {
 #[test]
 fn dashboard_plan_blocks_git_sync_managed_update_targets() {
     let mut input = sample_plan_input(false);
+    input.input_layout = "git-sync".to_string();
     input.orgs[0].local_dashboards[0].dashboard = json!({
         "uid": "cpu-main",
         "title": "CPU Overview",
@@ -469,6 +477,7 @@ fn dashboard_plan_blocks_git_sync_managed_update_targets() {
         action.blocked_reason.as_deref(),
         Some("target-provisioned-or-managed")
     );
+    assert_eq!(report.input_layout, "git-sync");
     assert_eq!(report.summary.blocked, 1);
 }
 

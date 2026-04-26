@@ -55,6 +55,7 @@ pub(crate) fn build_dashboard_plan(input: DashboardPlanInput) -> DashboardPlanRe
         mode: "review".to_string(),
         scope: input.scope,
         input_type: input.input_type,
+        input_layout: input.input_layout,
         prune: input.prune,
         summary,
         review: Value::Null,

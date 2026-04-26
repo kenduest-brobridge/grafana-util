@@ -525,6 +525,7 @@ where
             InspectExportInputType::Raw => "raw".to_string(),
             InspectExportInputType::Source => "source".to_string(),
         },
+        input_layout: resolved.layout_kind.as_str().to_string(),
         prune: args.prune,
         include_folder_permissions: args.include_folder_permissions,
         folder_permission_match: args.folder_permission_match.as_str().to_string(),
@@ -557,6 +558,13 @@ where
     let export_args = build_export_routing_import_args(args);
     let mut lookup_cache = ImportLookupCache::default();
     let scopes = discover_plan_export_org_scopes(args)?;
+    let layout_kind = load_dashboard_source(
+        &args.input_dir,
+        DashboardImportInputFormat::Raw,
+        Some(args.input_type),
+        false,
+    )?
+    .layout_kind;
     let mut orgs = Vec::new();
     for scope in scopes {
         let target_plan = resolve_target_org_plan_for_export_scope_with_request(
@@ -597,6 +605,7 @@ where
             InspectExportInputType::Raw => "raw".to_string(),
             InspectExportInputType::Source => "source".to_string(),
         },
+        input_layout: layout_kind.as_str().to_string(),
         prune: args.prune,
         include_folder_permissions: args.include_folder_permissions,
         folder_permission_match: args.folder_permission_match.as_str().to_string(),

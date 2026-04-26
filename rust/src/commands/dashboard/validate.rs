@@ -164,6 +164,18 @@ mod tests {
         .unwrap();
     }
 
+    fn load_grafana_source_dashboard_case(name: &str) -> Value {
+        let cases: Vec<Value> = serde_json::from_str(include_str!(
+            "../../../../tests/fixtures/dashboard_grafana_source_parity_cases.json"
+        ))
+        .unwrap();
+        cases
+            .into_iter()
+            .find(|case| case.get("name").and_then(Value::as_str) == Some(name))
+            .and_then(|case| case.get("input").cloned())
+            .unwrap_or_else(|| panic!("missing Grafana source dashboard fixture case {name}"))
+    }
+
     #[test]
     fn run_dashboard_validate_export_supports_provisioning_root() {
         let temp = tempdir().unwrap();
@@ -233,16 +245,8 @@ mod tests {
         fs::create_dir_all(&input_dir).unwrap();
         fs::write(
             input_dir.join("v2.json"),
-            serde_json::to_string_pretty(&json!({
-                "apiVersion": "dashboard.grafana.app/v2",
-                "kind": "Dashboard",
-                "metadata": {"name": "v2-main"},
-                "spec": {
-                    "title": "V2 Main",
-                    "elements": {}
-                }
-            }))
-            .unwrap(),
+            serde_json::to_string_pretty(&load_grafana_source_dashboard_case("v2-elements"))
+                .unwrap(),
         )
         .unwrap();
 
@@ -252,23 +256,15 @@ mod tests {
         assert_eq!(result.error_count, 0);
         assert_eq!(result.warning_count, 1);
         assert_eq!(result.issues[0].code, "unsupported-dashboard-v2-resource");
-        assert_eq!(result.issues[0].dashboard_uid, "v2-main");
-        assert_eq!(result.issues[0].dashboard_title, "V2 Main");
+        assert_eq!(result.issues[0].dashboard_uid, "v2-dash-uid");
+        assert_eq!(result.issues[0].dashboard_title, "v2 dashboard");
     }
 
     #[test]
     fn validate_dashboard_import_document_rejects_dashboard_v2_resource() {
         let temp = tempdir().unwrap();
         let file = temp.path().join("v2.json");
-        let document = json!({
-            "apiVersion": "dashboard.grafana.app/v2",
-            "kind": "Dashboard",
-            "metadata": {"name": "v2-main"},
-            "spec": {
-                "title": "V2 Main",
-                "elements": {}
-            }
-        });
+        let document = load_grafana_source_dashboard_case("v2-elements");
 
         let error = validate_dashboard_import_document(&document, &file, false, None)
             .unwrap_err()

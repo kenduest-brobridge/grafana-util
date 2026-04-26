@@ -1,0 +1,311 @@
+[
+  {
+    "name": "datasource-variable",
+    "grafanaSource": {
+      "area": "frontend external export",
+      "reference": "DashboardExporter.ts datasource-variable flow",
+      "note": "Classic dashboard variable using a datasource placeholder."
+    },
+    "input": {
+      "uid": "7BzWolqnk",
+      "title": "ds-variables",
+      "templating": {
+        "list": [
+          {
+            "name": "sqllite",
+            "type": "datasource",
+            "query": "sqlite-datasource",
+            "current": {
+              "selected": false,
+              "text": "SQLite Grafana",
+              "value": "SQLite Grafana"
+            },
+            "options": []
+          }
+        ]
+      },
+      "panels": [
+        {
+          "id": 1,
+          "title": "usersss!",
+          "type": "table",
+          "datasource": {
+            "type": "sqlite-datasource",
+            "uid": "${sqllite}"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "queryText": "select * from user",
+              "datasource": {
+                "type": "sqlite-datasource",
+                "uid": "${sqllite}"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "selected-current-datasource-variable",
+    "grafanaSource": {
+      "area": "frontend external export",
+      "reference": "DashboardExporter.ts selected current datasource mapping",
+      "note": "Used datasource variable keeps panel refs variable-based while current maps through DS input."
+    },
+    "input": {
+      "uid": "kube-current",
+      "title": "Kube Current",
+      "templating": {
+        "list": [
+          {
+            "name": "datasource",
+            "type": "datasource",
+            "query": "prometheus",
+            "current": {
+              "text": "Prometheus Main",
+              "value": "prom-main",
+              "selected": true
+            },
+            "options": []
+          }
+        ]
+      },
+      "panels": [
+        {
+          "id": 1,
+          "type": "timeseries",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$datasource"
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "$datasource"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "all-selected-single-datasource-variable",
+    "grafanaSource": {
+      "area": "frontend external export",
+      "reference": "DashboardExporter.ts includeAll datasource variable handling",
+      "note": "All-selected datasource variables must not become prompt inputs."
+    },
+    "input": {
+      "uid": "2HLX_B3nk",
+      "title": "new-dashboard-var-ds-test",
+      "templating": {
+        "list": [
+          {
+            "name": "dsVariable",
+            "type": "datasource",
+            "query": "sqlite-datasource",
+            "current": {
+              "selected": true,
+              "text": "All",
+              "value": "$__all"
+            },
+            "includeAll": true,
+            "options": []
+          }
+        ]
+      },
+      "panels": [
+        {
+          "id": 2,
+          "title": "Panel Title",
+          "type": "table",
+          "datasource": {
+            "type": "sqlite-datasource",
+            "uid": "${dsVariable}"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "type": "sqlite-datasource",
+                "uid": "${dsVariable}"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "default-datasource-variable",
+    "grafanaSource": {
+      "area": "frontend external export",
+      "reference": "DashboardExporter.ts default datasource variable handling",
+      "note": "Default datasource selectors still route through datasource-variable current mapping."
+    },
+    "input": {
+      "uid": "2HLX_B3nk",
+      "title": "new-dashboard-var-ds-test",
+      "templating": {
+        "list": [
+          {
+            "name": "dsVariable",
+            "type": "datasource",
+            "query": "testdata",
+            "current": {
+              "selected": true,
+              "text": "default",
+              "value": "default"
+            },
+            "options": []
+          }
+        ]
+      },
+      "panels": [
+        {
+          "id": 2,
+          "title": "Panel Title",
+          "type": "table",
+          "datasource": {
+            "type": "testdata",
+            "uid": "${dsVariable}"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "type": "testdata",
+                "uid": "${dsVariable}"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "with-library-panels",
+    "grafanaSource": {
+      "area": "frontend external export",
+      "reference": "library panel references in classic dashboard JSON",
+      "note": "Offline prompt conversion preserves libraryPanel references and warns instead of inventing __elements."
+    },
+    "input": {
+      "uid": "pppp",
+      "title": "pppp",
+      "panels": [
+        {
+          "id": 1,
+          "title": "green pie",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 0
+          },
+          "libraryPanel": {
+            "name": "green pie",
+            "uid": "a7975b7a-fb53-4ab7-951d-15810953b54f"
+          }
+        },
+        {
+          "id": 2,
+          "title": "green pie",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 0
+          },
+          "libraryPanel": {
+            "name": "red pie",
+            "uid": "e1d5f519-dabd-47c6-9ad7-83d181ce1cee"
+          }
+        },
+        {
+          "id": 3,
+          "title": "collapsed row",
+          "type": "row",
+          "collapsed": true,
+          "gridPos": {
+            "h": 1,
+            "w": 24,
+            "x": 0,
+            "y": 9
+          },
+          "panels": [
+            {
+              "id": 42,
+              "title": "blue pie",
+              "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 0
+              },
+              "libraryPanel": {
+                "name": "blue pie",
+                "uid": "l3d2s634-fdgf-75u4-3fg3-67j966ii7jur"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "v2-elements",
+    "grafanaSource": {
+      "area": "dashboard.grafana.app v2 resource",
+      "reference": "classic-vs-v2 rejection boundary",
+      "note": "Classic prompt/raw/provisioning lanes must reject dashboard v2 resources."
+    },
+    "input": {
+      "kind": "Dashboard",
+      "apiVersion": "dashboard.grafana.app/v2",
+      "metadata": {
+        "name": "v2-dash-uid"
+      },
+      "spec": {
+        "title": "v2 dashboard",
+        "elements": {
+          "panel-1": {
+            "kind": "Panel",
+            "spec": {
+              "title": "A"
+            }
+          }
+        },
+        "variables": [],
+        "annotations": []
+      }
+    }
+  },
+  {
+    "name": "k8s-wrapper",
+    "grafanaSource": {
+      "area": "dashboard resource wrapper",
+      "reference": "spec-wrapped dashboard object remains outside classic lane",
+      "note": "Classic prompt conversion rejects wrapper-shaped dashboard resources, including pre-v2 wrappers."
+    },
+    "input": {
+      "kind": "Dashboard",
+      "apiVersion": "dashboard.grafana.app/v0alpha1",
+      "metadata": {
+        "name": "adfbg6f",
+        "namespace": "default",
+        "uid": "b396894e-56bf-4a01-837b-64157912ca00"
+      },
+      "spec": {
+        "title": "k8s wrapper",
+        "elements": {},
+        "variables": [],
+        "annotations": []
+      }
+    }
+  }
+]

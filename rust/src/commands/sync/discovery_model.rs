@@ -95,6 +95,31 @@ impl DiscoveryInputKind {
     }
 }
 
+fn is_git_sync_dashboard_path(kind: DiscoveryInputKind, path: &std::path::Path) -> bool {
+    if !matches!(
+        kind,
+        DiscoveryInputKind::DashboardExportDir | DiscoveryInputKind::DashboardProvisioningDir
+    ) {
+        return false;
+    }
+    let components = path
+        .components()
+        .map(|component| component.as_os_str().to_string_lossy().into_owned())
+        .collect::<Vec<_>>();
+    components
+        .windows(3)
+        .any(|window| window[0] == "dashboards" && window[1] == "git-sync")
+}
+
+fn input_summary_label(kind: DiscoveryInputKind, path: &std::path::Path) -> String {
+    let base = kind.summary_label();
+    if is_git_sync_dashboard_path(kind, path) {
+        format!("{base}(git-sync)")
+    } else {
+        base.to_string()
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct DiscoveryInput {
     pub(crate) kind: DiscoveryInputKind,
@@ -149,8 +174,8 @@ impl ChangeDiscoveryDocument {
         let workspace_root = self.workspace_root.as_ref()?;
         let sources = self
             .inputs
-            .keys()
-            .map(|kind| kind.summary_label())
+            .iter()
+            .map(|(kind, path)| input_summary_label(*kind, path))
             .collect::<Vec<_>>()
             .join(", ");
         Some(format!(
@@ -168,7 +193,7 @@ impl ChangeDiscoveryDocument {
         let sources = self
             .inputs
             .iter()
-            .map(|(kind, path)| format!("{}={}", kind.summary_label(), path.display()))
+            .map(|(kind, path)| format!("{}={}", input_summary_label(*kind, path), path.display()))
             .collect::<Vec<_>>()
             .join(", ");
         Some(format!(
@@ -315,6 +340,32 @@ mod discovery_model_tests {
             render_discovery_provenance_line(&document),
             Some(
                 "Discovered change workspace root /tmp/grafana-oac-repo from dashboard-export=/tmp/grafana-oac-repo/dashboards/raw, datasource-provisioning=/tmp/grafana-oac-repo/datasources/provisioning/datasources.yaml."
+                    .to_string()
+            )
+        );
+    }
+
+    #[test]
+    fn renders_git_sync_dashboard_layout_in_summary_and_provenance() {
+        let document = ChangeDiscoveryDocument::from_inputs(
+            Some(PathBuf::from("/tmp/grafana-oac-repo")),
+            vec![DiscoveryInput {
+                kind: DiscoveryInputKind::DashboardExportDir,
+                path: PathBuf::from("/tmp/grafana-oac-repo/dashboards/git-sync/raw"),
+            }],
+        );
+
+        assert_eq!(
+            render_discovery_summary_line(&document),
+            Some(
+                "Discovery: workspace-root=/tmp/grafana-oac-repo sources=dashboard-export(git-sync)"
+                    .to_string()
+            )
+        );
+        assert_eq!(
+            render_discovery_provenance_line(&document),
+            Some(
+                "Discovered change workspace root /tmp/grafana-oac-repo from dashboard-export(git-sync)=/tmp/grafana-oac-repo/dashboards/git-sync/raw."
                     .to_string()
             )
         );

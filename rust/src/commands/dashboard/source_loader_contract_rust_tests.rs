@@ -123,6 +123,7 @@ fn source_loader_contract_resolves_direct_raw_root() {
     assert_eq!(resolved.workspace_root, temp.path());
     assert_eq!(resolved.input_dir, raw_root);
     assert_eq!(resolved.expected_variant, RAW_EXPORT_SUBDIR);
+    assert_eq!(resolved.layout_kind, DashboardWorkspaceLayoutKind::Export);
     assert_eq!(
         resolved.resolved.source_kind,
         DashboardSourceKind::RawExport
@@ -148,6 +149,7 @@ fn source_loader_contract_resolves_direct_provisioning_root() {
     assert_eq!(resolved.workspace_root, temp.path());
     assert_eq!(resolved.input_dir, provisioning_root.join("dashboards"));
     assert_eq!(resolved.expected_variant, "provisioning");
+    assert_eq!(resolved.layout_kind, DashboardWorkspaceLayoutKind::Export);
     assert_eq!(
         resolved.resolved.source_kind,
         DashboardSourceKind::ProvisioningExport
@@ -171,6 +173,7 @@ fn source_loader_contract_resolves_wrapped_git_sync_repo_root() {
     assert_eq!(resolved.workspace_root, temp.path());
     assert_eq!(resolved.input_dir, wrapped_raw_root);
     assert_eq!(resolved.expected_variant, RAW_EXPORT_SUBDIR);
+    assert_eq!(resolved.layout_kind, DashboardWorkspaceLayoutKind::GitSync);
     assert_eq!(
         resolved.resolved.source_kind,
         DashboardSourceKind::RawExport

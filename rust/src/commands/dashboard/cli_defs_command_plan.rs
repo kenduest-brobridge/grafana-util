@@ -35,7 +35,7 @@ pub struct PlanArgs {
     #[arg(
         long = "input-dir",
         value_name = "DIR",
-        help = "Build a dashboard plan from this local export root or dashboard variant directory.",
+        help = "Build a dashboard plan from this local export root, dashboard variant directory, or repo-backed Git Sync workspace root.",
         help_heading = "Input Options"
     )]
     pub input_dir: PathBuf,

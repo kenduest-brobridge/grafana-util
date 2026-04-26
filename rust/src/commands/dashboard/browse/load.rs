@@ -83,8 +83,14 @@ fn load_dashboard_browse_document_from_local_import_dir(
         true,
         false,
     )?;
+    let scope_prefix = match resolved.layout_kind {
+        super::super::source_loader::DashboardWorkspaceLayoutKind::GitSync => {
+            "Local Git Sync review tree"
+        }
+        super::super::source_loader::DashboardWorkspaceLayoutKind::Export => "Local export tree",
+    };
     document.summary.scope_label = format!(
-        "Local export tree ({})",
+        "{scope_prefix} ({})",
         resolved.resolved.dashboard_dir.display()
     );
     Ok(document)

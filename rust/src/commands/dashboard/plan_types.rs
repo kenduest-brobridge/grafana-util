@@ -104,6 +104,7 @@ pub(super) struct DashboardPlanReport {
     pub(super) mode: String,
     pub(super) scope: String,
     pub(super) input_type: String,
+    pub(super) input_layout: String,
     pub(super) prune: bool,
     pub(super) summary: DashboardPlanSummary,
     pub(super) review: Value,
@@ -298,6 +299,7 @@ pub(super) struct OrgPlanInput {
 pub(super) struct DashboardPlanInput {
     pub(super) scope: String,
     pub(super) input_type: String,
+    pub(super) input_layout: String,
     pub(super) prune: bool,
     pub(super) include_folder_permissions: bool,
     pub(super) folder_permission_match: String,
