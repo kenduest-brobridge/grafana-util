@@ -138,7 +138,7 @@ with narrow validation and a final full Rust test run when code changes.
 
 ### P0 - Source Ownership Implementation
 
-- [ ] Add or extend typed ownership evidence instead of passing ad hoc strings
+- [x] Add or extend typed ownership evidence instead of passing ad hoc strings
   where a stable model already exists.
 - [x] Preserve export index `ownership` and `provenance` when normalizing
   dashboard bundle items for workspace/source-bundle review.
@@ -149,7 +149,7 @@ with narrow validation and a final full Rust test run when code changes.
 - [x] Keep managed-unknown as warning unless a path proves it must be blocked.
 - [x] Preserve existing API-managed import/apply behavior.
 - [x] Add tests for all ownership classes before changing write behavior.
-- [ ] If output JSON changes, update contracts/fixtures and run
+- [x] If output JSON changes, update contracts/fixtures and run
   `make quality-output-contracts`.
 
 ### P1 - Workspace / Status / Overview Boundary
@@ -368,7 +368,7 @@ Validation:
 - [x] Run `cargo test --manifest-path rust/Cargo.toml --quiet sync_live`.
 - [x] Run `cargo test --manifest-path rust/Cargo.toml --quiet dashboard`.
 - [x] Run `cargo test --manifest-path rust/Cargo.toml --quiet status`.
-- [ ] Run live smoke against a fixed local Grafana container before changing concurrency defaults.
+- [x] Run live smoke against a fixed local Grafana container before changing concurrency defaults.
 
 ## P2 - Live Apply Safety
 

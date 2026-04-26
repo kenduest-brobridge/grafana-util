@@ -18,6 +18,13 @@ Current AI-maintained status only.
 - Older entries moved to [`ai-status-archive-2026-04-20.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-04-20.md).
 - Older entries moved to [`ai-status-archive-2026-04-26.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-04-26.md).
 
+## 2026-04-26 - Type dashboard ownership evidence
+- State: Done
+- Scope: Rust dashboard ownership evidence helpers, sync live dashboard write guard, focused ownership tests, and TODO trace. Public JSON fields, direct write policy, Python implementation, and generated docs are out of scope.
+- Baseline: `DashboardTargetOwnership` existed, but sync live write guards still rebuilt `ownership=...` evidence strings locally.
+- Current Update: Added typed ownership label parsing and evidence-note helpers, routed sync live dashboard ownership evidence through the dashboard target model, and covered duplicate insertion, unknown labels, and direct-write blocking behavior.
+- Result: Focused dashboard ownership, dashboard plan, and sync live tests pass.
+
 ## 2026-04-26 - Add Git Sync dashboard review layout evidence
 - State: Done
 - Scope: Rust dashboard local source loading, dashboard plan review metadata, workspace discovery labeling, Grafana-source dashboard fixture parity, live smoke validation, and AI trace docs. Direct live writes, dashboard v2 import/export support, and Python implementation are out of scope.
@@ -52,10 +59,3 @@ Current AI-maintained status only.
 - Baseline: dashboard import implementation lived as many flat `commands/dashboard/import_*.rs` files, while plan-owned reconciliation already lived under `commands/dashboard/plan/`.
 - Current Update: Moved the dashboard import implementation under `commands/dashboard/import/`, kept `commands/dashboard/mod.rs` as the public facade, and left plan reconciliation in the plan-owned boundary.
 - Result: Focused import/routed/plan/browse tests, formatter, maintainability, AI workflow, and full Rust tests pass.
-
-## 2026-04-20 - Clean up alert runtime schema keys
-- State: Done
-- Scope: Rust alert runtime plan, delete-preview, and import dry-run schema-key cleanup, focused sync/alert/import validation, and AI trace docs. Alert diff shared document internals, public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
-- Baseline: `commands/alert/runtime_support.rs` still repeated tool-owned plan row, plan document, delete-preview, and import dry-run keys directly in production render/read paths.
-- Current Update: Grouped alert runtime document, row, and summary keys under local schema namespaces while keeping Grafana raw alert payload fields direct.
-- Result: Focused sync, alert, runtime, dashboard import, formatter, maintainability, AI workflow, and full Rust tests pass.

@@ -3,7 +3,9 @@ use reqwest::Method;
 use serde_json::{Map, Value};
 
 use crate::common::Result;
-use crate::dashboard::import_target::dashboard_target_evidence_blocks_direct_write;
+use crate::dashboard::import_target::{
+    dashboard_target_evidence_blocks_direct_write, dashboard_target_ownership_evidence,
+};
 use crate::review_contract::{REVIEW_ACTION_WOULD_DELETE, REVIEW_ACTION_WOULD_UPDATE};
 use crate::sync::live::SyncApplyOperation;
 
@@ -73,15 +75,7 @@ fn refuse_owned_dashboard_operation(operation: &SyncApplyOperation) -> Result<()
 }
 
 fn dashboard_operation_ownership_evidence(operation: &SyncApplyOperation) -> Vec<String> {
-    let mut evidence = operation.provenance.clone();
-    let ownership = operation.ownership.trim();
-    if !ownership.is_empty() {
-        let ownership_note = format!("ownership={ownership}");
-        if !evidence.iter().any(|value| value == &ownership_note) {
-            evidence.insert(0, ownership_note);
-        }
-    }
-    evidence
+    dashboard_target_ownership_evidence(&operation.ownership, &operation.provenance)
 }
 
 fn build_dashboard_body(identity: &str, desired: &Map<String, Value>) -> Map<String, Value> {

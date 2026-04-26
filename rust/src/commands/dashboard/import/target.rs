@@ -37,13 +37,27 @@ pub(crate) enum DashboardTargetOwnership {
 }
 
 impl DashboardTargetOwnership {
-    fn label(self) -> &'static str {
+    pub(crate) fn label(self) -> &'static str {
         match self {
             DashboardTargetOwnership::ApiManaged => "api-managed",
             DashboardTargetOwnership::FileProvisioned => "file-provisioned",
             DashboardTargetOwnership::GitSyncManaged => "git-sync-managed",
             DashboardTargetOwnership::ManagedUnknown => "managed-unknown",
         }
+    }
+
+    pub(crate) fn from_label(label: &str) -> Option<Self> {
+        match label.trim() {
+            "api-managed" => Some(DashboardTargetOwnership::ApiManaged),
+            "file-provisioned" => Some(DashboardTargetOwnership::FileProvisioned),
+            "git-sync-managed" => Some(DashboardTargetOwnership::GitSyncManaged),
+            "managed-unknown" => Some(DashboardTargetOwnership::ManagedUnknown),
+            _ => None,
+        }
+    }
+
+    pub(crate) fn evidence_note(self) -> String {
+        format!("ownership={}", self.label())
     }
 
     fn blocks_direct_write(self) -> bool {
@@ -93,9 +107,31 @@ pub(crate) fn dashboard_target_evidence_warns_direct_write(evidence: &[String]) 
     evidence_has_ownership(evidence, DashboardTargetOwnership::ManagedUnknown)
 }
 
+pub(crate) fn dashboard_target_ownership_from_evidence(
+    evidence: &[String],
+) -> Option<DashboardTargetOwnership> {
+    evidence
+        .iter()
+        .filter_map(|value| value.strip_prefix("ownership="))
+        .find_map(DashboardTargetOwnership::from_label)
+}
+
+pub(crate) fn dashboard_target_ownership_evidence(
+    ownership_label: &str,
+    provenance: &[String],
+) -> Vec<String> {
+    let mut evidence = provenance.to_vec();
+    if let Some(ownership) = DashboardTargetOwnership::from_label(ownership_label) {
+        let ownership_note = ownership.evidence_note();
+        if !evidence.iter().any(|value| value == &ownership_note) {
+            evidence.insert(0, ownership_note);
+        }
+    }
+    evidence
+}
+
 fn evidence_has_ownership(evidence: &[String], ownership: DashboardTargetOwnership) -> bool {
-    let expected = format!("ownership={}", ownership.label());
-    evidence.iter().any(|value| value == &expected)
+    dashboard_target_ownership_from_evidence(evidence) == Some(ownership)
 }
 
 fn summarize_scalar_value(key: &str, value: &Value) -> Option<String> {
@@ -217,7 +253,7 @@ pub(crate) fn build_dashboard_target_review(
     let mut evidence = Vec::new();
     let ownership = classify_dashboard_target_ownership(meta);
     if ownership != DashboardTargetOwnership::ApiManaged {
-        evidence.push(format!("ownership={}", ownership.label()));
+        evidence.push(ownership.evidence_note());
     }
     let provisioned = meta
         .get("provisioned")
@@ -335,5 +371,58 @@ mod tests {
         assert!(review
             .evidence
             .contains(&"ownership=managed-unknown".to_string()));
+    }
+
+    #[test]
+    fn target_ownership_evidence_uses_typed_labels_and_preserves_provenance() {
+        let evidence = dashboard_target_ownership_evidence(
+            "git-sync-managed",
+            &[
+                "managedRepository{name=platform-dashboards}".to_string(),
+                "ownership=git-sync-managed".to_string(),
+            ],
+        );
+
+        assert_eq!(
+            dashboard_target_ownership_from_evidence(&evidence),
+            Some(DashboardTargetOwnership::GitSyncManaged)
+        );
+        assert_eq!(
+            evidence,
+            vec![
+                "managedRepository{name=platform-dashboards}".to_string(),
+                "ownership=git-sync-managed".to_string()
+            ]
+        );
+        assert!(dashboard_target_evidence_blocks_direct_write(&evidence));
+    }
+
+    #[test]
+    fn target_ownership_evidence_inserts_known_ownership_once() {
+        let evidence = dashboard_target_ownership_evidence(
+            "file-provisioned",
+            &["provisioned=true".to_string()],
+        );
+
+        assert_eq!(
+            evidence,
+            vec![
+                DashboardTargetOwnership::FileProvisioned.evidence_note(),
+                "provisioned=true".to_string()
+            ]
+        );
+        assert!(dashboard_target_evidence_blocks_direct_write(&evidence));
+    }
+
+    #[test]
+    fn target_ownership_evidence_ignores_unknown_labels() {
+        let evidence = dashboard_target_ownership_evidence(
+            "plugin-owned",
+            &["managedBy{kind=plugin}".to_string()],
+        );
+
+        assert_eq!(evidence, vec!["managedBy{kind=plugin}".to_string()]);
+        assert_eq!(dashboard_target_ownership_from_evidence(&evidence), None);
+        assert!(!dashboard_target_evidence_blocks_direct_write(&evidence));
     }
 }
