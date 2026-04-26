@@ -5,9 +5,9 @@ use super::super::DatasourceImportRecord;
 use super::builder::{build_datasource_plan, build_datasource_plan_json};
 use super::model::{
     DatasourcePlanInput, DatasourcePlanOrgInput, DatasourcePlanReport,
-    PLAN_ACTION_BLOCKED_READ_ONLY, PLAN_ACTION_EXTRA_REMOTE, PLAN_ACTION_WOULD_DELETE,
-    PLAN_ACTION_WOULD_UPDATE, PLAN_HINT_REQUIRES_SECRET_VALUES, PLAN_REASON_TARGET_READ_ONLY,
-    PLAN_STATUS_BLOCKED, PLAN_STATUS_READY, PLAN_STATUS_WARNING,
+    PLAN_ACTION_BLOCKED_READ_ONLY, PLAN_ACTION_EXTRA_REMOTE, PLAN_ACTION_WOULD_CREATE,
+    PLAN_ACTION_WOULD_DELETE, PLAN_ACTION_WOULD_UPDATE, PLAN_HINT_REQUIRES_SECRET_VALUES,
+    PLAN_REASON_TARGET_READ_ONLY, PLAN_STATUS_BLOCKED, PLAN_STATUS_READY, PLAN_STATUS_WARNING,
 };
 
 fn record(uid: &str, name: &str, datasource_type: &str) -> DatasourceImportRecord {
@@ -183,6 +183,104 @@ fn datasource_plan_builds_review_projection_with_blocking_hints_and_org_identity
     assert_eq!(action.raw["sourceOrgId"], json!("1"));
     assert_eq!(action.raw["targetOrgId"], json!("1"));
     assert_eq!(action.raw["requiresSecretValues"], json!(true));
+}
+
+#[test]
+fn datasource_plan_review_projection_orders_actions_and_preserves_raw_payload() {
+    let mut changed = record("loki", "Loki", "loki");
+    changed.url = "http://loki:3100".to_string();
+    let mut blocked = record("prom", "Prometheus", "prometheus");
+    blocked.url = "http://new-prometheus:9090".to_string();
+    blocked.secure_json_data_placeholders = Some(Map::from_iter([(
+        "password".to_string(),
+        Value::String("configured".to_string()),
+    )]));
+    let mut blocked_live = live("prom", "Prometheus", "prometheus");
+    blocked_live.insert("readOnly".to_string(), Value::Bool(true));
+    let report = report(
+        vec![
+            blocked,
+            changed,
+            record("tempo", "Tempo", "tempo"),
+            record("same", "Same", "prometheus"),
+        ],
+        vec![
+            blocked_live,
+            live("loki", "Loki", "loki"),
+            live("same", "Same", "prometheus"),
+            live("remote", "Remote Only", "prometheus"),
+        ],
+        true,
+    );
+
+    let projection = report.build_review_projection();
+
+    let ordered = projection
+        .actions
+        .iter()
+        .map(|action| {
+            (
+                action.identity.as_str(),
+                action.action.as_str(),
+                action.status.as_str(),
+                action.blocked_reason.as_deref(),
+            )
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(
+        ordered,
+        vec![
+            ("tempo", PLAN_ACTION_WOULD_CREATE, PLAN_STATUS_READY, None),
+            ("loki", PLAN_ACTION_WOULD_UPDATE, PLAN_STATUS_READY, None),
+            ("same", "same", "same", None),
+            (
+                "prom",
+                PLAN_ACTION_BLOCKED_READ_ONLY,
+                PLAN_STATUS_BLOCKED,
+                Some(PLAN_REASON_TARGET_READ_ONLY)
+            ),
+            ("remote", PLAN_ACTION_WOULD_DELETE, PLAN_STATUS_READY, None),
+        ]
+    );
+
+    let blocked_action = projection
+        .actions
+        .iter()
+        .find(|action| action.identity == "prom")
+        .unwrap();
+    assert_eq!(blocked_action.action_id, "org:1/datasource:uid:prom");
+    assert_eq!(blocked_action.domain, "datasource");
+    assert_eq!(blocked_action.resource_kind, "datasource");
+    assert_eq!(blocked_action.order_group, "review");
+    assert_eq!(blocked_action.kind_order, 1);
+    assert_eq!(
+        blocked_action.details.as_deref(),
+        Some("fields=url,secureJsonDataPlaceholders")
+    );
+    assert_eq!(
+        blocked_action.review_hints,
+        vec![PLAN_HINT_REQUIRES_SECRET_VALUES]
+    );
+    assert_eq!(blocked_action.raw["uid"], json!("prom"));
+    assert_eq!(blocked_action.raw["name"], json!("Prometheus"));
+    assert_eq!(blocked_action.raw["sourceOrgId"], json!("1"));
+    assert_eq!(blocked_action.raw["targetOrgId"], json!("1"));
+    assert_eq!(blocked_action.raw["targetReadOnly"], json!(true));
+    assert_eq!(
+        blocked_action.raw["blockedReason"],
+        json!("target-read-only")
+    );
+    assert_eq!(blocked_action.raw["requiresSecretValues"], json!(true));
+
+    let remote_action = projection
+        .actions
+        .iter()
+        .find(|action| action.identity == "remote")
+        .unwrap();
+    assert_eq!(remote_action.order_group, "delete");
+    assert_eq!(remote_action.kind_order, 2);
+    assert_eq!(remote_action.raw["targetUid"], json!("remote"));
+    assert_eq!(remote_action.raw["targetVersion"], json!(7));
 }
 
 #[test]

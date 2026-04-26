@@ -57,6 +57,106 @@ fn build_workspace_review_view_normalizes_actions_domains_and_blockers() {
 }
 
 #[test]
+fn build_workspace_review_view_orders_actions_and_preserves_raw_payload() {
+    let document = json!({
+        "kind": "grafana-utils-sync-plan",
+        "summary": {},
+        "operations": [
+            {
+                "action": "blocked-read-only",
+                "kind": "alert-contact-point",
+                "identity": "ops-email",
+                "reason": "target-read-only",
+                "detail": "managed by provisioning",
+                "customEvidence": {"owner": "platform"}
+            },
+            {
+                "action": "would-delete",
+                "kind": "datasource",
+                "uid": "remote-prom",
+                "name": "Remote Prometheus"
+            },
+            {
+                "action": "same",
+                "kind": "team",
+                "identity": "viewers"
+            },
+            {
+                "action": "would-update",
+                "kind": "dashboard",
+                "identity": "ops-overview"
+            },
+            {
+                "action": "would-create",
+                "kind": "folder",
+                "identity": "platform"
+            }
+        ]
+    });
+
+    let view = build_workspace_review_view(&document).unwrap();
+
+    let ordered = view
+        .actions
+        .iter()
+        .map(|action| {
+            (
+                action.domain.as_str(),
+                action.identity.as_str(),
+                action.action.as_str(),
+                action.status.as_str(),
+                action.blocked_reason.as_deref(),
+            )
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(
+        ordered,
+        vec![
+            ("folder", "platform", "would-create", "ready", None),
+            ("dashboard", "ops-overview", "would-update", "ready", None),
+            ("datasource", "remote-prom", "would-delete", "ready", None),
+            (
+                "alert",
+                "ops-email",
+                "blocked-read-only",
+                "blocked",
+                Some("target-read-only")
+            ),
+            ("access", "viewers", "same", "same", None),
+        ]
+    );
+
+    let alert = view
+        .actions
+        .iter()
+        .find(|action| action.identity == "ops-email")
+        .unwrap();
+    assert_eq!(
+        alert.action_id,
+        "alert:alert-contact-point:identity:ops-email"
+    );
+    assert_eq!(alert.resource_kind, "alert-contact-point");
+    assert_eq!(alert.order_group, "review");
+    assert_eq!(alert.kind_order, 3);
+    assert_eq!(alert.details.as_deref(), Some("managed by provisioning"));
+    assert_eq!(alert.raw["blockedReason"], json!("target-read-only"));
+    assert_eq!(alert.raw["details"], json!("managed by provisioning"));
+    assert_eq!(alert.raw["customEvidence"], json!({"owner": "platform"}));
+
+    let datasource = view
+        .actions
+        .iter()
+        .find(|action| action.identity == "remote-prom")
+        .unwrap();
+    assert_eq!(
+        datasource.action_id,
+        "datasource:datasource:uid:remote-prom"
+    );
+    assert_eq!(datasource.raw["name"], json!("Remote Prometheus"));
+    assert_eq!(view.blocked_reasons, vec!["target-read-only"]);
+}
+
+#[test]
 fn filter_review_plan_operations_uses_workspace_review_view_contract() {
     let plan = json!({
         "kind": "grafana-utils-sync-plan",
