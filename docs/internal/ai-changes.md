@@ -17,6 +17,7 @@ Current AI change log only.
 - Older entries moved to [`ai-changes-archive-2026-04-19.md`](docs/internal/archive/ai-changes-archive-2026-04-19.md).
 - Older entries moved to [`ai-changes-archive-2026-04-20.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-changes-archive-2026-04-20.md).
 - Older entries moved to [`ai-changes-archive-2026-04-26.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-changes-archive-2026-04-26.md).
+- Older entries moved to [`ai-changes-archive-2026-04-27.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-changes-archive-2026-04-27.md).
 
 ## 2026-04-26 - Prove provisioning remains derived dashboard projection
 - Summary: added regression coverage that provisioning dashboard files normalize to the same classic dashboard compare payload as raw export wrappers, and that sync bundle rejects explicit dual raw/provisioning dashboard inputs instead of treating provisioning as an alternate source of truth.
@@ -24,6 +25,13 @@ Current AI change log only.
 - Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet compare_local_document_`; `cargo test --manifest-path rust/Cargo.toml --quiet source_loader_contract_resolves_direct_provisioning_root`; `cargo test --manifest-path rust/Cargo.toml --quiet collect_import_dry_run_report_accepts_provisioning_root_variant_metadata`; `cargo test --manifest-path rust/Cargo.toml --quiet run_sync_cli_bundle_rejects_dual_dashboard_sources`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`.
 - Impact: `rust/src/commands/dashboard/import/compare.rs`, `rust/src/commands/sync/bundle_exec_sources_rust_tests.rs`, `todo.md`, and AI trace docs. Public JSON, generated docs, Python implementation, and dashboard v2 support are intentionally unchanged.
 - Rollback/Risk: low test-only boundary hardening. Rollback would remove the regression coverage while leaving existing provisioning behavior unchanged.
+
+## 2026-04-27 - Guard Git Sync dashboard live apply boundaries
+- Summary: treated workspace-backed dashboard browse sources as local review trees and added sync apply handoff regressions so Git Sync-managed dashboards remain Git-owned targets instead of becoming direct live API writes.
+- Tests: covered workspace browse local-source detection, apply-intent ownership/provenance preservation, Git Sync dashboard live-apply rejection before transport, and reusable command-output live-apply rejection.
+- Test Run: `cargo test --manifest-path rust/Cargo.toml workspace_roots_are_treated_as_local_browse_sources --quiet`; `cargo test --manifest-path rust/Cargo.toml build_sync_apply_intent_document_preserves_dashboard_ownership_provenance --quiet`; `cargo test --manifest-path rust/Cargo.toml execute_live_apply_with_request_blocks_git_sync_dashboard_from_apply_intent_handoff --quiet`; `cargo test --manifest-path rust/Cargo.toml execute_sync_command_rejects_live_apply_reusable_output --quiet`.
+- Impact: `rust/src/commands/dashboard/browse/mod.rs`, `rust/src/commands/dashboard/browse/tui.rs`, `rust/src/commands/sync/rust_tests.rs`, `rust/src/commands/sync/live_rust_tests.rs`, `rust/src/commands/sync/cli_rust_tests.rs`, `todo.md`, and AI trace docs. Public JSON, generated docs, Python implementation, and actual Git PR automation are intentionally unchanged.
+- Rollback/Risk: low behavior-boundary fix. Rollback would make workspace-backed local browse trees depend on the older `input_dir`-only local-mode check and would remove the sync handoff regressions.
 
 ## 2026-04-26 - Add dashboard v2 adapter boundary regressions
 - Summary: added adapter-facing regression coverage so classic dashboard diff and root-export source-wrapper paths reject Grafana dashboard v2 resources before any remote compare or normalized temp import source can blur the future adapter boundary.
@@ -81,10 +89,3 @@ Current AI change log only.
 - Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet import --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet routed_import --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet dashboard_plan --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet interactive_import --lib`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `python3 scripts/rust_maintainability_report.py`; `cargo test --manifest-path rust/Cargo.toml --quiet`; `make quality-ai-workflow`; `git diff --check`.
 - Impact: `rust/src/commands/dashboard/mod.rs`, `rust/src/commands/dashboard/import/`, `todo.md`, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are intentionally unchanged.
 - Rollback/Risk: low mechanical module move. Rollback would move the import files back to the flat dashboard directory and restore the root module declarations; focused import/routed/plan/browse and full Rust tests cover the moved paths.
-
-## 2026-04-20 - Clean up alert runtime schema keys
-- Summary: grouped alert runtime plan, delete-preview, and import dry-run document keys behind local schema namespaces while preserving Grafana raw alert payload reads.
-- Tests: preserved alert plan row summaries, plan execution reads, delete preview output, import dry-run summaries, and existing readable JSON fixtures.
-- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet alert --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet runtime --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet sync --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet import --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet import_validation --lib`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `python3 scripts/rust_maintainability_report.py`; `cargo test --manifest-path rust/Cargo.toml --quiet`; `make quality-ai-workflow`; `git diff --check`.
-- Impact: `rust/src/commands/alert/runtime_support.rs`, `todo.md`, and AI trace docs. Public CLI behavior, generated docs, Python implementation, and output contracts are intentionally unchanged.
-- Rollback/Risk: low mechanical key centralization. Rollback would restore repeated raw alert runtime document keys; focused alert/runtime and full Rust tests cover the touched paths.

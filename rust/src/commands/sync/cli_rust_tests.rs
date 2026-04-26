@@ -1,8 +1,8 @@
 //! Sync CLI test suite.
 //! Verifies sync routing and rendering contracts that remain outside the split execution slices.
 use super::{
-    run_sync_cli, SyncAdvancedCliArgs, SyncAdvancedCommand, SyncAssessAlertsArgs, SyncGroupCommand,
-    SyncOutputFormat, SyncPlanArgs, SyncSummaryArgs,
+    execute_sync_command, run_sync_cli, SyncAdvancedCliArgs, SyncAdvancedCommand, SyncApplyArgs,
+    SyncAssessAlertsArgs, SyncGroupCommand, SyncOutputFormat, SyncPlanArgs, SyncSummaryArgs,
 };
 use crate::dashboard::CommonCliArgs;
 use serde_json::json;
@@ -157,4 +157,39 @@ fn filter_review_plan_operations_recalculates_summary_and_alert_assessment() {
         json!(1)
     );
     assert_eq!(filtered["operations"].as_array().unwrap().len(), 2);
+}
+
+#[test]
+fn execute_sync_command_rejects_live_apply_reusable_output() {
+    let error = execute_sync_command(&SyncGroupCommand::Apply(SyncApplyArgs {
+        plan_file: None,
+        preflight_file: None,
+        bundle_preflight_file: None,
+        approve: true,
+        common: CommonCliArgs {
+            color: crate::common::CliColorChoice::Auto,
+            profile: None,
+            url: "http://127.0.0.1:3000".to_string(),
+            api_token: Some("test-token".to_string()),
+            username: None,
+            password: None,
+            prompt_password: false,
+            prompt_token: false,
+            timeout: 30,
+            verify_ssl: false,
+        },
+        org_id: None,
+        execute_live: true,
+        allow_folder_delete: false,
+        allow_policy_reset: false,
+        output_format: SyncOutputFormat::Json,
+        applied_by: None,
+        applied_at: None,
+        approval_reason: None,
+        apply_note: None,
+    }))
+    .unwrap_err()
+    .to_string();
+
+    assert!(error.contains("Sync live apply is not exposed through reusable execution output."));
 }

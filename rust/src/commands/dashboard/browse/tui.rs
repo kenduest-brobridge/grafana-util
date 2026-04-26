@@ -12,6 +12,7 @@ use super::browse_input::{ensure_selected_dashboard_view, handle_browser_key, Br
 use super::browse_render::render_dashboard_browser_frame;
 use super::browse_state::BrowserState;
 use super::browse_terminal::TerminalSession;
+use super::uses_local_browse_source;
 use super::BrowseArgs;
 
 pub(crate) fn run_dashboard_browser_tui<F>(mut request_json: F, args: &BrowseArgs) -> Result<usize>
@@ -20,7 +21,7 @@ where
 {
     let document = refresh_browser_document(&mut request_json, args)?;
     let mut session = TerminalSession::enter()?;
-    let mut state = BrowserState::new_with_mode(document, args.input_dir.is_some());
+    let mut state = BrowserState::new_with_mode(document, uses_local_browse_source(args));
     ensure_selected_dashboard_view(&mut request_json, args, &mut state, false)?;
 
     loop {

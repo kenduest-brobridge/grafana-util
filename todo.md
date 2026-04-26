@@ -283,7 +283,7 @@ place.
 Keep these follow-ups separated from the classic prompt contract so the next
 changes stay reviewable and do not blur lane boundaries.
 
-- [ ] Add first-class Grafana Git Sync awareness to dashboard/workspace flows.
+- [x] Add first-class Grafana Git Sync awareness to dashboard/workspace flows.
   Git Sync-managed dashboard folders should be treated as Git-owned targets:
   dashboard JSON deployment should go through the Git repository / PR path, not
   direct dashboard API import or workspace apply.

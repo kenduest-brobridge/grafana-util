@@ -37,12 +37,16 @@ use super::BrowseArgs;
 #[cfg(feature = "tui")]
 use super::{build_http_client, build_http_client_for_org};
 
+pub(crate) fn uses_local_browse_source(args: &BrowseArgs) -> bool {
+    args.input_dir.is_some() || args.workspace.is_some()
+}
+
 #[cfg(feature = "tui")]
 pub(crate) fn browse_dashboards_with_client(
     client: &JsonHttpClient,
     args: &BrowseArgs,
 ) -> Result<usize> {
-    if args.input_dir.is_some() || args.workspace.is_some() {
+    if uses_local_browse_source(args) {
         return browse_dashboards_with_local_args(args);
     }
     ensure_interactive_terminal()?;
@@ -54,7 +58,7 @@ pub(crate) fn browse_dashboards_with_client(
 
 #[cfg(feature = "tui")]
 pub(crate) fn browse_dashboards_with_org_client(args: &BrowseArgs) -> Result<usize> {
-    if args.input_dir.is_some() || args.workspace.is_some() {
+    if uses_local_browse_source(args) {
         return browse_dashboards_with_local_args(args);
     }
     let client = if args.all_orgs {
@@ -103,4 +107,52 @@ pub(crate) fn browse_dashboards_with_client(
 #[cfg(not(feature = "tui"))]
 pub(crate) fn browse_dashboards_with_org_client(_args: &BrowseArgs) -> Result<usize> {
     super::tui_not_built("browse")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::common::CliColorChoice;
+    use crate::dashboard::{CommonCliArgs, DashboardImportInputFormat};
+    use std::path::PathBuf;
+
+    fn make_browse_args() -> BrowseArgs {
+        BrowseArgs {
+            common: CommonCliArgs {
+                color: CliColorChoice::Auto,
+                profile: None,
+                url: "https://grafana.example.com".to_string(),
+                api_token: Some("secret".to_string()),
+                username: None,
+                password: None,
+                prompt_password: false,
+                prompt_token: false,
+                timeout: 30,
+                verify_ssl: false,
+            },
+            workspace: None,
+            input_dir: None,
+            local: false,
+            run: None,
+            run_id: None,
+            input_format: DashboardImportInputFormat::Raw,
+            page_size: 500,
+            org_id: None,
+            all_orgs: false,
+            path: None,
+        }
+    }
+
+    #[test]
+    fn workspace_roots_are_treated_as_local_browse_sources() {
+        let mut args = make_browse_args();
+        assert!(!uses_local_browse_source(&args));
+
+        args.workspace = Some(PathBuf::from("/tmp/git-sync-workspace"));
+        assert!(uses_local_browse_source(&args));
+
+        args.workspace = None;
+        args.input_dir = Some(PathBuf::from("/tmp/raw"));
+        assert!(uses_local_browse_source(&args));
+    }
 }

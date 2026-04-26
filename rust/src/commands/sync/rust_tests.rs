@@ -416,6 +416,69 @@ fn build_sync_apply_intent_document_filters_non_mutating_operations() {
 }
 
 #[test]
+fn build_sync_apply_intent_document_preserves_dashboard_ownership_provenance() {
+    let plan = json!({
+        "kind": "grafana-utils-sync-plan",
+        "reviewRequired": true,
+        "reviewed": true,
+        "allowPrune": false,
+        "summary": {
+            "would_create": 0,
+            "would_update": 1,
+            "would_delete": 0,
+            "noop": 1,
+            "unmanaged": 0,
+            "alert_candidate": 0,
+            "alert_plan_only": 0,
+            "alert_blocked": 0
+        },
+        "alertAssessment": {
+            "summary": {
+                "candidateCount": 0,
+                "planOnlyCount": 0,
+                "blockedCount": 0
+            }
+        },
+        "operations": [
+            {
+                "kind": "dashboard",
+                "identity": "cpu-main",
+                "action": "would-update",
+                "ownership": "git-sync-managed",
+                "provenance": [
+                    "ownership=git-sync-managed",
+                    "source=dashboard-export(git-sync)"
+                ],
+                "desired": {"title": "CPU Main"}
+            },
+            {
+                "kind": "dashboard",
+                "identity": "cpu-main",
+                "action": "noop",
+                "ownership": "git-sync-managed",
+                "provenance": ["ownership=git-sync-managed"],
+                "desired": {"title": "CPU Main"}
+            }
+        ]
+    });
+
+    let intent = build_sync_apply_intent_document(&plan, true).unwrap();
+    let operations = intent["operations"].as_array().unwrap();
+
+    assert_eq!(operations.len(), 1);
+    assert_eq!(operations[0]["identity"], json!("cpu-main"));
+    assert_eq!(operations[0]["action"], json!("would-update"));
+    assert_eq!(operations[0]["ownership"], json!("git-sync-managed"));
+    assert_eq!(
+        operations[0]["provenance"],
+        json!([
+            "ownership=git-sync-managed",
+            "source=dashboard-export(git-sync)"
+        ])
+    );
+}
+
+#[test]
 fn build_sync_plan_document_prunes_alert_policy_when_requested() {
     let plan = build_sync_plan_document(
         &[],

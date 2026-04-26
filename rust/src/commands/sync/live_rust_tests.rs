@@ -4,7 +4,7 @@ use super::live::{
     execute_live_apply_with_request, fetch_live_availability_with_request,
     fetch_live_resource_specs_with_request, load_apply_intent_operations,
 };
-use super::{SyncAdvancedCommand, SyncCliArgs, SyncGroupCommand};
+use super::{build_sync_apply_intent_document, SyncAdvancedCommand, SyncCliArgs, SyncGroupCommand};
 use clap::Parser;
 use reqwest::Method;
 use serde_json::json;
@@ -544,6 +544,67 @@ fn execute_live_apply_with_request_rejects_owned_dashboard_before_transport() {
         assert!(error.contains("Refusing live dashboard write"));
         assert!(calls.is_empty());
     }
+}
+
+#[test]
+fn execute_live_apply_with_request_blocks_git_sync_dashboard_from_apply_intent_handoff() {
+    let plan = json!({
+        "kind": "grafana-utils-sync-plan",
+        "reviewRequired": true,
+        "reviewed": true,
+        "allowPrune": false,
+        "summary": {
+            "would_create": 0,
+            "would_update": 1,
+            "would_delete": 0,
+            "noop": 0,
+            "unmanaged": 0,
+            "alert_candidate": 0,
+            "alert_plan_only": 0,
+            "alert_blocked": 0
+        },
+        "alertAssessment": {
+            "summary": {
+                "candidateCount": 0,
+                "planOnlyCount": 0,
+                "blockedCount": 0
+            }
+        },
+        "operations": [
+            {
+                "kind": "dashboard",
+                "identity": "git-main",
+                "action": "would-update",
+                "ownership": "git-sync-managed",
+                "provenance": [
+                    "ownership=git-sync-managed",
+                    "source=dashboard-export(git-sync)"
+                ],
+                "desired": {"title": "Git Sync Managed"}
+            }
+        ]
+    });
+    let intent = build_sync_apply_intent_document(&plan, true).unwrap();
+    let operations = load_apply_intent_operations(&intent).unwrap();
+    let mut calls = Vec::new();
+
+    let error = execute_live_apply_with_request(
+        |method, path, _, payload| {
+            calls.push((method.clone(), path.to_string(), payload.cloned()));
+            Err(crate::common::message(
+                "request handler should not be called",
+            ))
+        },
+        &operations,
+        false,
+        false,
+    )
+    .expect_err("git-sync dashboard should stay blocked in live apply")
+    .to_string();
+
+    assert!(error.contains("Refusing live dashboard write"));
+    assert!(error.contains("git-sync-managed"));
+    assert!(calls.is_empty());
 }
 
 #[test]

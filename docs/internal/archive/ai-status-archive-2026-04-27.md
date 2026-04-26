@@ -1,0 +1,8 @@
+# ai-status-archive-2026-04-27
+
+## 2026-04-20 - Add dashboard folder permission drift review
+- State: Done
+- Scope: Rust dashboard plan CLI, permission bundle loading, folder permission drift actions/rendering, focused tests, and AI trace docs. Dashboard import permission restore, dashboard-level ACL replay, generated docs, Python implementation, and access subject lifecycle are out of scope.
+- Baseline: Dashboard export writes `raw/permissions.json`, but dashboard plan/import treat it as metadata and cannot compare exported folder ACLs against live Grafana.
+- Current Update: Added `dashboard plan --include-folder-permissions`, UID-first folder permission comparison, optional path fallback, permission detail rendering, command docs, and regression coverage.
+- Result: Focused dashboard plan/parser tests, docs surface, formatter, and full Rust tests pass.
