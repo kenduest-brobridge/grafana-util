@@ -220,6 +220,45 @@ fn run_sync_cli_bundle_keeps_plain_file_output_when_also_stdout_is_enabled() {
 }
 
 #[test]
+fn run_sync_cli_bundle_rejects_dual_dashboard_sources() {
+    let temp = tempdir().unwrap();
+    let dashboard_export_dir = temp.path().join("dashboards").join("raw");
+    let provisioning_root = temp.path().join("dashboards").join("provisioning");
+    fs::create_dir_all(&dashboard_export_dir).unwrap();
+    fs::write(
+        dashboard_export_dir.join("cpu.json"),
+        serde_json::to_string_pretty(&json!({
+            "dashboard": {
+                "uid": "cpu-main",
+                "title": "CPU Main",
+                "panels": []
+            }
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    write_dashboard_provisioning_fixture(&provisioning_root);
+
+    let result = run_sync_cli(SyncGroupCommand::Bundle(SyncBundleArgs {
+        workspace: None,
+        dashboard_export_dir: Some(dashboard_export_dir),
+        dashboard_provisioning_dir: Some(provisioning_root),
+        alert_export_dir: None,
+        datasource_export_file: None,
+        datasource_provisioning_file: None,
+        metadata_file: None,
+        output_file: Some(temp.path().join("bundle.json")),
+        also_stdout: false,
+        output_format: SyncOutputFormat::Json,
+    }));
+
+    let error = result
+        .expect_err("explicit raw and provisioning dashboard sources should be rejected")
+        .to_string();
+    assert!(error.contains("Sync bundle accepts only one dashboard input"));
+}
+
+#[test]
 fn run_sync_cli_bundle_preserves_alert_export_artifact_metadata() {
     let temp = tempdir().unwrap();
     let alert_export_dir = temp.path().join("alerts").join("raw");

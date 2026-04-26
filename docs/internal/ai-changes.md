@@ -18,6 +18,13 @@ Current AI change log only.
 - Older entries moved to [`ai-changes-archive-2026-04-20.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-changes-archive-2026-04-20.md).
 - Older entries moved to [`ai-changes-archive-2026-04-26.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-changes-archive-2026-04-26.md).
 
+## 2026-04-26 - Prove provisioning remains derived dashboard projection
+- Summary: added regression coverage that provisioning dashboard files normalize to the same classic dashboard compare payload as raw export wrappers, and that sync bundle rejects explicit dual raw/provisioning dashboard inputs instead of treating provisioning as an alternate source of truth.
+- Tests: covered raw wrapper vs provisioning compare normalization, provisioning classic payload shape, direct provisioning source loading, import dry-run provisioning roots, and sync bundle dual dashboard source rejection.
+- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet compare_local_document_`; `cargo test --manifest-path rust/Cargo.toml --quiet source_loader_contract_resolves_direct_provisioning_root`; `cargo test --manifest-path rust/Cargo.toml --quiet collect_import_dry_run_report_accepts_provisioning_root_variant_metadata`; `cargo test --manifest-path rust/Cargo.toml --quiet run_sync_cli_bundle_rejects_dual_dashboard_sources`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`.
+- Impact: `rust/src/commands/dashboard/import/compare.rs`, `rust/src/commands/sync/bundle_exec_sources_rust_tests.rs`, `todo.md`, and AI trace docs. Public JSON, generated docs, Python implementation, and dashboard v2 support are intentionally unchanged.
+- Rollback/Risk: low test-only boundary hardening. Rollback would remove the regression coverage while leaving existing provisioning behavior unchanged.
+
 ## 2026-04-26 - Bound library-panel elements to live export
 - Summary: removed raw-to-prompt live library-panel model lookup so `dashboard convert raw-to-prompt` keeps library-panel references warning-only with empty `__elements`, while live export/import-handoff remains the only path that fetches live library-panel models into prompt `__elements`.
 - Tests: updated raw-to-prompt live-lookup tests to prove datasource live lookup still works without library-panel inlining, preserved warning-only missing-model behavior, and kept the live export prompt `__elements` regression passing.
@@ -81,10 +88,3 @@ Current AI change log only.
 - Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet import --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet preflight --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet dashboard_plan --lib`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `python3 scripts/rust_maintainability_report.py`; `cargo test --manifest-path rust/Cargo.toml --quiet`; `make quality-ai-workflow`; `git diff --check`.
 - Impact: `rust/src/commands/dashboard/import_validation_dependencies.rs`, `todo.md`, and AI trace docs. Alert runtime schema cleanup, import directory moves, public CLI behavior, generated docs, Python implementation, and output contracts are intentionally unchanged.
 - Rollback/Risk: low mechanical key centralization. Rollback would restore repeated raw preflight strings; focused import/preflight/dashboard-plan tests cover the touched path.
-
-## 2026-04-20 - Move dashboard authoring into directory boundary
-- Summary: moved dashboard authoring implementation and direct authoring regression tests under `commands/dashboard/authoring/` while keeping `commands/dashboard/mod.rs` as the facade.
-- Tests: preserved dashboard authoring helper imports, root test registration, and public dashboard CLI command paths.
-- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet authoring --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet dashboard --lib`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `python3 scripts/rust_maintainability_report.py`; `cargo test --manifest-path rust/Cargo.toml --quiet`; `make quality-ai-workflow`; `git diff --check`.
-- Impact: `rust/src/commands/dashboard/mod.rs`, `rust/src/commands/dashboard/authoring/mod.rs`, `rust/src/commands/dashboard/authoring/rust_tests.rs`, `todo.md`, and AI trace docs. Import/reconcile and inspect/governance directory moves are intentionally unchanged.
-- Rollback/Risk: low mechanical move. Rollback would move the two authoring files back to the flat dashboard directory and restore the root test path; focused authoring/dashboard tests cover the module path.

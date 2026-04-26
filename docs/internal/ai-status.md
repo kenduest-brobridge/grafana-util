@@ -18,6 +18,13 @@ Current AI-maintained status only.
 - Older entries moved to [`ai-status-archive-2026-04-20.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-04-20.md).
 - Older entries moved to [`ai-status-archive-2026-04-26.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-04-26.md).
 
+## 2026-04-26 - Prove provisioning remains derived dashboard projection
+- State: Done
+- Scope: Rust dashboard compare/import regression tests, sync bundle dashboard source guard, focused tests, and TODO trace. Public JSON, generated docs, and dashboard v2 support are out of scope.
+- Baseline: Provisioning was already a file-backed export lane, but TODO still needed regression evidence that it is not the canonical dashboard contract.
+- Current Update: Added compare tests proving raw export wrappers and provisioning projections normalize to the same classic dashboard payload, and added a sync bundle guard that rejects explicit dual dashboard raw/provisioning inputs.
+- Result: Focused compare, source-loader, sync bundle, and import dry-run tests pass.
+
 ## 2026-04-26 - Bound library-panel elements to live export
 - State: Done
 - Scope: Rust raw-to-prompt library-panel handling, live export prompt regression, focused tests, and TODO trace. Live export/import-handoff `__elements` support remains in scope; dashboard v2 import/export support and provisioning contract changes are out of scope.
@@ -52,10 +59,3 @@ Current AI-maintained status only.
 - Baseline: Contract ownership lanes were documented, but the promotion report still needed concrete matrix behavior for actual route shapes, runtime-only rows, informational findings, and test coverage.
 - Current Update: Expanded the report to read manifest route sections and quick lookups, normalize command evidence, show runtime-only rows and categorized informational findings, and documented how maintainers read the evidence matrix.
 - Result: Contract promotion report, report unit tests, output-contract checks, schema check, AI workflow, and diff checks pass.
-
-## 2026-04-20 - Finish project status producer audit
-- State: Done
-- Scope: Rust project-status producer audit across sync, datasource, alert, dashboard, access, and live status fallback producers. Public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
-- Baseline: Most domain producers already routed through `StatusReading`, but the remaining audit still needed to confirm whether any direct producer construction remained.
-- Current Update: Audited the producer lanes in workers and normalized the remaining dashboard live read-failure fallback in test support through `StatusReading` while preserving live evidence and public status fields.
-- Result: Focused dashboard/access/status/project_status tests, formatter, architecture, AI workflow, and full Rust tests pass.

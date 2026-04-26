@@ -233,3 +233,94 @@ where
     }
     Ok(differences)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn compare_local_document_normalizes_raw_wrapper_and_provisioning_projection_equally() {
+        let raw_export_document = json!({
+            "dashboard": {
+                "id": 7,
+                "uid": "cpu-main",
+                "title": "CPU Main",
+                "schemaVersion": 38,
+                "panels": [{
+                    "id": 11,
+                    "title": "CPU",
+                    "type": "timeseries"
+                }]
+            },
+            "meta": {
+                "folderUid": "legacy-folder",
+                "folderTitle": "Legacy Folder"
+            }
+        });
+        let provisioning_projection = json!({
+            "uid": "cpu-main",
+            "title": "CPU Main",
+            "schemaVersion": 38,
+            "panels": [{
+                "id": 11,
+                "title": "CPU",
+                "type": "timeseries"
+            }]
+        });
+
+        let raw_compare =
+            build_local_compare_document(&raw_export_document, Some("team-folder")).unwrap();
+        let provisioning_compare =
+            build_local_compare_document(&provisioning_projection, Some("team-folder")).unwrap();
+
+        assert_eq!(raw_compare, provisioning_compare);
+        assert_eq!(raw_compare["dashboard"]["id"], Value::Null);
+        assert_eq!(raw_compare["folderUid"], "team-folder");
+    }
+
+    #[test]
+    fn compare_local_document_keeps_provisioning_as_classic_dashboard_contract() {
+        let provisioning_projection = json!({
+            "uid": "cpu-main",
+            "title": "CPU Main",
+            "schemaVersion": 38,
+            "templating": {
+                "list": [{
+                    "name": "env",
+                    "type": "query"
+                }]
+            },
+            "panels": [{
+                "id": 11,
+                "title": "CPU",
+                "type": "timeseries"
+            }]
+        });
+
+        let compare = build_local_compare_document(&provisioning_projection, None).unwrap();
+
+        assert_eq!(
+            compare,
+            json!({
+                "dashboard": {
+                    "id": null,
+                    "uid": "cpu-main",
+                    "title": "CPU Main",
+                    "schemaVersion": 38,
+                    "templating": {
+                        "list": [{
+                            "name": "env",
+                            "type": "query"
+                        }]
+                    },
+                    "panels": [{
+                        "id": 11,
+                        "title": "CPU",
+                        "type": "timeseries"
+                    }]
+                }
+            })
+        );
+    }
+}

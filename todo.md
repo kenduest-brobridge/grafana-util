@@ -228,7 +228,7 @@ with narrow validation and a final full Rust test run when code changes.
   a dedicated adapter exists.
 - [x] Anchor fixtures to Grafana source testdata for datasource variables,
   selected current datasource handling, library panels, and v2 rejection.
-- [ ] Keep provisioning as a derived projection, not the source-of-truth
+- [x] Keep provisioning as a derived projection, not the source-of-truth
   dashboard contract.
 - [x] Keep live library-panel `__elements` lookup limited to live export /
   import-handoff paths.
@@ -306,7 +306,7 @@ changes stay reviewable and do not blur lane boundaries.
   remaining publish or workspace paths that still lack provenance before live
   writes.
 - [x] Keep dashboard v2 as a separate future adapter boundary. Continue rejecting v2-shaped input in the classic prompt lane rather than mixing it into `raw/`, `prompt/`, or provisioning behavior.
-- [ ] Treat provisioning as a derived projection that can be compared later against Grafana file provisioning. Do not rebase the dashboard contract on provisioning as if it were the source of truth.
+- [x] Treat provisioning as a derived projection that can be compared later against Grafana file provisioning. Do not rebase the dashboard contract on provisioning as if it were the source of truth.
 - [ ] Keep dashboard permissions adjacent to access evidence and access workflows, not as dashboard JSON fields or as an extension of the prompt export shape.
 - [ ] Split large dashboard modules by responsibility, not by line count alone. Favor focused export planning, prompt conversion, live preflight, and provisioning projection boundaries over arbitrary file carving.
 
