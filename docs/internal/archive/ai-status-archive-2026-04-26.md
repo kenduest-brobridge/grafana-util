@@ -13,3 +13,10 @@
 - Baseline: `commands/alert/runtime_support.rs` still repeated tool-owned plan row, plan document, delete-preview, and import dry-run keys directly in production render/read paths.
 - Current Update: Grouped alert runtime document, row, and summary keys under local schema namespaces while keeping Grafana raw alert payload fields direct.
 - Result: Focused sync, alert, runtime, dashboard import, formatter, maintainability, AI workflow, and full Rust tests pass.
+
+## 2026-04-20 - Move dashboard import into directory boundary
+- State: Done
+- Scope: Rust dashboard import module layout, focused import/routed/plan/browse validation, and AI trace docs. Plan reconciliation, inspect/governance moves, public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
+- Baseline: dashboard import implementation lived as many flat `commands/dashboard/import_*.rs` files, while plan-owned reconciliation already lived under `commands/dashboard/plan/`.
+- Current Update: Moved the dashboard import implementation under `commands/dashboard/import/`, kept `commands/dashboard/mod.rs` as the public facade, and left plan reconciliation in the plan-owned boundary.
+- Result: Focused import/routed/plan/browse tests, formatter, maintainability, AI workflow, and full Rust tests pass.

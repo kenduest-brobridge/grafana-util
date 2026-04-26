@@ -82,13 +82,13 @@ fn start_live_export_mock_server() -> (String, thread::JoinHandle<()>) {
 }
 
 fn start_live_export_mock_server_with_library_model(
-    library_model: serde_json::Value,
+    _library_model: serde_json::Value,
 ) -> (String, thread::JoinHandle<()>) {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let address = listener.local_addr().unwrap();
     let server = thread::spawn(move || {
         let mut served = 0usize;
-        while served < 3 {
+        while served < 2 {
             let (mut stream, _) = listener.accept().unwrap();
             stream
                 .set_read_timeout(Some(Duration::from_secs(5)))
@@ -130,15 +130,9 @@ fn start_live_export_mock_server_with_library_model(
                         "isDefault": true
                     }
                 ]),
-                "/api/library-elements/shared-panel" => json!({
-                    "result": {
-                        "uid": "shared-panel",
-                        "name": "Shared Panel",
-                        "kind": 1,
-                        "type": "graph",
-                        "model": library_model.clone()
-                    }
-                }),
+                "/api/library-elements/shared-panel" => {
+                    panic!("raw-to-prompt should not fetch live library panel models")
+                }
                 other => panic!("unexpected request path: {other}"),
             };
             let body = serde_json::to_string(&body).unwrap();
@@ -932,7 +926,7 @@ fn raw_to_prompt_warns_for_library_panel_references_without_inlining_fixture() {
 }
 
 #[test]
-fn raw_to_prompt_inlines_live_library_panel_models_without_losing_prompt_semantics() {
+fn raw_to_prompt_keeps_live_lookup_scoped_to_datasources_and_does_not_inline_library_models() {
     let temp = tempdir().unwrap();
     let input = temp.path().join("library-live.json");
     write_json(
@@ -994,7 +988,7 @@ fn raw_to_prompt_inlines_live_library_panel_models_without_losing_prompt_semanti
     );
     assert_eq!(
         prompt["templating"]["list"][0]["current"]["value"],
-        serde_json::Value::String("${DS_PROM_MAIN}".to_string())
+        serde_json::Value::String("${DS_PROMETHEUS_MAIN}".to_string())
     );
     assert_eq!(
         prompt["panels"][0]["datasource"]["uid"],
@@ -1004,19 +998,11 @@ fn raw_to_prompt_inlines_live_library_panel_models_without_losing_prompt_semanti
         prompt["panels"][0]["targets"][0]["datasource"]["uid"],
         serde_json::Value::String("$datasource".to_string())
     );
-    assert_eq!(prompt["__elements"]["shared-panel"]["uid"], "shared-panel");
-    assert_eq!(
-        prompt["__elements"]["shared-panel"]["model"]["datasource"]["uid"],
-        serde_json::Value::String("${DS_PROM_MAIN}".to_string())
-    );
-    assert_eq!(
-        prompt["__elements"]["shared-panel"]["model"]["targets"][0]["datasource"]["uid"],
-        serde_json::Value::String("${DS_PROM_MAIN}".to_string())
-    );
+    assert_eq!(prompt["__elements"], json!({}));
 }
 
 #[test]
-fn raw_to_prompt_maps_datasource_variable_current_when_live_library_model_uses_placeholder() {
+fn raw_to_prompt_keeps_library_panel_references_warning_only_during_live_datasource_lookup() {
     let temp = tempdir().unwrap();
     let input = temp.path().join("library-variable-live.json");
     write_json(
@@ -1061,6 +1047,7 @@ fn raw_to_prompt_maps_datasource_variable_current_when_live_library_model_uses_p
     args.input_file = vec![input.clone()];
     args.url = Some(base_url);
     args.api_token = Some("token".to_string());
+    args.log_file = Some(temp.path().join("raw-to-prompt.log"));
 
     run_raw_to_prompt(&args).unwrap();
     server.join().unwrap();
@@ -1069,19 +1056,15 @@ fn raw_to_prompt_maps_datasource_variable_current_when_live_library_model_uses_p
     let prompt: serde_json::Value =
         serde_json::from_str(&fs::read_to_string(output).unwrap()).unwrap();
     let inputs = prompt["__inputs"].as_array().unwrap();
-    assert_eq!(inputs.len(), 1);
-    assert_eq!(inputs[0]["pluginId"], "prometheus");
-    assert!(prompt["templating"]["list"][0]["current"]["value"]
-        .as_str()
-        .is_some_and(|value| value.starts_with("${DS_")));
+    assert!(inputs.is_empty());
     assert_eq!(
-        prompt["__elements"]["shared-panel"]["model"]["datasource"]["uid"],
-        serde_json::Value::String("$datasource".to_string())
+        prompt["templating"]["list"][0]["current"]["value"],
+        serde_json::Value::String("prom-main".to_string())
     );
-    assert_eq!(
-        prompt["__elements"]["shared-panel"]["model"]["targets"][0]["datasource"]["uid"],
-        serde_json::Value::String("$datasource".to_string())
-    );
+    assert_eq!(prompt["__elements"], json!({}));
+    assert_eq!(prompt["panels"][0]["libraryPanel"]["uid"], "shared-panel");
+    let log = fs::read_to_string(temp.path().join("raw-to-prompt.log")).unwrap();
+    assert!(log.contains("library panel external export is not fully portable yet"));
 }
 
 #[test]

@@ -230,7 +230,7 @@ with narrow validation and a final full Rust test run when code changes.
   selected current datasource handling, library panels, and v2 rejection.
 - [ ] Keep provisioning as a derived projection, not the source-of-truth
   dashboard contract.
-- [ ] Keep live library-panel `__elements` lookup limited to live export /
+- [x] Keep live library-panel `__elements` lookup limited to live export /
   import-handoff paths.
 - [ ] Add adapter tests before allowing any v2-shaped import/export path.
 
@@ -300,7 +300,7 @@ changes stay reviewable and do not blur lane boundaries.
 - [ ] Keep datasource, alert, access, and status workflows as direct product
   differentiators; Grafana Git Sync mainly changes dashboard JSON ownership, not
   datasource/access/alert lifecycle management.
-- [ ] Keep live library-panel `__elements` lookup limited to the live export / import-handoff path. Keep local raw-to-prompt conversion warning-only when a referenced library panel model is missing.
+- [x] Keep live library-panel `__elements` lookup limited to the live export / import-handoff path. Keep local raw-to-prompt conversion warning-only when a referenced library panel model is missing.
 - [x] Keep prompt/export fixture parity anchored to Grafana source testdata for datasource variables, selected current datasource handling, library panels, and the classic-vs-v2 rejection boundary.
 - [x] Extend the implemented dashboard import/plan ownership evidence into any
   remaining publish or workspace paths that still lack provenance before live

@@ -18,6 +18,13 @@ Current AI-maintained status only.
 - Older entries moved to [`ai-status-archive-2026-04-20.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-04-20.md).
 - Older entries moved to [`ai-status-archive-2026-04-26.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-04-26.md).
 
+## 2026-04-26 - Bound library-panel elements to live export
+- State: Done
+- Scope: Rust raw-to-prompt library-panel handling, live export prompt regression, focused tests, and TODO trace. Live export/import-handoff `__elements` support remains in scope; dashboard v2 import/export support and provisioning contract changes are out of scope.
+- Baseline: Raw-to-prompt could still perform live library-panel model lookup when live datasource lookup was enabled, which blurred the boundary between local conversion and live export handoff.
+- Current Update: Removed raw-to-prompt live library-panel lookup, kept live datasource lookup intact, preserved warning-only local library-panel references with empty `__elements`, and retained live export `__elements` behavior.
+- Result: Focused raw-to-prompt and live export regression tests pass.
+
 ## 2026-04-26 - Type dashboard ownership evidence
 - State: Done
 - Scope: Rust dashboard ownership evidence helpers, sync live dashboard write guard, focused ownership tests, and TODO trace. Public JSON fields, direct write policy, Python implementation, and generated docs are out of scope.
@@ -52,10 +59,3 @@ Current AI-maintained status only.
 - Baseline: Most domain producers already routed through `StatusReading`, but the remaining audit still needed to confirm whether any direct producer construction remained.
 - Current Update: Audited the producer lanes in workers and normalized the remaining dashboard live read-failure fallback in test support through `StatusReading` while preserving live evidence and public status fields.
 - Result: Focused dashboard/access/status/project_status tests, formatter, architecture, AI workflow, and full Rust tests pass.
-
-## 2026-04-20 - Move dashboard import into directory boundary
-- State: Done
-- Scope: Rust dashboard import module layout, focused import/routed/plan/browse validation, and AI trace docs. Plan reconciliation, inspect/governance moves, public CLI behavior, generated docs, Python implementation, and output contracts are out of scope.
-- Baseline: dashboard import implementation lived as many flat `commands/dashboard/import_*.rs` files, while plan-owned reconciliation already lived under `commands/dashboard/plan/`.
-- Current Update: Moved the dashboard import implementation under `commands/dashboard/import/`, kept `commands/dashboard/mod.rs` as the public facade, and left plan reconciliation in the plan-owned boundary.
-- Result: Focused import/routed/plan/browse tests, formatter, maintainability, AI workflow, and full Rust tests pass.

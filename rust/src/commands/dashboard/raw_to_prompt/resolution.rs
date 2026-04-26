@@ -11,21 +11,19 @@ use super::super::{
     build_http_client, build_http_client_for_org, load_json_file, CommonCliArgs,
     DatasourceInventoryItem, RawToPromptArgs, RawToPromptResolution, DEFAULT_TIMEOUT, DEFAULT_URL,
 };
+pub(crate) use super::raw_to_prompt_datasource_resolution::load_datasource_mapping;
 use super::raw_to_prompt_datasource_resolution::{
     build_synthetic_catalog, collect_reference_families, rewrite_datasource_refs,
 };
 use super::raw_to_prompt_prompt_paths::{
     collect_library_panel_portability_warnings, collect_panel_placeholder_datasource_paths,
-    is_dashboard_v2_payload, load_live_library_panel_exports, raw_to_prompt_live_lookup_requested,
+    is_dashboard_v2_payload, raw_to_prompt_live_lookup_requested,
     rewrite_prompt_panel_placeholder_paths,
 };
 use super::raw_to_prompt_types::{
     DashboardScanContext, DatasourceMapDocument, RawToPromptOutcome, RawToPromptResolutionKind,
     RawToPromptStats,
 };
-use crate::dashboard::prompt::build_external_export_document_with_library_panels;
-
-pub(crate) use super::raw_to_prompt_datasource_resolution::load_datasource_mapping;
 
 pub(crate) fn load_live_datasource_inventory(
     args: &RawToPromptArgs,
@@ -64,7 +62,7 @@ pub(crate) fn convert_raw_dashboard_file(
     datasource_inventory: &[DatasourceInventoryItem],
     mapping: Option<&DatasourceMapDocument>,
     resolution: RawToPromptResolution,
-    live_args: Option<&RawToPromptArgs>,
+    _live_args: Option<&RawToPromptArgs>,
 ) -> Result<RawToPromptOutcome> {
     let payload = load_json_file(input_path)?;
     if is_dashboard_v2_payload(&payload) {
@@ -88,24 +86,7 @@ pub(crate) fn convert_raw_dashboard_file(
         &mut stats,
     )?;
     let datasource_catalog = build_datasource_catalog(&build_synthetic_catalog(&dashboard));
-    let live_library_panels = if let Some(args) = live_args {
-        if raw_to_prompt_live_lookup_requested(args) {
-            Some(load_live_library_panel_exports(args, &dashboard)?)
-        } else {
-            None
-        }
-    } else {
-        None
-    };
-    let mut prompt_document = if let Some(library_panels) = live_library_panels.as_ref() {
-        build_external_export_document_with_library_panels(
-            &dashboard,
-            &datasource_catalog,
-            Some(library_panels),
-        )?
-    } else {
-        build_external_export_document(&dashboard, &datasource_catalog)?
-    };
+    let mut prompt_document = build_external_export_document(&dashboard, &datasource_catalog)?;
     rewrite_prompt_panel_placeholder_paths(&mut prompt_document, &placeholder_paths);
     let datasource_slots = prompt_document
         .get("__inputs")

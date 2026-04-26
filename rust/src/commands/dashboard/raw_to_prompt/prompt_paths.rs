@@ -1,16 +1,9 @@
 //! Prompt-lane preservation helpers for raw-to-prompt conversions.
 
 use serde_json::Value;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 
-use crate::common::Result;
-use crate::dashboard::prompt::{build_library_panel_export, collect_library_panel_uids};
-use crate::grafana_api::DashboardResourceClient;
-
-use super::super::{
-    build_http_client, build_http_client_for_org, CommonCliArgs, RawToPromptArgs, DEFAULT_TIMEOUT,
-    DEFAULT_URL,
-};
+use super::super::RawToPromptArgs;
 
 pub(crate) fn raw_to_prompt_live_lookup_requested(args: &RawToPromptArgs) -> bool {
     args.profile.is_some()
@@ -23,74 +16,6 @@ pub(crate) fn raw_to_prompt_live_lookup_requested(args: &RawToPromptArgs) -> boo
         || args.org_id.is_some()
         || args.timeout.is_some()
         || args.verify_ssl
-}
-
-pub(crate) fn load_live_library_panel_exports(
-    args: &RawToPromptArgs,
-    dashboard_payload: &Value,
-) -> Result<BTreeMap<String, Value>> {
-    let common = CommonCliArgs {
-        color: args.color,
-        profile: args.profile.clone(),
-        url: args.url.clone().unwrap_or_else(|| DEFAULT_URL.to_string()),
-        api_token: args.api_token.clone(),
-        username: args.username.clone(),
-        password: args.password.clone(),
-        prompt_password: args.prompt_password,
-        prompt_token: args.prompt_token,
-        timeout: args.timeout.unwrap_or(DEFAULT_TIMEOUT),
-        verify_ssl: args.verify_ssl,
-    };
-    let client = match args.org_id {
-        Some(org_id) => build_http_client_for_org(&common, org_id)?,
-        None => build_http_client(&common)?,
-    };
-    let dashboard = DashboardResourceClient::new(&client);
-    let (exports, warnings) = collect_live_library_panel_exports_with_request(
-        dashboard_payload,
-        |method, path, params, payload| dashboard.request_json(method, path, params, payload),
-    )?;
-    for warning in warnings {
-        eprintln!("Dashboard raw-to-prompt warning: {warning}");
-    }
-    Ok(exports)
-}
-
-fn collect_live_library_panel_exports_with_request<F>(
-    dashboard_payload: &Value,
-    mut request_json: F,
-) -> Result<(BTreeMap<String, Value>, Vec<String>)>
-where
-    F: FnMut(reqwest::Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
-{
-    let mut exports = BTreeMap::new();
-    let mut warnings = Vec::new();
-
-    for uid in collect_library_panel_uids(dashboard_payload) {
-        match request_json(
-            reqwest::Method::GET,
-            &format!("/api/library-elements/{uid}"),
-            &[],
-            None,
-        ) {
-            Ok(Some(value)) => match build_library_panel_export(&value) {
-                Ok((export_uid, export)) => {
-                    exports.insert(export_uid, export);
-                }
-                Err(error) => warnings.push(format!(
-                    "Failed to normalize library panel {uid} for export: {error}"
-                )),
-            },
-            Ok(None) => warnings.push(format!(
-                "Library panel {uid} did not return a response from Grafana."
-            )),
-            Err(error) => warnings.push(format!(
-                "Failed to fetch library panel {uid} for export: {error}"
-            )),
-        }
-    }
-
-    Ok((exports, warnings))
 }
 
 pub(crate) fn is_dashboard_v2_payload(payload: &Value) -> bool {
@@ -227,63 +152,6 @@ pub(crate) fn is_placeholder_datasource_reference(reference: &Value) -> bool {
 mod tests {
     use super::*;
     use serde_json::json;
-
-    #[test]
-    fn collect_live_library_panel_exports_with_request_returns_exports_for_models() {
-        let dashboard = json!({
-            "panels": [{
-                "id": 1,
-                "libraryPanel": {"uid": "shared-panel", "name": "Shared Panel"}
-            }]
-        });
-        let (exports, warnings) =
-            collect_live_library_panel_exports_with_request(&dashboard, |_, path, _, _| {
-                assert_eq!(path, "/api/library-elements/shared-panel");
-                Ok(Some(json!({
-                    "result": {
-                        "uid": "shared-panel",
-                        "name": "Shared Panel",
-                        "kind": 1,
-                        "type": "graph",
-                        "model": {
-                            "type": "graph",
-                            "datasource": {"uid": "prom-main", "type": "prometheus"}
-                        }
-                    }
-                })))
-            })
-            .unwrap();
-        assert!(warnings.is_empty());
-        assert_eq!(exports.len(), 1);
-        assert_eq!(exports["shared-panel"]["model"]["type"], "graph");
-    }
-
-    #[test]
-    fn collect_live_library_panel_exports_with_request_warns_when_model_is_missing() {
-        let dashboard = json!({
-            "panels": [{
-                "id": 1,
-                "libraryPanel": {"uid": "shared-panel", "name": "Shared Panel"}
-            }]
-        });
-        let (exports, warnings) =
-            collect_live_library_panel_exports_with_request(&dashboard, |_, path, _, _| {
-                assert_eq!(path, "/api/library-elements/shared-panel");
-                Ok(Some(json!({
-                    "result": {
-                        "uid": "shared-panel",
-                        "name": "Shared Panel",
-                        "kind": 1,
-                        "type": "graph"
-                    }
-                })))
-            })
-            .unwrap();
-        assert!(exports.is_empty());
-        assert!(warnings
-            .iter()
-            .any(|warning| warning.contains("Unexpected library panel payload")));
-    }
 
     #[test]
     fn rewrite_prompt_panel_placeholder_paths_preserves_placeholder_datasource_slots() {

@@ -18,6 +18,13 @@ Current AI change log only.
 - Older entries moved to [`ai-changes-archive-2026-04-20.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-changes-archive-2026-04-20.md).
 - Older entries moved to [`ai-changes-archive-2026-04-26.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-changes-archive-2026-04-26.md).
 
+## 2026-04-26 - Bound library-panel elements to live export
+- Summary: removed raw-to-prompt live library-panel model lookup so `dashboard convert raw-to-prompt` keeps library-panel references warning-only with empty `__elements`, while live export/import-handoff remains the only path that fetches live library-panel models into prompt `__elements`.
+- Tests: updated raw-to-prompt live-lookup tests to prove datasource live lookup still works without library-panel inlining, preserved warning-only missing-model behavior, and kept the live export prompt `__elements` regression passing.
+- Test Run: `cargo test --manifest-path rust/Cargo.toml raw_to_prompt --quiet`; `cargo test --manifest-path rust/Cargo.toml export_dashboards_with_request_includes_live_library_panel_elements_in_prompt_variant --quiet`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`.
+- Impact: `rust/src/commands/dashboard/raw_to_prompt/resolution.rs`, `rust/src/commands/dashboard/raw_to_prompt/prompt_paths.rs`, `rust/src/commands/dashboard/raw_to_prompt/rust_tests.rs`, `todo.md`, and AI trace docs. Live export `__elements`, dashboard v2 rejection, Python implementation, and generated docs are intentionally unchanged.
+- Rollback/Risk: low behavior-boundary change. Rollback would reintroduce live library-panel fetches into raw-to-prompt; focused raw-to-prompt and live export tests cover the intended split.
+
 ## 2026-04-26 - Type dashboard ownership evidence
 - Summary: extended the existing `DashboardTargetOwnership` model with typed label parsing and evidence-note helpers, then reused it in the sync live dashboard write guard instead of rebuilding `ownership=...` strings locally.
 - Tests: added ownership evidence helper coverage for duplicate preservation, known ownership insertion, unknown labels, and direct-write blocking; preserved dashboard plan and sync live owned-dashboard guard behavior.
@@ -81,10 +88,3 @@ Current AI change log only.
 - Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet authoring --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet dashboard --lib`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `python3 scripts/rust_maintainability_report.py`; `cargo test --manifest-path rust/Cargo.toml --quiet`; `make quality-ai-workflow`; `git diff --check`.
 - Impact: `rust/src/commands/dashboard/mod.rs`, `rust/src/commands/dashboard/authoring/mod.rs`, `rust/src/commands/dashboard/authoring/rust_tests.rs`, `todo.md`, and AI trace docs. Import/reconcile and inspect/governance directory moves are intentionally unchanged.
 - Rollback/Risk: low mechanical move. Rollback would move the two authoring files back to the flat dashboard directory and restore the root test path; focused authoring/dashboard tests cover the module path.
-
-## 2026-04-20 - Split sync live read facets
-- Summary: moved sync live read dashboard/folder, datasource, alert, and availability assembly logic into dedicated child modules while keeping `sync_live_read.rs` as the facade.
-- Tests: preserved live resource-spec and availability behavior for client and request-closure paths.
-- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet sync_live --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet fetch_live_resource_specs_with_request --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet fetch_live_availability_with_request --lib`; `cargo test --manifest-path rust/Cargo.toml --quiet status --lib`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `python3 scripts/rust_maintainability_report.py`; `cargo test --manifest-path rust/Cargo.toml --quiet`; `make quality-ai-workflow`; `git diff --check`.
-- Impact: `rust/src/grafana/api/sync_live_read.rs`, `rust/src/grafana/api/sync_live_read/dashboard.rs`, `rust/src/grafana/api/sync_live_read/datasource.rs`, `rust/src/grafana/api/sync_live_read/alert.rs`, `rust/src/grafana/api/sync_live_read/availability.rs`, `todo.md`, and AI trace docs. Public CLI/output contracts are intentionally unchanged.
-- Rollback/Risk: low mechanical extraction. Rollback would inline the dashboard/folder, datasource, alert, and availability loops back into `sync_live_read.rs`; focused sync-live tests cover both request and client paths.
