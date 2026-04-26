@@ -4,7 +4,9 @@
 透過 Grafana API 匯入儀表板 JSON 檔案。
 
 ## 何時使用
-當您手上有本地匯出樹或 provisioning 樹，想把儀表板推回 Grafana，無論是實際執行或 dry run，都可以使用這個指令。這個指令只吃 `raw/` 或 `provisioning/` 輸入，不吃 Grafana UI 的 `prompt/` 路徑。
+當您手上有屬於 Grafana API 狀態管理的本地匯出樹，想把儀表板推回 Grafana，無論是實際執行或 dry run，都可以使用這個指令。這個指令只吃 `raw/` 或 `provisioning/` 輸入，不吃 Grafana UI 的 `prompt/` 路徑。
+
+不要用這個指令繞過來源管理。如果目標 dashboard 是 Grafana Git Sync 或 file provisioning 管理，應該修改 Git repository、PR 或 provisioning source，再由該流程部署，而不是強制走 dashboard API 匯入。
 
 ## 採用前後對照
 - **採用前**：匯入比較像盲目 replay，folder、org 或 schema 問題往往要打到 live 後才知道。
@@ -23,12 +25,15 @@
 
 ## 成功判準
 - dry-run 先把 create/update 動作列清楚，再進入 live replay
+- dry-run 也會顯示目標 UID 的 live dashboard ownership evidence，包含 provisioned 或 managed-state 警告
 - 目的 org 與 folder 路由足夠明確，可以先 review
 - 這次匯入使用的是正確的輸入 lane：`raw` 或 `provisioning`，不是 `prompt`
+- Git Sync 或 file-provisioned targets 會被視為 source-owned，應回到 repository 或 provisioning workflow 處理
 
 ## 失敗時先檢查
 - 如果 folder 或 org 落點不對，先檢查路由旗標，不要直接重跑 live import
 - 如果看起來會刪或覆蓋太多，先停在 `--dry-run` 並回頭檢查匯出樹
+- 如果 Grafana 回報目標 UID 是 provisioned 或 Git Sync-managed dashboard，不要改用直接 import 重試；請更新它的來源並透過原本 lane 重新部署
 - 如果 schema 被擋下來，先確認來源資料是不是需要先正規化再匯入
 
 ## 範例

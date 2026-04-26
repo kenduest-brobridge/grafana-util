@@ -34,6 +34,7 @@
 - `--include-history` 會在每個匯出 org 範圍下加上 `history/`。
 - provider 檔案會寫到 `provisioning/provisioning/dashboards.yaml`。
 - `raw/` 給 API import 或 diff，`prompt/` 給 UI import，`provisioning/` 給 file provisioning。
+- 對 Grafana Git Sync target，Git repository 才是部署來源。Export output 可作為證據、review 或 migration input，但後續應更新 repo/PR 路徑，不要用直接 API import 繞過來源流程。
 
 ## Artifact workspace 輸出
 
@@ -71,6 +72,7 @@ run layout 如下：
 - 要做備份、review、diff、dry-run import，從 `raw/` 開始。
 - 要把 dashboard 交給人從 Grafana UI 匯入，交付 `prompt/`。
 - 要放進 Grafana file provisioning，使用 `provisioning/`，並確認 provider 參數是否符合部署路徑。
+- 若 folder 屬於 Git Sync 管理，dashboard JSON 應留在 Git Sync repository，讓 Grafana 從該來源同步；不要把 export output 當成繞過 PR/provisioning workflow 的捷徑。
 - 若只需要其中一種輸出，可用 `--without-raw`、`--without-prompt` 或 `--without-provisioning` 減少噪音。
 
 ## 成功判準

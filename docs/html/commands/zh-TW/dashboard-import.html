@@ -941,7 +941,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 </div>
 <div class="command-intro-block">
   <p class="command-intro-label">什麼時候看這頁</p>
-  <ul class="command-intro-list"><li>當您手上有本地匯出樹或 provisioning 樹，想把儀表板推回 Grafana，無論是實際執行或 dry run，都可以使用這個指令。這個指令只吃 raw/ 或 provisioning/ 輸入，不吃 Grafana UI 的 prompt/ 路徑。</li></ul>
+  <ul class="command-intro-list"><li>當您手上有屬於 Grafana API 狀態管理的本地匯出樹，想把儀表板推回 Grafana，無論是實際執行或 dry run，都可以使用這個指令。這個指令只吃 raw/ 或 provisioning/ 輸入，不吃 Grafana UI 的 prompt/ 路徑。</li><li>不要用這個指令繞過來源管理。如果目標 dashboard 是 Grafana Git Sync 或 file provisioning 管理，應該修改 Git repository、PR 或 provisioning source，再由該流程部署，而不是強制走 dashboard API 匯入。</li></ul>
 </div>
 <div class="command-intro-block">
   <p class="command-intro-label">適合誰</p>
@@ -952,15 +952,16 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="用途">用途</h2>
 <p>透過 Grafana API 匯入儀表板 JSON 檔案。</p>
 <h2 id="何時使用">何時使用</h2>
-<p>當您手上有本地匯出樹或 provisioning 樹，想把儀表板推回 Grafana，無論是實際執行或 dry run，都可以使用這個指令。這個指令只吃 <code>raw/</code> 或 <code>provisioning/</code> 輸入，不吃 Grafana UI 的 <code>prompt/</code> 路徑。</p>
+<p>當您手上有屬於 Grafana API 狀態管理的本地匯出樹，想把儀表板推回 Grafana，無論是實際執行或 dry run，都可以使用這個指令。這個指令只吃 <code>raw/</code> 或 <code>provisioning/</code> 輸入，不吃 Grafana UI 的 <code>prompt/</code> 路徑。</p>
+<p>不要用這個指令繞過來源管理。如果目標 dashboard 是 Grafana Git Sync 或 file provisioning 管理，應該修改 Git repository、PR 或 provisioning source，再由該流程部署，而不是強制走 dashboard API 匯入。</p>
 <h2 id="採用前後對照">採用前後對照</h2>
 <ul><li><strong>採用前</strong>：匯入比較像盲目 replay，folder、org 或 schema 問題往往要打到 live 後才知道。</li><li><strong>採用後</strong>：匯入會先變成可 preview 的回放步驟，先用 <code>--dry-run</code> 看清楚，再決定是否真的動 live。</li></ul>
 <h2 id="重點旗標">重點旗標</h2>
 <ul><li><code>--input-dir</code>：原始或合併匯出輸入的來源目錄。</li><li><code>--input-format</code>：選擇 <code>raw</code> 或 <code>provisioning</code>。</li><li><code>--local</code>、<code>--run</code>、<code>--run-id</code>：不傳 <code>--input-dir</code>，改從 artifact workspace 的 dashboard lane 讀取來源。</li><li><code>--org-id</code>、<code>--use-export-org</code>、<code>--only-org-id</code>、<code>--create-missing-orgs</code>：控制跨 org 路由。</li><li><code>--import-folder-uid</code>：強制指定目的資料夾 UID。</li><li><code>--ensure-folders</code>、<code>--replace-existing</code>、<code>--update-existing-only</code>：控制匯入行為。</li><li><code>--require-matching-folder-path</code>、<code>--require-matching-export-org</code>、<code>--strict-schema</code>、<code>--target-schema-version</code>：安全檢查。</li><li><code>--import-message</code>：儲存在 Grafana 的修訂訊息。</li><li><code>--interactive</code>、<code>--dry-run</code>、<code>--table</code>、<code>--json</code>、<code>--output-format</code>、<code>--output-columns</code>、<code>--list-columns</code>、<code>--no-header</code>、<code>--progress</code>、<code>--verbose</code>：預覽與回報控制。若想看完整 dry-run 表格欄位，可用 <code>--output-columns all</code>。</li></ul>
 <h2 id="成功判準">成功判準</h2>
-<ul><li>dry-run 先把 create/update 動作列清楚，再進入 live replay</li><li>目的 org 與 folder 路由足夠明確，可以先 review</li><li>這次匯入使用的是正確的輸入 lane：<code>raw</code> 或 <code>provisioning</code>，不是 <code>prompt</code></li></ul>
+<ul><li>dry-run 先把 create/update 動作列清楚，再進入 live replay</li><li>dry-run 也會顯示目標 UID 的 live dashboard ownership evidence，包含 provisioned 或 managed-state 警告</li><li>目的 org 與 folder 路由足夠明確，可以先 review</li><li>這次匯入使用的是正確的輸入 lane：<code>raw</code> 或 <code>provisioning</code>，不是 <code>prompt</code></li><li>Git Sync 或 file-provisioned targets 會被視為 source-owned，應回到 repository 或 provisioning workflow 處理</li></ul>
 <h2 id="失敗時先檢查">失敗時先檢查</h2>
-<ul><li>如果 folder 或 org 落點不對，先檢查路由旗標，不要直接重跑 live import</li><li>如果看起來會刪或覆蓋太多，先停在 <code>--dry-run</code> 並回頭檢查匯出樹</li><li>如果 schema 被擋下來，先確認來源資料是不是需要先正規化再匯入</li></ul>
+<ul><li>如果 folder 或 org 落點不對，先檢查路由旗標，不要直接重跑 live import</li><li>如果看起來會刪或覆蓋太多，先停在 <code>--dry-run</code> 並回頭檢查匯出樹</li><li>如果 Grafana 回報目標 UID 是 provisioned 或 Git Sync-managed dashboard，不要改用直接 import 重試；請更新它的來源並透過原本 lane 重新部署</li><li>如果 schema 被擋下來，先確認來源資料是不是需要先正規化再匯入</li></ul>
 <h2 id="範例">範例</h2>
 <pre><code># 透過 Grafana API 匯入儀表板 JSON 檔案。
 grafana-util dashboard import --profile prod --input-dir ./dashboards/raw --replace-existing</code></pre>

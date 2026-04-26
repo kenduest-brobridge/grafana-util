@@ -10,6 +10,8 @@
 它仍然是 read-only 的 review surface。`--use-export-org` 會把 combined multi-org export root 對應回相同的 target org ID，且需要 Basic auth，讓命令可以解析 live org routing。
 如果 raw export 有 `permissions.json`，`--include-folder-permissions` 可以把 folder 權限 drift row 加進同一份 review plan。這只檢視 folder ACL 差異，不會復原或套用權限。
 
+在任何寫入前，先用 plan output 判斷正確的 ownership lane。API-managed dashboard 可以繼續走 `dashboard import`；Git Sync-managed 與 file-provisioned dashboard 應回到 repository/PR 或 provisioning workflow 修改，不應直接用 dashboard API import 或 workspace live apply。
+
 ## 重要參數
 - `--input-dir`: 本地 dashboard export root 或 dashboard variant directory。
 - `--input-type`: 選擇 `raw` 或 `source`。prompt-lane exports 使用 `source`。
@@ -77,6 +79,7 @@ grafana-util dashboard plan --profile prod --input-dir ./dashboards/raw --prune 
 - import 前可看出 create 與 update candidates
 - 遠端多出的 dashboards 預設只被標示，不會被刪除
 - provisioning 或 managed target 會先被 blocked
+- Git Sync-managed target 會被視為 source-owned，下一步應該是 repository review，而不是 API replay
 - unresolved datasource references 與 folder 問題會顯示為 review hints
 - import 或 restore 前可以先看到 exported folder 權限差異
 - `--create-missing-orgs` 只影響 plan 呈現，不會真的建立 org

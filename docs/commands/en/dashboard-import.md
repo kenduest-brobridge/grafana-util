@@ -4,7 +4,9 @@
 Import dashboard JSON files through the Grafana API.
 
 ## When to use
-Use this when you have a local export tree or provisioning tree and need to push dashboards back into Grafana, either live or as a dry run. This command consumes `raw/` or `provisioning/` inputs; it does not consume the Grafana UI `prompt/` lane.
+Use this when you have a local export tree for dashboards that are owned by Grafana's API state and need to push dashboards back into Grafana, either live or as a dry run. This command consumes `raw/` or `provisioning/` inputs; it does not consume the Grafana UI `prompt/` lane.
+
+Do not use this command to bypass source-owned dashboards. If the target dashboard is managed by Grafana Git Sync or file provisioning, change the repository, PR, or provisioning source and let that workflow deploy it instead of forcing a direct dashboard API import.
 
 ## Before / After
 - **Before**: import is a blind replay step, and you find folder, org, or schema problems only after the live call.
@@ -26,11 +28,12 @@ Use this when you have a local export tree or provisioning tree and need to push
 - dry-run also surfaces live dashboard target evidence when Grafana already owns the UID, including provisioned or managed-state warnings
 - the destination org and folder routing are explicit enough to review
 - the chosen input lane matches the replay goal: `raw` or `provisioning`, not `prompt`
+- Git Sync or file-provisioned targets are treated as source-owned and routed back to their repository or provisioning workflow
 
 ## Failure checks
 - if folder or org placement looks wrong, verify the routing flags before re-running live import
 - if the replay looks too destructive, stop at `--dry-run` and inspect the export tree first
-- if Grafana reports a provisioned dashboard at the target UID, the live overwrite is blocked before the POST call
+- if Grafana reports a provisioned or Git Sync-managed dashboard at the target UID, do not retry with a direct import; update the owning source and redeploy through that lane
 - if the schema check blocks replay, confirm whether the source tree needs normalization before import
 
 ## Examples

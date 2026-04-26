@@ -953,6 +953,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <p>Purpose: scan, test, preview, package, and apply one local Grafana workspace.</p>
 <p>When to use: when you already have a local repo root or staged package and want to understand it, validate it, preview the impact, package it for handoff, or apply a reviewed result.</p>
 <p>Description: <code>workspace</code> is the user-facing local package lane. Start with <code>scan</code> to discover inputs, use <code>test</code> to check whether they are structurally safe, use <code>preview</code> to see what would change, and use <code>apply</code> only after review. Use <code>ci</code> for lower-level contract checks and handoff documents.</p>
+<p>Git Sync and file-provisioned dashboards are source-owned. <code>workspace scan</code>, <code>test</code>, and <code>preview</code> can inspect those trees, but live dashboard writes must go through the Git repository/PR or provisioning workflow rather than <code>workspace apply --execute-live</code>.</p>
 <p>First-run path:</p>
 <ol><li><code>workspace scan</code></li><li><code>workspace test</code></li><li><code>workspace preview</code></li><li><code>workspace apply</code></li></ol>
 <p>Key inputs: an optional workspace path, <code>--desired-file</code>, <code>--dashboard-export-dir</code>, <code>--dashboard-provisioning-dir</code>, <code>--alert-export-dir</code>, <code>--target-inventory</code>, <code>--availability-file</code>, <code>--mapping-file</code>, <code>--fetch-live</code>, <code>--live-file</code>, <code>--preview-file</code>, <code>--approve</code>, <code>--execute-live</code>, and <code>--output-format</code>.</p>
@@ -975,7 +976,7 @@ grafana-util workspace apply --preview-file ./workspace-preview.json --approve -
 <h2 id="preview"><code>preview</code></h2>
 <p>Purpose: show what would change from the current workspace inputs.</p>
 <h2 id="apply"><code>apply</code></h2>
-<p>Purpose: turn a reviewed preview into staged or live apply output.</p>
+<p>Purpose: turn a reviewed preview into staged or live apply output. Do not use live apply to overwrite Git Sync-managed or file-provisioned dashboards; update the owning source instead.</p>
 <h2 id="package"><code>package</code></h2>
 <p>Purpose: package dashboards, alerts, datasources, and metadata into one local handoff artifact.</p>
 <h2 id="ci"><code>ci</code></h2>

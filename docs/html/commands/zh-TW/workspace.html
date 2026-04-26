@@ -949,6 +949,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <p>用途：針對本機 Grafana workspace 進行 scan、test、preview、package 與 apply。</p>
 <p>適用時機：當你手上已經有本機 repo root 或 staged package，想先看懂它、驗證它、預覽影響、打包交接，或在審核後套用它時。</p>
 <p>說明：<code>workspace</code> 是給使用者看的本機 package lane。先用 <code>scan</code> 找輸入，用 <code>test</code> 檢查結構是否安全，用 <code>preview</code> 看會改什麼，只有在審核完成後才用 <code>apply</code>。較低階的 contract 檢查與交接文件放在 <code>ci</code>。</p>
+<p>Git Sync 與 file-provisioned dashboards 都屬於 source-owned。<code>workspace scan</code>、<code>test</code>、<code>preview</code> 可以檢視這些 tree，但 live dashboard 寫入應走 Git repository/PR 或 provisioning workflow，不應用 <code>workspace apply --execute-live</code> 直接覆蓋。</p>
 <p>第一次使用流程：</p>
 <ol><li><code>workspace scan</code></li><li><code>workspace test</code></li><li><code>workspace preview</code></li><li><code>workspace apply</code></li></ol>
 <p>主要輸入：可選的 workspace 路徑、<code>--desired-file</code>、<code>--dashboard-export-dir</code>、<code>--dashboard-provisioning-dir</code>、<code>--alert-export-dir</code>、<code>workspace package</code> 的輸出檔、<code>--target-inventory</code>、<code>--availability-file</code>、<code>--mapping-file</code>、<code>--fetch-live</code>、<code>--live-file</code>、<code>--preview-file</code>、<code>--approve</code>、<code>--execute-live</code> 與 <code>--output-format</code>。</p>
@@ -971,7 +972,7 @@ grafana-util workspace apply --preview-file ./workspace-preview.json --approve -
 <h2 id="preview"><code>preview</code></h2>
 <p>用途：顯示目前 workspace 輸入會造成哪些變動。</p>
 <h2 id="apply"><code>apply</code></h2>
-<p>用途：把已審核的 preview 轉成 staged 或 live apply 結果。</p>
+<p>用途：把已審核的 preview 轉成 staged 或 live apply 結果。不要用 live apply 覆蓋 Git Sync-managed 或 file-provisioned dashboard；請更新它的來源。</p>
 <h2 id="package"><code>package</code></h2>
 <p>用途：把 dashboards、alerts、datasources 與 metadata 打包成一份可交接 artifact。</p>
 <h2 id="ci"><code>ci</code></h2>

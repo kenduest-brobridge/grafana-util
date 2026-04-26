@@ -8,6 +8,7 @@
 
 - 當 preview 與 review 都已完成時。
 - 只有真的準備好動 Grafana 時，才加 `--execute-live`。
+- 不要用 live apply 覆蓋 Git Sync-managed 或 file-provisioned dashboards。這類變更應回到擁有 dashboard 的 Git repository/PR 或 provisioning source。
 
 ## 主要旗標
 
@@ -30,4 +31,3 @@ grafana-util workspace apply --preview-file ./workspace-preview.json --approve -
 - [workspace](./workspace.md)
 - [workspace preview](./workspace-preview.md)
 - [workspace ci](./workspace.md#ci)
-

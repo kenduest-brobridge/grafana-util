@@ -145,6 +145,8 @@ Dashboard export intentionally produces three different lanes. This is more than
 
 `provisioning/` is a deployment projection. It lets Grafana read dashboards from the filesystem through provisioning config, which fits container images, ConfigMaps, volume mounts, and GitOps-style deployment flows. It can deploy dashboards, but it should not become the only source for daily review and replay.
 
+Grafana Git Sync is also a source-owned lane. When a folder is Git Sync-managed, the repository and PR flow own the dashboard JSON. Use `grafana-util` to inspect, export evidence, plan, and validate dependencies, but deploy changes by updating the Git Sync repository or provisioning source, not by forcing `dashboard import` or `workspace apply --execute-live`.
+
 | Lane | Purpose | Best Use Case |
 | :--- | :--- | :--- |
 | `raw/` | **Canonical Replay** | The primary source for `grafana-util dashboard import`. Reversible and API-friendly. |
@@ -170,9 +172,11 @@ Use `dashboard history export` when you need a standalone JSON artifact for one 
 ## Staged vs Live: The Operator Logic
 
 - **Staged Work**: Local export trees, validation, offline inspection, and dry-run reviews.
-- **Live Work**: Grafana-backed inventory, live diffs, imports, and deletions.
+- **Live Work**: Grafana-backed inventory, live diffs, imports, and deletions for API-managed dashboards.
 
 **The Golden Rule**: Start with `list` or `browse` to discover, `export` to a staged tree, `summary` and `diff` to verify, and only then `import` or `delete` after a matching dry-run.
+
+If discovery or plan output shows a Git Sync-managed or file-provisioned dashboard, stop before live mutation. The next step is a repository/PR or provisioning change, not direct dashboard API replay.
 
 ---
 
@@ -221,6 +225,8 @@ If `list` or `browse` misses a dashboard you expected, check profile, org scope,
 - `provisioning/`: for Grafana file provisioning. This is a deployment projection, not a replacement for raw review.
 
 If you are handing one dashboard to a person for manual UI import, `prompt/` is easier to use than `raw/`. If CI needs diff, dry-run, or replay, use `raw/`. If the target is GitOps or a mounted provisioning directory, use `provisioning/`.
+
+For Git Sync-owned folders, keep the dashboard JSON in the synced repository and let Grafana apply it from there. `raw/` export can still be the review or migration evidence, but it should not become a shortcut around the Git-owned workflow.
 
 ## Review / Publish: A Draft Must Be Explainable
 

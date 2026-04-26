@@ -983,14 +983,16 @@ grafana-util dashboard edit-live --profile prod --dashboard-uid cpu-main --outpu
 <p><code>raw/</code> 是最值得保留的原始紀錄。它接近 API 回傳的樣子，也最適合成為 Git 裡可追溯的來源。要做備份、災難恢復、diff、audit、dry-run import，或準備之後用 CLI 推回 Grafana，從這裡開始。</p>
 <p><code>prompt/</code> 是給人操作 UI 的交接稿。它服務的是 Grafana UI 的 &quot;Upload JSON&quot; 流程，而不是 <code>grafana-util dashboard import</code>。當你要把 dashboard 交給另一個團隊、另一個 org，或只是希望對方用瀏覽器匯入，這條路徑才是比較乾淨的交付物。</p>
 <p><code>provisioning/</code> 是部署投影。它讓 Grafana 透過 provisioning 設定從檔案系統讀 dashboard，適合被放進容器映像、ConfigMap、volume mount 或 GitOps-style 部署流程。這條路徑可以部署，但不適合作為日常 review 與回放的唯一真相來源。</p>
+<p>Grafana Git Sync 也是 source-owned lane。當 folder 是 Git Sync-managed，dashboard JSON 的擁有者是 repository 與 PR flow。<code>grafana-util</code> 可以用來 inspect、export evidence、plan 與 validate dependencies，但實際部署應更新 Git Sync repository 或 provisioning source，不要強制走 <code>dashboard import</code> 或 <code>workspace apply --execute-live</code>。</p>
 <table><thead><tr><th>路徑 (Lane)</th><th>用途</th><th>最佳使用場景</th></tr></thead><tbody><tr><td><code>raw/</code></td><td><strong>標準回放 (Replay)</strong></td><td><code>grafana-util dashboard import</code> 的主要來源。可還原且 API 友善。</td></tr><tr><td><code>prompt/</code></td><td><strong>UI 匯入</strong></td><td>與 Grafana UI 內建的 &quot;Upload JSON&quot; 功能相容。若您手上只有一般或 raw 的 dashboard JSON，請先用 <code>grafana-util dashboard convert raw-to-prompt</code> 轉換。</td></tr><tr><td><code>provisioning/</code></td><td><strong>檔案配置</strong></td><td>供 Grafana 透過其內建配置系統從磁碟讀取 Dashboard。</td></tr></tbody></table>
 <p>如果您對 <code>dashboard export</code> 加上 <code>--include-history</code>，匯出樹就會在每個 org 範圍下多出一個 <code>history/</code> 子目錄。當您使用 <code>--all-orgs</code> 時，每個匯出的 org root 都會各自有一份 history 樹。</p>
 <p>當您需要的是單一 dashboard UID 的獨立 JSON 成品時，請直接用 <code>dashboard history export</code>。當您想讓版本歷史跟著 export tree 一起輸出時，請用 <code>dashboard export --include-history</code>。</p>
 <h2 id="prompt-與變數說明">Prompt 與變數說明</h2>
 <ul><li><code>$datasource</code> 是 dashboard variable 參照。</li><li><code>${DS_*}</code> 是由 <code>__inputs</code> 產生的 external import placeholder。</li><li>一份 prompt dashboard 同時出現這兩種寫法是合理的。</li><li>這通常代表 dashboard 一邊保留 Grafana datasource variable 的工作流，一邊也需要 external import input。</li><li>不要把 <code>$datasource</code> 直接解讀成 mixed datasource family；很多情況只是 panel 仍透過同一個 datasource variable 做選擇。</li></ul>
 <h2 id="暫存-vs-即時維運邏輯">暫存 vs 即時：維運邏輯</h2>
-<ul><li><strong>暫存工作 (Staged)</strong>：本地匯出樹、驗證、離線檢視與 Dry-run 審查。</li><li><strong>即時工作 (Live)</strong>：直接對接 Grafana 的盤點、即時 Diff、匯入與刪除。</li></ul>
+<ul><li><strong>暫存工作 (Staged)</strong>：本地匯出樹、驗證、離線檢視與 Dry-run 審查。</li><li><strong>即時工作 (Live)</strong>：針對 API-managed dashboards 直接對接 Grafana 的盤點、即時 Diff、匯入與刪除。</li></ul>
 <p><strong>黃金守則</strong>：先用 <code>list</code> 或 <code>browse</code> 發現資產，<code>export</code> 到暫存目錄，透過 <code>dashboard dependencies</code> 與 <code>diff</code> 驗證，最後在 Dry-run 符合預期後才執行 <code>import</code> 或 <code>delete</code>。</p>
+<p>如果 discovery 或 plan output 顯示 dashboard 是 Git Sync-managed 或 file-provisioned，請在 live mutation 前停下來。下一步應該是 repository/PR 或 provisioning change，而不是直接 dashboard API replay。</p>
 <h2 id="閱讀即時資產盤點">閱讀即時資產盤點</h2>
 <p>使用 <code>dashboard list</code> 快速取得資產全貌。</p>
 <pre><code># 使用 dashboard list 快速取得資產全貌。
@@ -1014,6 +1016,7 @@ spring-jmx-node-unified  Spring JMX + Node Unified Dashboard (VM)  Demo    ffhrm
 <p><code>dashboard export</code> 不是只產生「一份 JSON」。它同時服務三種工作：CLI 回放、UI 匯入、Grafana provisioning。選錯 lane 會讓後續 review 變得很痛苦。</p>
 <ul><li><code>raw/</code>：給 <code>dashboard import</code>、<code>dashboard diff</code>、audit 與災難恢復。這是最適合放進 Git 的主資料。</li><li><code>prompt/</code>：給人拿去 Grafana UI Upload JSON。這是交接稿，不是 CLI 回放主資料。</li><li><code>provisioning/</code>：給 Grafana 從磁碟讀取。這是部署投影，不應該取代 raw review。</li></ul>
 <p>如果你只是要把一個 dashboard 交給另一個人手動匯入，<code>prompt/</code> 會比 <code>raw/</code> 好懂。如果你要讓 CI 比對、dry-run 或回放，請回到 <code>raw/</code>。如果你要放到 GitOps 或容器 volume，才使用 <code>provisioning/</code>。</p>
+<p>若 folder 屬於 Git Sync 管理，dashboard JSON 應保留在同步的 repository，讓 Grafana 從那裡套用。<code>raw/</code> export 仍可作為 review 或 migration evidence，但不應變成繞過 Git-owned workflow 的捷徑。</p>
 <h2 id="review-publish草稿要先能被解釋">Review / Publish：草稿要先能被解釋</h2>
 <p><code>dashboard review</code> 和 <code>dashboard publish</code> 的關係，是「先確認草稿是否值得送出，再決定是否寫入 live」。Review 時至少要看 title、UID、folder UID、tags、data source 參照、變數與 blocking issue。Publish 前如果你說不出這份 JSON 從哪裡來、要覆蓋哪個 UID、會進哪個 folder，就不應該 apply。</p>
 <p><code>dashboard publish --dry-run</code> 適合放在 PR 或人工變更前；<code>--watch</code> 適合本地反覆改同一份草稿。真正 publish 後，再回到 <code>dashboard get</code> 或 <code>dashboard list</code> 驗證 live state，而不是只相信 publish 的終端輸出。</p>

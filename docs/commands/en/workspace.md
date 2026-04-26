@@ -8,6 +8,8 @@ When to use: when you already have a local repo root or staged package and want 
 
 Description: `workspace` is the user-facing local package lane. Start with `scan` to discover inputs, use `test` to check whether they are structurally safe, use `preview` to see what would change, and use `apply` only after review. Use `ci` for lower-level contract checks and handoff documents.
 
+Git Sync and file-provisioned dashboards are source-owned. `workspace scan`, `test`, and `preview` can inspect those trees, but live dashboard writes must go through the Git repository/PR or provisioning workflow rather than `workspace apply --execute-live`.
+
 First-run path:
 
 1. `workspace scan`
@@ -48,7 +50,7 @@ Purpose: show what would change from the current workspace inputs.
 
 ## `apply`
 
-Purpose: turn a reviewed preview into staged or live apply output.
+Purpose: turn a reviewed preview into staged or live apply output. Do not use live apply to overwrite Git Sync-managed or file-provisioned dashboards; update the owning source instead.
 
 ## `package`
 

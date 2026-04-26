@@ -268,7 +268,7 @@ validate whether the local workspace is structurally safe to continue.
 show what would change from the current workspace inputs.
 .TP
 .B grafana\-util\-workspace\-apply(1)
-turn a reviewed preview into staged or live apply output.
+turn a reviewed preview into staged or live apply output. Do not use live apply to overwrite Git Sync\-managed or file\-provisioned dashboards; update the owning source instead.
 .TP
 .B grafana\-util\-workspace\-package(1)
 package dashboards, alerts, datasources, and metadata into one local handoff artifact.

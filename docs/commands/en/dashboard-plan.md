@@ -10,6 +10,8 @@ Use this when you want to understand what a dashboard export would mean against 
 It remains a read-only review surface. `--use-export-org` maps a combined multi-org export root back to the matching target org IDs, and it requires Basic auth so the command can resolve live org routing.
 When a raw export includes `permissions.json`, `--include-folder-permissions` can add read-only folder permission drift rows to the same review plan. This reviews folder ACL differences only; it does not restore or apply permissions.
 
+Use plan output to decide the correct ownership lane before any write. API-managed dashboards can continue toward `dashboard import`; Git Sync-managed and file-provisioned dashboards should be changed through their repository/PR or provisioning workflow instead of a direct dashboard API import or workspace live apply.
+
 ## Key flags
 - `--input-dir`: local dashboard export root or dashboard variant directory.
 - `--input-type`: choose `raw` or `source`. Use `source` for prompt-lane exports.
@@ -77,6 +79,7 @@ grafana-util dashboard plan --profile prod --input-dir ./dashboards/raw --prune 
 - create and update candidates are visible before import
 - remote-only dashboards are called out without deleting anything by default
 - provisioned or managed targets are blocked before an operator treats the plan as ready
+- Git Sync-managed targets are visible as source-owned targets, so the next step is repository review rather than API replay
 - unresolved datasource references and folder issues are surfaced as review hints
 - exported folder permission differences are visible before any import or restore workflow
 - missing destination orgs can stay as review-only `would-create` entries when `--create-missing-orgs` is set

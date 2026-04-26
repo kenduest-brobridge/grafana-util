@@ -8,6 +8,8 @@
 
 說明：`workspace` 是給使用者看的本機 package lane。先用 `scan` 找輸入，用 `test` 檢查結構是否安全，用 `preview` 看會改什麼，只有在審核完成後才用 `apply`。較低階的 contract 檢查與交接文件放在 `ci`。
 
+Git Sync 與 file-provisioned dashboards 都屬於 source-owned。`workspace scan`、`test`、`preview` 可以檢視這些 tree，但 live dashboard 寫入應走 Git repository/PR 或 provisioning workflow，不應用 `workspace apply --execute-live` 直接覆蓋。
+
 第一次使用流程：
 
 1. `workspace scan`
@@ -48,7 +50,7 @@ grafana-util workspace apply --preview-file ./workspace-preview.json --approve -
 
 ## `apply`
 
-用途：把已審核的 preview 轉成 staged 或 live apply 結果。
+用途：把已審核的 preview 轉成 staged 或 live apply 結果。不要用 live apply 覆蓋 Git Sync-managed 或 file-provisioned dashboard；請更新它的來源。
 
 ## `package`
 

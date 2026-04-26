@@ -34,6 +34,7 @@ Use this when you need a local export tree for later import, review, diff, or fi
 - Use `--include-history` to add `history/` under each exported org scope.
 - The provider file is `provisioning/provisioning/dashboards.yaml`.
 - Keep `raw/` for API import or diff, `prompt/` for UI import, and `provisioning/` for file provisioning.
+- For Grafana Git Sync targets, treat the Git repository as the deployment source. Use export output for evidence, review, or migration, then update the repo/PR path instead of replaying the dashboard through direct API import.
 
 ## Artifact workspace output
 
@@ -71,6 +72,7 @@ Common choices:
 - For backup, review, diff, or dry-run import, start from `raw/`.
 - For a human UI import handoff, deliver `prompt/`.
 - For Grafana file provisioning, use `provisioning/` and confirm the provider settings match the deployment path.
+- For Git Sync-owned folders, keep the dashboard JSON in the Git Sync repository and let Grafana sync from that source; do not use export output as a shortcut around the PR/provisioning workflow.
 - If you only need one output shape, use `--without-raw`, `--without-prompt`, or `--without-provisioning` to reduce noise.
 
 ## What success looks like

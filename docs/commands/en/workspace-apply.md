@@ -8,6 +8,7 @@ Turn a reviewed preview into staged or live apply output.
 
 - Use this after preview and review are already complete.
 - Add `--execute-live` only when you are ready to mutate Grafana for real.
+- Do not use live apply to overwrite Git Sync-managed or file-provisioned dashboards. Route those changes through the Git repository/PR or provisioning source that owns the dashboard.
 
 ## Key flags
 
@@ -30,4 +31,3 @@ grafana-util workspace apply --preview-file ./workspace-preview.json --approve -
 - [workspace](./workspace.md)
 - [workspace preview](./workspace-preview.md)
 - [workspace ci](./workspace.md#ci)
-

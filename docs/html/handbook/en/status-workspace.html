@@ -989,6 +989,7 @@ grafana-util status staged --dashboard-export-dir ./dashboards/raw --alert-expor
 <p>If you are not sure where to start, use this sequence:</p>
 <ol><li><code>workspace scan .</code></li><li><code>workspace test .</code></li><li><code>workspace preview . --fetch-live --profile &lt;profile&gt;</code></li><li><code>workspace apply --preview-file ./workspace-preview.json --approve --execute-live --profile &lt;profile&gt;</code></li></ol>
 <p>The workspace path is the shortest path because <code>workspace</code> will try to discover common staged inputs in the current repo or working tree, including one repo root that mixes Git Sync dashboards, <code>alerts/raw</code>, and <code>datasources/provisioning</code>. If that does not match your layout, switch to explicit flags such as <code>--desired-file</code>, <code>--dashboard-export-dir</code>, <code>--alert-export-dir</code>, <code>workspace package</code>, or <code>--target-inventory</code>.</p>
+<p>Treat Git Sync and file-provisioned dashboard inputs as source-owned. Workspace scan, test, and preview are useful review gates for those trees, but if preview points at a Git Sync-managed or file-provisioned target, make the live change through the repository/PR or provisioning path instead of <code>workspace apply --execute-live</code>.</p>
 <p>Example mixed workspace tree:</p>
 <pre><code>./grafana-oac-repo/
   dashboards/git-sync/raw/

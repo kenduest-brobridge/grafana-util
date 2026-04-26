@@ -294,7 +294,7 @@ changes stay reviewable and do not blur lane boundaries.
 - [ ] Add Git Sync-friendly layout support in dashboard export/convert,
   workspace scan/preview, and dashboard plan so repo trees can be reviewed
   without pretending they are ordinary live API targets.
-- [ ] Update dashboard import/apply docs and command guidance so Git Sync
+- [x] Update dashboard import/apply docs and command guidance so Git Sync
   folders route changes to Git while normal unmanaged folders can still use API
   import/apply.
 - [ ] Keep datasource, alert, access, and status workflows as direct product

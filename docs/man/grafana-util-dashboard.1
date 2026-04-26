@@ -67,7 +67,7 @@ List, restore, diff, or export dashboard revision history for one dashboard UID,
 Export dashboards to raw/, prompt/, and provisioning/ files, with optional history/ artifacts. Use when: You need a local export tree for later import, review, diff, or file\-provisioning workflows. Add \-\-include\-history when you also need dashboard revision\-history artifacts under each exported org scope. The prompt/ lane is for Grafana UI import, not dashboard API import; use dashboard convert raw\-to\-prompt when you need to convert ordinary or raw dashboard JSON into prompt JSON.
 .TP
 .B import
-Import dashboard JSON files through the Grafana API. Use when: You have a local export tree or provisioning tree and need to push dashboards back into Grafana, either live or as a dry run. This command consumes raw/ or provisioning/ inputs; it does not consume the Grafana UI prompt/ lane.
+Import dashboard JSON files through the Grafana API. Use when: You have a local export tree for dashboards that are owned by Grafana's API state and need to push dashboards back into Grafana, either live or as a dry run. This command consumes raw/ or provisioning/ inputs; it does not consume the Grafana UI prompt/ lane.
 .TP
 .B patch
 Patch one local dashboard JSON file in place or write it to a new path. Use when: You need to rewrite dashboard metadata locally before review or publish, without contacting Grafana.

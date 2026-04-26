@@ -948,7 +948,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="用途">用途</h2>
 <p>把已審核的 preview 轉成 staged 或 live apply 結果。</p>
 <h2 id="適用時機">適用時機</h2>
-<ul><li>當 preview 與 review 都已完成時。</li><li>只有真的準備好動 Grafana 時，才加 <code>--execute-live</code>。</li></ul>
+<ul><li>當 preview 與 review 都已完成時。</li><li>只有真的準備好動 Grafana 時，才加 <code>--execute-live</code>。</li><li>不要用 live apply 覆蓋 Git Sync-managed 或 file-provisioned dashboards。這類變更應回到擁有 dashboard 的 Git repository/PR 或 provisioning source。</li></ul>
 <h2 id="主要旗標">主要旗標</h2>
 <ul><li><code>--preview-file</code></li><li><code>--plan-file</code></li><li><code>--approve</code></li><li><code>--execute-live</code></li><li><code>--approval-reason</code>、<code>--apply-note</code></li><li><code>--output-format</code></li></ul>
 <h2 id="範例">範例</h2>
