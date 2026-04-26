@@ -2,7 +2,7 @@ use serde_json::{Map, Value};
 
 use crate::common::{message, string_field, Result};
 
-use super::prompt_helpers::{
+use super::helpers::{
     build_resolved_datasource, datasource_plugin_version, format_plugin_name,
     is_builtin_datasource_ref, is_placeholder_string, lookup_datasource,
     resolve_datasource_type_alias, DatasourceCatalog, ResolvedDatasource,

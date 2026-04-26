@@ -23,6 +23,7 @@ pub(crate) mod pub_exports {
     pub use super::super::export::{
         build_export_variant_dirs, build_output_path, export_dashboards_with_client,
     };
+    pub use super::super::export_prompt::build_external_export_document;
     pub use super::super::help::{
         maybe_render_dashboard_help_full_from_os_args,
         maybe_render_dashboard_subcommand_help_from_os_args, render_summary_export_help_full,
@@ -34,7 +35,6 @@ pub(crate) mod pub_exports {
         delete_dashboard_request, delete_folder_request, fetch_dashboard, import_dashboard_request,
         list_dashboard_summaries, list_datasources,
     };
-    pub use super::super::prompt::build_external_export_document;
     pub use super::super::screenshot::capture_dashboard_screenshot;
 }
 
@@ -55,6 +55,11 @@ pub(crate) mod crate_exports {
         resolve_dashboard_workspace_variant_dir, LoadedDashboardSource,
     };
 
+    pub(crate) use super::super::export_prompt::{
+        build_datasource_catalog, collect_datasource_refs, datasource_type_alias,
+        is_builtin_datasource_ref, is_placeholder_string, lookup_datasource,
+        resolve_datasource_type_alias,
+    };
     #[allow(unused_imports)]
     pub(crate) use super::super::facade_support::{
         build_datasource_inventory_record, build_folder_path, build_live_dashboard_domain_status,
@@ -90,9 +95,4 @@ pub(crate) mod crate_exports {
         FolderInventoryItem, RootExportIndex, RootExportVariants, VariantIndexEntry,
     };
     pub(crate) use super::super::project_status::build_dashboard_domain_status;
-    pub(crate) use super::super::prompt::{
-        build_datasource_catalog, collect_datasource_refs, datasource_type_alias,
-        is_builtin_datasource_ref, is_placeholder_string, lookup_datasource,
-        resolve_datasource_type_alias,
-    };
 }

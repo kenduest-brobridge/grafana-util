@@ -6,12 +6,12 @@ use serde_json::{Map, Value};
 
 use crate::common::{message, string_field, Result};
 
+use super::super::export_prompt::build_external_export_document_with_library_panels;
 use super::super::history::build_dashboard_history_export_document_with_request;
 use super::super::list::{
     attach_dashboard_org_metadata, collect_dashboard_ownership_provenance,
     collect_dashboard_source_metadata, fetch_current_org_with_request,
 };
-use super::super::prompt::build_external_export_document_with_library_panels;
 use super::super::{
     build_dashboard_index_item, build_datasource_catalog, build_datasource_inventory_record,
     build_export_metadata, build_preserved_web_import_document, build_root_export_index,

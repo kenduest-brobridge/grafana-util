@@ -4,11 +4,12 @@ use std::collections::BTreeSet;
 use std::path::Path;
 
 use crate::common::{message, string_field, value_as_object, Result};
+use crate::dashboard::export_prompt::DatasourceCatalog;
 use crate::dashboard::list::collect_dashboard_source_metadata;
 use crate::dashboard::{
     build_datasource_catalog, collect_datasource_refs, discover_dashboard_files,
-    extract_dashboard_object, is_builtin_datasource_ref, load_json_file, prompt,
-    DEFAULT_DASHBOARD_TITLE, FOLDER_INVENTORY_FILENAME,
+    extract_dashboard_object, is_builtin_datasource_ref, load_json_file, DEFAULT_DASHBOARD_TITLE,
+    FOLDER_INVENTORY_FILENAME,
 };
 use crate::grafana_api::DashboardResourceClient;
 use crate::sync::preflight::build_sync_preflight_document;
@@ -189,7 +190,7 @@ fn build_dashboard_import_availability_with_client(
 
 fn build_dashboard_import_dependency_specs(
     input_dir: &Path,
-    datasource_catalog: &prompt::DatasourceCatalog,
+    datasource_catalog: &DatasourceCatalog,
     strict_schema: bool,
     target_schema_version: Option<i64>,
 ) -> Result<Vec<Value>> {

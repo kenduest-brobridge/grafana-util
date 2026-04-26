@@ -44,7 +44,7 @@ fn lookup_unique_datasource_name_by_type(
 
 fn resolve_datasource_source_name(
     reference: &Value,
-    datasource_catalog: &super::super::prompt::DatasourceCatalog,
+    datasource_catalog: &super::super::export_prompt::DatasourceCatalog,
 ) -> Option<String> {
     if reference.is_null() || is_builtin_datasource_ref(reference) {
         return None;
@@ -104,7 +104,7 @@ fn resolve_datasource_source_name(
 
 fn resolve_datasource_source_uid(
     reference: &Value,
-    datasource_catalog: &super::super::prompt::DatasourceCatalog,
+    datasource_catalog: &super::super::export_prompt::DatasourceCatalog,
 ) -> Option<String> {
     if reference.is_null() || is_builtin_datasource_ref(reference) {
         return None;
@@ -157,7 +157,7 @@ pub(crate) fn collect_dashboard_ownership_provenance(
 /// collect dashboard source metadata.
 pub(crate) fn collect_dashboard_source_metadata(
     payload: &Value,
-    datasource_catalog: &super::super::prompt::DatasourceCatalog,
+    datasource_catalog: &super::super::export_prompt::DatasourceCatalog,
 ) -> Result<(Vec<String>, Vec<String>)> {
     let payload_object = value_as_object(payload, "Unexpected dashboard payload from Grafana.")?;
     let dashboard_object = extract_dashboard_object(payload_object)?;

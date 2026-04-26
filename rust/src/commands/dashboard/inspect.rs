@@ -34,6 +34,7 @@ mod inspect_query_report;
 use serde_json::{Map, Value};
 use std::path::Path;
 
+use super::export_prompt::collect_datasource_refs;
 use super::files::{
     discover_dashboard_files, extract_dashboard_object, load_datasource_inventory,
     load_export_metadata, load_folder_inventory, load_json_file,
@@ -54,7 +55,6 @@ use super::inspect_summary::{
     MixedDashboardSummary,
 };
 use super::models::{DatasourceInventoryItem, FolderInventoryItem};
-use super::prompt::collect_datasource_refs;
 use super::{
     DEFAULT_DASHBOARD_TITLE, DEFAULT_FOLDER_TITLE, DEFAULT_UNKNOWN_UID, RAW_EXPORT_SUBDIR,
 };

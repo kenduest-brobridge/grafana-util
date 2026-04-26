@@ -1,13 +1,11 @@
 use serde_json::{json, Value};
 use std::collections::{BTreeMap, BTreeSet};
 
-use super::prompt_helpers::{
-    format_panel_plugin_name, make_input_label, make_input_name, InputMapping,
-};
-use super::prompt_variables::ConstantInputMapping;
+use super::helpers::{format_panel_plugin_name, make_input_label, make_input_name, InputMapping};
+use super::variables::ConstantInputMapping;
 
 pub(super) fn allocate_input_mapping(
-    resolved: &super::prompt_helpers::ResolvedDatasource,
+    resolved: &super::helpers::ResolvedDatasource,
     ref_mapping: &mut BTreeMap<String, InputMapping>,
     type_counts: &mut BTreeMap<String, usize>,
     key_override: Option<String>,

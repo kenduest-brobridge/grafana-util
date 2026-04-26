@@ -33,6 +33,13 @@ Current AI-maintained status only.
 - Current Update: Added `docs/internal/dashboard-directory-relayering-inventory.md` with mixed-responsibility files, stable boundaries, and candidate future moves for prompt-lane transform, export-org source discovery, and status live collector namespace cleanup.
 - Result: The inventory checkpoint is complete; actual `git mv` work remains gated behind one-boundary-per-commit guardrails.
 
+## 2026-04-27 - Move dashboard prompt transform boundary
+- State: Done
+- Scope: Rust dashboard prompt transform module layout, facade re-exports, focused prompt/export tests, full Rust validation, and TODO trace. Public CLI/docs, generated docs, Python implementation, and behavior changes are out of scope.
+- Baseline: The dashboard re-layering inventory identified root-level `prompt*.rs` files as a shared prompt-lane transform boundary used by live export and offline raw-to-prompt.
+- Current Update: Moved the prompt transform and helper files under `rust/src/commands/dashboard/export_prompt/`, kept `commands/dashboard/mod.rs` as the public facade, and rewired direct consumers plus test support to the new module.
+- Result: Focused raw-to-prompt, export prompt, inventory, library-panel, and export-diff tests pass; full Rust validation is run for the commit.
+
 ## 2026-04-27 - Guard dashboard permissions as adjacent evidence
 - State: Done
 - Scope: Rust dashboard permission-artifact rejection, dashboard/raw-to-prompt/review regressions, sync/access workspace boundary tests, and TODO trace. Permission restore/apply behavior, public JSON changes, generated docs, and Python implementation are out of scope.
@@ -53,10 +60,3 @@ Current AI-maintained status only.
 - Baseline: Classic raw/provisioning import and plan lanes already rejected dashboard v2 resources, but adapter-facing diff and root-export normalization paths still lacked dedicated regression coverage.
 - Current Update: Added diff-lane tests proving raw and provisioning compare entrypoints reject dashboard v2 input before any remote compare request runs, and added import source-wrapper tests proving root export normalization into temp raw/provisioning variants still rejects v2 payloads.
 - Result: Focused export-diff and import-loaded-source tests pass, and the remaining v2 adapter-boundary TODO is now satisfied.
-
-## 2026-04-26 - Bound library-panel elements to live export
-- State: Done
-- Scope: Rust raw-to-prompt library-panel handling, live export prompt regression, focused tests, and TODO trace. Live export/import-handoff `__elements` support remains in scope; dashboard v2 import/export support and provisioning contract changes are out of scope.
-- Baseline: Raw-to-prompt could still perform live library-panel model lookup when live datasource lookup was enabled, which blurred the boundary between local conversion and live export handoff.
-- Current Update: Removed raw-to-prompt live library-panel lookup, kept live datasource lookup intact, preserved warning-only local library-panel references with empty `__elements`, and retained live export `__elements` behavior.
-- Result: Focused raw-to-prompt and live export regression tests pass.

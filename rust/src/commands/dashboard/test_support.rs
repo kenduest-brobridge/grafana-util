@@ -68,6 +68,11 @@ pub(in crate::dashboard) mod import {
 pub(in crate::dashboard) mod inspect_governance {
     pub(in crate::dashboard) use crate::dashboard::inspect_governance::*;
 }
+pub(super) use crate::dashboard::export_prompt::{
+    build_datasource_catalog, build_external_export_document, collect_datasource_refs,
+    datasource_type_alias, is_builtin_datasource_ref, is_placeholder_string, lookup_datasource,
+    resolve_datasource_type_alias,
+};
 pub(super) use crate::dashboard::inspect_family::normalize_family_name;
 pub(super) use crate::dashboard::inspect_governance::{
     build_export_inspection_governance_document, render_governance_table_report,
@@ -122,11 +127,6 @@ pub(super) use crate::dashboard::models::{
     DashboardExportRootManifest, DashboardExportRootScopeKind, DashboardIndexItem,
     DatasourceInventoryItem, ExportDatasourceUsageSummary, ExportMetadata, ExportOrgSummary,
     FolderInventoryItem, RootExportIndex, RootExportVariants, VariantIndexEntry,
-};
-pub(super) use crate::dashboard::prompt::{
-    build_datasource_catalog, build_external_export_document, collect_datasource_refs,
-    datasource_type_alias, is_builtin_datasource_ref, is_placeholder_string, lookup_datasource,
-    resolve_datasource_type_alias,
 };
 pub(super) use crate::dashboard::raw_to_prompt::run_raw_to_prompt;
 pub(super) use crate::dashboard::screenshot::{

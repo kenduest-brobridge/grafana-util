@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 
 use crate::common::string_field;
 
-use super::{BUILTIN_DATASOURCE_NAMES, BUILTIN_DATASOURCE_TYPES};
+use super::super::{BUILTIN_DATASOURCE_NAMES, BUILTIN_DATASOURCE_TYPES};
 
 const DEFAULT_GENERATED_DATASOURCE_INPUT: &str = "DATASOURCE";
 

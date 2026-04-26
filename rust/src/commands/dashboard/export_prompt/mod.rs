@@ -5,16 +5,21 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use crate::common::{message, string_field, value_as_object, Result};
 
-use super::build_preserved_web_import_document;
-use super::prompt_datasource_refs::resolve_datasource_ref;
-use super::prompt_inputs::{allocate_input_mapping, build_input_definitions, build_requires_block};
-use super::prompt_variables::{
+mod datasource_refs;
+mod helpers;
+mod inputs;
+mod variables;
+
+use self::datasource_refs::resolve_datasource_ref;
+use self::inputs::{allocate_input_mapping, build_input_definitions, build_requires_block};
+use self::variables::{
     collect_and_rewrite_constant_variables, collect_datasource_variable_reference_names,
     map_datasource_variable_current_inputs,
 };
+use super::build_preserved_web_import_document;
 
 #[allow(unused_imports)]
-pub(crate) use super::prompt_helpers::{
+pub(crate) use self::helpers::{
     build_datasource_catalog, build_resolved_datasource, collect_datasource_refs,
     datasource_plugin_version, datasource_type_alias, extract_placeholder_name,
     format_panel_plugin_name, format_plugin_name, is_builtin_datasource_ref, is_placeholder_string,

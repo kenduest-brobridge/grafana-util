@@ -2,15 +2,15 @@
 
 use serde_json::Value;
 
+use crate::dashboard::export_prompt::{
+    datasource_type_alias, is_builtin_datasource_ref, is_placeholder_string,
+};
 use crate::dashboard::inspect_query::{
     resolve_query_analyzer_family_from_datasource_type,
     resolve_query_analyzer_family_from_query_signature, QueryExtractionContext,
     DATASOURCE_FAMILY_UNKNOWN,
 };
 use crate::dashboard::models::DatasourceInventoryItem;
-use crate::dashboard::prompt::{
-    datasource_type_alias, is_builtin_datasource_ref, is_placeholder_string,
-};
 
 #[derive(Clone, Copy, Debug)]
 enum DatasourceReference<'a> {

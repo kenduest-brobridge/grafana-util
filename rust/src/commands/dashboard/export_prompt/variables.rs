@@ -3,12 +3,12 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use crate::common::Result;
 
-use super::prompt_datasource_refs::resolve_datasource_ref;
-use super::prompt_helpers::{
+use super::datasource_refs::resolve_datasource_ref;
+use super::helpers::{
     datasource_type_alias, extract_placeholder_name, is_placeholder_string, DatasourceCatalog,
     InputMapping,
 };
-use super::prompt_inputs::allocate_input_mapping;
+use super::inputs::allocate_input_mapping;
 
 #[derive(Clone, Debug)]
 pub(super) struct ConstantInputMapping {

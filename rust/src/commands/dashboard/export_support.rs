@@ -13,7 +13,7 @@ use std::path::{Path, PathBuf};
 
 use crate::common::{message, sanitize_path_component, string_field, Result};
 
-use super::super::prompt::{build_library_panel_export, collect_library_panel_uids};
+use super::super::export_prompt::{build_library_panel_export, collect_library_panel_uids};
 use crate::dashboard::live::{
     fetch_dashboard_permissions_with_request, fetch_folder_permissions_with_request,
 };

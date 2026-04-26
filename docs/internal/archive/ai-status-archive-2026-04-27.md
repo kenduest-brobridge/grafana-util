@@ -20,3 +20,10 @@
 - Baseline: `DashboardTargetOwnership` existed, but sync live write guards still rebuilt `ownership=...` evidence strings locally.
 - Current Update: Added typed ownership label parsing and evidence-note helpers, routed sync live dashboard ownership evidence through the dashboard target model, and covered duplicate insertion, unknown labels, and direct-write blocking behavior.
 - Result: Focused dashboard ownership, dashboard plan, and sync live tests pass.
+
+## 2026-04-26 - Bound library-panel elements to live export
+- State: Done
+- Scope: Rust raw-to-prompt library-panel handling, live export prompt regression, focused tests, and TODO trace. Live export/import-handoff `__elements` support remains in scope; dashboard v2 import/export support and provisioning contract changes are out of scope.
+- Baseline: Raw-to-prompt could still perform live library-panel model lookup when live datasource lookup was enabled, which blurred the boundary between local conversion and live export handoff.
+- Current Update: Removed raw-to-prompt live library-panel lookup, kept live datasource lookup intact, preserved warning-only local library-panel references with empty `__elements`, and retained live export `__elements` behavior.
+- Result: Focused raw-to-prompt and live export regression tests pass.

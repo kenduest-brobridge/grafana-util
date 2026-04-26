@@ -4,6 +4,7 @@ use regex::Regex;
 use serde_json::{Map, Value};
 use std::sync::OnceLock;
 
+use crate::dashboard::export_prompt::datasource_type_alias;
 use crate::dashboard::inspect::{
     extract_metric_names, extract_query_buckets, extract_query_measurements,
     resolve_query_analyzer_family,
@@ -13,7 +14,6 @@ use crate::dashboard::inspect_analyzer_loki;
 use crate::dashboard::inspect_analyzer_prometheus;
 use crate::dashboard::inspect_analyzer_search;
 use crate::dashboard::inspect_analyzer_sql;
-use crate::dashboard::prompt::datasource_type_alias;
 
 pub(crate) const DATASOURCE_FAMILY_PROMETHEUS: &str = "prometheus";
 pub(crate) const DATASOURCE_FAMILY_LOKI: &str = "loki";

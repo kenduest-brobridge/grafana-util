@@ -33,6 +33,13 @@ Current AI change log only.
 - Impact: `docs/internal/dashboard-directory-relayering-inventory.md`, `todo.md`, and AI trace docs. No Rust code, public CLI/docs, generated docs, or runtime behavior changed.
 - Rollback/Risk: low documentation-only checkpoint. Rollback would remove the fresh inventory and leave the future re-layering TODO without current evidence.
 
+## 2026-04-27 - Move dashboard prompt transform boundary
+- Summary: moved the shared dashboard prompt transform from root-level `prompt*.rs` modules into `dashboard/export_prompt/`, preserving facade re-exports for live export, raw-to-prompt, inspect, import validation, list metadata, and tests.
+- Tests: covered raw-to-prompt conversion, prompt document generation, dashboard export/import inventory wiring, live library-panel prompt export support, and export-diff/test-support re-exports.
+- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet build_external_export_document`; `cargo test --manifest-path rust/Cargo.toml --quiet raw_to_prompt`; `cargo test --manifest-path rust/Cargo.toml --quiet dashboard_export_import_inventory_rust_tests`; `cargo test --manifest-path rust/Cargo.toml --quiet collect_library_panel_exports_with_request_records_failures_as_warnings`; `cargo test --manifest-path rust/Cargo.toml --quiet export_diff_rust_tests`; full Rust validation.
+- Impact: `rust/src/commands/dashboard/export_prompt/`, dashboard facade/consumer imports, `todo.md`, and AI trace docs. Public CLI/docs, generated artifacts, Python implementation, and runtime behavior are intentionally unchanged.
+- Rollback/Risk: low behavior-preserving module move. Rollback would restore the old root-level `prompt*.rs` layout; focused prompt/export tests cover the import wiring.
+
 ## 2026-04-27 - Guard dashboard permissions as adjacent evidence
 - Summary: rejected dashboard permission bundle/export artifacts from shared dashboard JSON extraction and added workspace/access regressions so permission bundles remain adjacent evidence rather than dashboard JSON or prompt export input.
 - Tests: covered preserved-web-import and import-payload rejection for permission bundles, raw-to-prompt single-file rejection, review artifact resolution with raw `permissions.json`, sync workspace bundle auto-discovery ignoring dashboard permission bundles, and access `resource=all` ignoring dashboard workspace JSON.
@@ -82,10 +89,3 @@ Current AI change log only.
 - Impact: `rust/src/commands/dashboard/cli_defs_command_plan.rs`, `rust/src/commands/dashboard/plan/`, `rust/src/commands/dashboard/plan_types.rs`, `rust/src/commands/dashboard/dashboard_runtime.rs`, `docs/commands/en/dashboard-plan.md`, `docs/commands/zh-TW/dashboard-plan.md`, and AI trace docs. Import-time permission restore, dashboard ACL diff, Python implementation, and generated docs are intentionally unchanged.
 - Rollback/Risk: moderate review-surface change. Rollback would remove the optional flag and permission action lane while keeping existing dashboard plan behavior; the feature is opt-in and read-only, but plan summary counts include folder permission rows when enabled.
 - Follow-up: add dashboard permission diff or import-time folder permission restore only after subject-resolution and ACL apply policy are finalized.
-
-## 2026-04-20 - Add contract promotion report
-- Summary: made `scripts/contract_promotion_report.py` a concrete informational evidence matrix for runtime golden, schema/help manifest, public route, docs entrypoint, generated docs, and artifact workspace lanes.
-- Tests: added report unit coverage for actual manifest route shapes, runtime-only rows, generated-doc detection, artifact workspace evidence, deterministic ordering, categorized findings, and informational default exits.
-- Test Run: `python3 -m unittest -v scripts.test_contract_promotion_report`; `python3 scripts/contract_promotion_report.py`; `python3 scripts/contract_promotion_report.py --strict-structure`; `make contract-promotion-report`; `make quality-output-contracts`; `make schema-check`; `make quality-ai-workflow`; `git diff --check`.
-- Impact: `scripts/contract_promotion_report.py`, `scripts/test_contract_promotion_report.py`, `docs/internal/contract-doc-map.md`, `todo.md`, and AI trace docs. Public CLI behavior, generated docs, schema artifacts, Rust implementation, and Python package behavior are intentionally unchanged.
-- Rollback/Risk: low script/reporting change. Rollback would restore the previous overlap report with less route and runtime-only evidence; the report remains informational and does not gate findings.

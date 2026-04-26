@@ -106,8 +106,9 @@ changes priority.
 - P1: Normalize the status producer model only where a domain-owned signal
   already exists and can feed shared `status` aggregation without moving live
   collection into the shared trait.
-- P2: Perform more dashboard directory re-layering only after the pre-split
-  checklist proves a mixed-responsibility hotspot remains.
+- [x] P2: Move the shared prompt-lane transform into a dedicated
+  `dashboard/export_prompt/` boundary after the inventory identified it as the
+  next mixed-responsibility hotspot.
 
 ## Next Architecture Checklists
 
@@ -236,15 +237,15 @@ with narrow validation and a final full Rust test run when code changes.
 
 ### P2 - Dashboard Directory Re-layering
 
-- [ ] Do not split files only because they are large.
+- [x] Do not split files only because they are large.
 - [x] Use a fresh inventory before any later move.
-- [ ] Choose exactly one mixed-responsibility boundary per commit.
-- [ ] Use `git mv` for tracked moves.
-- [ ] Keep `commands/dashboard/mod.rs` as the public facade.
-- [ ] Keep public CLI/help/docs unchanged unless the task explicitly targets
+- [x] Choose exactly one mixed-responsibility boundary per commit.
+- [x] Use `git mv` for tracked moves.
+- [x] Keep `commands/dashboard/mod.rs` as the public facade.
+- [x] Keep public CLI/help/docs unchanged unless the task explicitly targets
   those surfaces.
-- [ ] Run focused dashboard suites and parser/help tests.
-- [ ] Run full Rust tests after the move.
+- [x] Run focused dashboard suites and parser/help tests.
+- [x] Run full Rust tests after the move.
 
 ## Split Policy - Conservative Boundaries
 
@@ -308,7 +309,10 @@ changes stay reviewable and do not blur lane boundaries.
 - [x] Keep dashboard v2 as a separate future adapter boundary. Continue rejecting v2-shaped input in the classic prompt lane rather than mixing it into `raw/`, `prompt/`, or provisioning behavior.
 - [x] Treat provisioning as a derived projection that can be compared later against Grafana file provisioning. Do not rebase the dashboard contract on provisioning as if it were the source of truth.
 - [x] Keep dashboard permissions adjacent to access evidence and access workflows, not as dashboard JSON fields or as an extension of the prompt export shape.
-- [ ] Split large dashboard modules by responsibility, not by line count alone. Favor focused export planning, prompt conversion, live preflight, and provisioning projection boundaries over arbitrary file carving.
+- [x] Split large dashboard modules by responsibility, not by line count alone.
+  The prompt conversion boundary now lives under `dashboard/export_prompt/`;
+  keep later export planning, live preflight, and provisioning projection moves
+  separate.
 
 ## P1 - Status Producer Model
 

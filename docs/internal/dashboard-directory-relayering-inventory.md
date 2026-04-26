@@ -18,7 +18,7 @@ pick one stable responsibility boundary per commit and keep
   `review_source.rs`, `topology.rs`, `live.rs`, `plan/reconcile.rs`, and
   `live_project_status.rs`.
 - Several boundaries are already good enough to preserve: `browse/`,
-  `import/`, `plan/`, `raw_to_prompt/`, `governance_gate/`,
+  `export_prompt/`, `import/`, `plan/`, `raw_to_prompt/`, `governance_gate/`,
   `governance_gate_rules/`, `inspect_workbench/`, `topology/`, and
   `source_loader.rs`.
 
@@ -30,9 +30,9 @@ pick one stable responsibility boundary per commit and keep
   folder inventory, permission export, per-dashboard live fetch/history,
   ownership provenance, raw writes, prompt writes, provisioning writes, and
   metadata emission.
-- `prompt.rs` owns shared prompt-lane transformation: datasource slot rewrite,
-  variable rewrite, panel type collection, library-panel element shaping, and
-  final prompt document output.
+- `export_prompt/` owns shared prompt-lane transformation: datasource slot
+  rewrite, variable rewrite, panel type collection, library-panel element
+  shaping, and final prompt document output.
 - `export_layout.rs` still combines layout CLI workflow, planning, variant
   discovery, metadata probing, folder resolution heuristics, and repair
   decisions. `export_layout_apply.rs` and `export_layout_render.rs` are already
@@ -74,10 +74,10 @@ pick one stable responsibility boundary per commit and keep
 
 ## Candidate Next Moves
 
-### 1. Shared Prompt-Lane Transform Boundary
+### 1. Shared Prompt-Lane Transform Boundary - Done 2026-04-27
 
-Move shared prompt transformation out of root-level `prompt*.rs` into a
-dedicated boundary such as `dashboard/export_prompt/`.
+Moved shared prompt transformation out of root-level `prompt*.rs` into
+`dashboard/export_prompt/`.
 
 Evidence:
 
@@ -89,6 +89,11 @@ Evidence:
 
 Suggested validation:
 
+- Completed focused validation included `raw_to_prompt`,
+  `build_external_export_document`,
+  `dashboard_export_import_inventory_rust_tests`,
+  `collect_library_panel_exports_with_request_records_failures_as_warnings`,
+  and `export_diff_rust_tests`.
 - `cargo test --manifest-path rust/Cargo.toml --quiet dashboard_export_contract_rust_tests`
 - `cargo test --manifest-path rust/Cargo.toml --quiet export_focus_report_path_top_rust_tests`
 - `cargo test --manifest-path rust/Cargo.toml --quiet export_layout_tests`
