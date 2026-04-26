@@ -49,15 +49,15 @@ Observed gaps:
   ownership/provenance through workspace source-bundle, preview, and review
   output; workspace live-apply now blocks direct writes for file-provisioned and
   Git Sync-managed dashboard evidence.
-- [ ] Grafana 13 Git Sync ownership is now guarded in dashboard import/plan
-  paths. Remaining Git Sync work is broader dashboard/workspace source routing,
+- Grafana 13 Git Sync ownership is now guarded in dashboard import/plan paths.
+  Remaining Git Sync work is broader dashboard/workspace source routing,
   export layout, and operator docs, not the direct-write safety guard.
-- [ ] Crate-root and domain facade routing should stay stable. Avoid moving
-  shared surfaces to crate root unless they are already proven across domains
-  and documented as shared architecture.
-- [ ] TUI/browser feature surfaces are broad. Default `tui` and optional
-  `browser` builds are supported release lanes, so any TUI/browser-adjacent
-  change must validate the feature matrix, not just default tests.
+- Crate-root and domain facade routing should stay stable. Avoid moving shared
+  surfaces to crate root unless they are already proven across domains and
+  documented as shared architecture.
+- TUI/browser feature surfaces are broad. Default `tui` and optional `browser`
+  builds are supported release lanes, so any TUI/browser-adjacent change must
+  validate the feature matrix, not just default tests.
 - [x] Live read throughput has bounded fan-out for dashboard details, alert
   templates, dashboard/folder permission export reads, and a shared
   dashboard/datasource all-org read pass. Live status diagnostics now preserve
@@ -67,9 +67,9 @@ Observed gaps:
   same action/status/reason/risk shape. Workspace and datasource plan now share
   an internal `ReviewMutationAction` projection without adding a public
   datasource `review` field.
-- [ ] Production assumptions need opportunistic cleanup. Most `unwrap`,
-  `expect`, and `panic` occurrences are tests or hard-coded regex assertions,
-  but touched live/operator paths should prefer `Result` errors over panic.
+- Production assumptions need opportunistic cleanup. Most `unwrap`, `expect`,
+  and `panic` occurrences are tests or hard-coded regex assertions, but
+  touched live/operator paths should prefer `Result` errors over panic.
 
 First-priority handling order:
 
@@ -103,11 +103,11 @@ changes priority.
 - [x] P2: Revisit dashboard v2 as a separate adapter boundary. Continue
   rejecting v2-shaped input in the classic prompt lane until fixtures and tests
   prove a clean migration path.
-- [ ] P1: Normalize the status producer model only where a domain-owned signal
+- P1: Normalize the status producer model only where a domain-owned signal
   already exists and can feed shared `status` aggregation without moving live
   collection into the shared trait.
-- [ ] P2: Perform more dashboard directory re-layering only after the
-  pre-split checklist proves a mixed-responsibility hotspot remains.
+- P2: Perform more dashboard directory re-layering only after the pre-split
+  checklist proves a mixed-responsibility hotspot remains.
 
 ## Next Architecture Checklists
 
@@ -116,17 +116,17 @@ with narrow validation and a final full Rust test run when code changes.
 
 ### P0 - Dashboard Source Ownership Matrix
 
-- [ ] Inventory existing ownership evidence in `dashboard/import/target.rs` and
+- Inventory existing ownership evidence in `dashboard/import/target.rs` and
   identify every caller that consumes `ownership=...` evidence.
-- [ ] Check dashboard import/apply direct-write behavior for API-managed,
+- Check dashboard import/apply direct-write behavior for API-managed,
   file-provisioned, Git Sync-managed, and unknown-managed targets.
-- [ ] Check dashboard plan behavior for the same ownership classes.
-- [ ] Check export/layout conversion behavior for Git Sync tree input and
-  whether the output can be reviewed without pretending it is an API export.
-- [ ] Check workspace/sync dashboard apply paths for missing ownership
-  evidence before live writes.
-- [ ] Check live inventory/review outputs for ownership/provenance visibility.
-- [ ] Check operator docs/help for clear routing: Git Sync targets go through
+- Check dashboard plan behavior for the same ownership classes.
+- Check export/layout conversion behavior for Git Sync tree input and whether
+  the output can be reviewed without pretending it is an API export.
+- Check workspace/sync dashboard apply paths for missing ownership evidence
+  before live writes.
+- Check live inventory/review outputs for ownership/provenance visibility.
+- Check operator docs/help for clear routing: Git Sync targets go through
   repository/PR workflow; API-managed targets may use direct API apply.
 - [x] Produce a short implementation order with one read/review gap first and
   one write/apply gap later.
@@ -186,12 +186,12 @@ with narrow validation and a final full Rust test run when code changes.
 
 ### P1 - Status Producer Model
 
-- [ ] Keep domain-owned collection outside the shared producer trait.
-- [ ] Keep multi-org live transport outside the shared producer trait.
-- [ ] Feed domain-owned signals into shared `status` aggregation only after the
+- Keep domain-owned collection outside the shared producer trait.
+- Keep multi-org live transport outside the shared producer trait.
+- Feed domain-owned signals into shared `status` aggregation only after the
   domain has a stable staged or live status row.
-- [ ] Avoid moving overview-specific projection into `status`.
-- [ ] Add focused tests for any new domain producer before changing overview.
+- Avoid moving overview-specific projection into `status`.
+- Add focused tests for any new domain producer before changing overview.
 
 ### P1 - Live Status Diagnostics And Read-Only Throughput
 
@@ -329,7 +329,7 @@ Relevant areas:
 
 Action:
 
-- [ ] Keep live producer collection and multi-org transport outside the shared
+- Keep live producer collection and multi-org transport outside the shared
   trait; dashboard/datasource live status now share the producer adapter after
   their domain inputs are collected.
 
@@ -427,7 +427,7 @@ Validation:
 
 - [x] Run `make quality-architecture`.
 - [x] Run `make quality-docs-surface`.
-- [ ] Run domain-focused Rust tests.
+- [x] Run domain-focused Rust tests.
 
 ## General Guardrails
 
