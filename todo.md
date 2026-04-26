@@ -30,9 +30,9 @@ Scope rules:
   structure risk across browse, inspect workbench, governance gate, live status,
   and topology. Do not continue fine-grained file splitting unless a fresh
   responsibility-boundary review proves it is needed.
-- Remaining risk is now mostly product and architecture alignment: dashboard
-  source ownership/Git Sync routing, workspace/status/overview ownership,
-  mutation review adapters, live-read throughput, and cross-domain balance.
+- Remaining risk is now mostly product and architecture alignment: broader
+  dashboard source ownership/Git Sync routing, operator docs, and cross-domain
+  balance.
 
 ## First Priority - Architecture Deficit Audit
 
@@ -42,10 +42,13 @@ capability over more mechanical module reshaping.
 
 Observed gaps:
 
-- [ ] Dashboard remains the heaviest product domain, but the next risk is not
+- [x] Dashboard remains the heaviest product domain, but the next risk is not
   file size. The main risk is source ownership: API-managed dashboards,
   file-provisioned dashboards, and Git Sync-managed dashboards must route to the
-  correct review/apply path.
+  correct review/apply path. The first read/review route now propagates
+  ownership/provenance through workspace source-bundle, preview, and review
+  output; workspace live-apply now blocks direct writes for file-provisioned and
+  Git Sync-managed dashboard evidence.
 - [ ] Grafana 13 Git Sync ownership is now guarded in dashboard import/plan
   paths. Remaining Git Sync work is broader dashboard/workspace source routing,
   export layout, and operator docs, not the direct-write safety guard.
@@ -55,49 +58,54 @@ Observed gaps:
 - [ ] TUI/browser feature surfaces are broad. Default `tui` and optional
   `browser` builds are supported release lanes, so any TUI/browser-adjacent
   change must validate the feature matrix, not just default tests.
-- [ ] Live read throughput has bounded fan-out for dashboard details, alert
+- [x] Live read throughput has bounded fan-out for dashboard details, alert
   templates, dashboard/folder permission export reads, and a shared
-  dashboard/datasource all-org read pass. Remaining transport risk is proven
-  hot spots only.
-- [ ] Mutation review envelopes remain domain-shaped. A shared internal adapter
+  dashboard/datasource all-org read pass. Live status diagnostics now preserve
+  useful read failures; remaining transport risk is proven hot spots only.
+- [x] Mutation review envelopes remain domain-shaped. A shared internal adapter
   should be introduced only after workspace plus one concrete domain prove the
-  same action/status/reason/risk shape.
+  same action/status/reason/risk shape. Workspace and datasource plan now share
+  an internal `ReviewMutationAction` projection without adding a public
+  datasource `review` field.
 - [ ] Production assumptions need opportunistic cleanup. Most `unwrap`,
   `expect`, and `panic` occurrences are tests or hard-coded regex assertions,
   but touched live/operator paths should prefer `Result` errors over panic.
 
 First-priority handling order:
 
-- [ ] First complete a dashboard source-ownership matrix across import, plan,
+- [x] First complete a dashboard source-ownership matrix across import, plan,
   export/layout, workspace, live inventory, and docs.
-- [ ] Then implement the smallest missing source-ownership route, preferably a
+- [x] Then implement the smallest missing source-ownership route, preferably a
   read/review path before a write/apply path.
-- [ ] Then introduce one internal mutation-review adapter over an already-stable
+- [x] Then introduce one internal mutation-review adapter over an already-stable
   domain output without changing public JSON.
-- [ ] Defer dashboard v2 and broad shared-status rewrites until source
-  ownership and review adapters are stable.
+- [x] Defer dashboard v2 and broad shared-status rewrites until source
+  ownership and review adapters are stable. Dashboard v2 now has a central
+  classic-lane rejection guardrail; broad shared-status rewrites remain deferred.
 
 ## Active Execution Queue
 
 Run the next development passes in this order unless a CI failure or user report
 changes priority.
 
-- [ ] P0: Build the dashboard source-ownership matrix. Record current behavior
+- [x] P0: Build the dashboard source-ownership matrix. Record current behavior
   and missing ownership evidence for import, plan, export layout,
   workspace/sync, live inventory, and operator docs.
-- [ ] P0: Extend one missing source-ownership read/review path. Prefer
+- [x] P0: Extend one missing source-ownership read/review path. Prefer
   workspace source-bundle/preview ownership evidence before direct live writes.
-- [ ] P1: Add an internal mutation-review adapter for workspace plus one domain
+- [x] P1: Add an internal mutation-review adapter for workspace plus one domain
   plan/review output. Start with datasource plan internal projection and do not
   change public JSON contracts in the first pass.
+- [x] P1: Clean up workspace/status wording drift while preserving schema and
+  compatibility names where they describe existing wire shapes.
+- [x] P1: Improve live status diagnostics before changing read concurrency.
+  Preserve deterministic output ordering and keep write/apply/import serial.
+- [x] P2: Revisit dashboard v2 as a separate adapter boundary. Continue
+  rejecting v2-shaped input in the classic prompt lane until fixtures and tests
+  prove a clean migration path.
 - [ ] P1: Normalize the status producer model only where a domain-owned signal
   already exists and can feed shared `status` aggregation without moving live
   collection into the shared trait.
-- [ ] P1: Improve live status diagnostics before changing read concurrency.
-  Preserve deterministic output ordering and keep write/apply/import serial.
-- [ ] P2: Revisit dashboard v2 as a separate adapter boundary. Continue
-  rejecting v2-shaped input in the classic prompt lane until fixtures and tests
-  prove a clean migration path.
 - [ ] P2: Perform more dashboard directory re-layering only after the
   pre-split checklist proves a mixed-responsibility hotspot remains.
 
@@ -122,25 +130,25 @@ with narrow validation and a final full Rust test run when code changes.
   repository/PR workflow; API-managed targets may use direct API apply.
 - [x] Produce a short implementation order with one read/review gap first and
   one write/apply gap later.
-- [ ] First implementation: propagate dashboard ownership/provenance from
+- [x] First implementation: propagate dashboard ownership/provenance from
   dashboard export indexes into workspace source-bundle/preview specs and
   review output.
-- [ ] Later implementation: add dashboard ownership preflight to workspace live
+- [x] Later implementation: add dashboard ownership preflight to workspace live
   apply before POST/DELETE, reusing dashboard import/plan ownership semantics.
 
 ### P0 - Source Ownership Implementation
 
 - [ ] Add or extend typed ownership evidence instead of passing ad hoc strings
   where a stable model already exists.
-- [ ] Preserve export index `ownership` and `provenance` when normalizing
+- [x] Preserve export index `ownership` and `provenance` when normalizing
   dashboard bundle items for workspace/source-bundle review.
-- [ ] Surface ownership/provenance in workspace preview/review before changing
+- [x] Surface ownership/provenance in workspace preview/review before changing
   live write behavior.
-- [ ] Keep direct write blocked by default for file-provisioned and Git
+- [x] Keep direct write blocked by default for file-provisioned and Git
   Sync-managed dashboards.
-- [ ] Keep managed-unknown as warning unless a path proves it must be blocked.
-- [ ] Preserve existing API-managed import/apply behavior.
-- [ ] Add tests for all ownership classes before changing write behavior.
+- [x] Keep managed-unknown as warning unless a path proves it must be blocked.
+- [x] Preserve existing API-managed import/apply behavior.
+- [x] Add tests for all ownership classes before changing write behavior.
 - [ ] If output JSON changes, update contracts/fixtures and run
   `make quality-output-contracts`.
 
@@ -148,18 +156,18 @@ with narrow validation and a final full Rust test run when code changes.
 
 - [x] Audit current public/user-facing references to `workspace`, `status`,
   `status overview`, `sync`, and `project-status`.
-- [ ] Clean up user-facing drift: avoid `project status` and `staged sync`
+- [x] Clean up user-facing drift: avoid `project status` and `staged sync`
   wording in normal help/docs unless the text is explicitly schema or
   compatibility-related.
-- [ ] Keep schema/contract references to `project-status`,
+- [x] Keep schema/contract references to `project-status`,
   `grafana-util-project-status`, and `grafana-utils-sync-*` when they describe
   existing wire shapes.
-- [ ] Keep `workspace` as the public staged change workflow surface.
-- [ ] Keep `sync` as internal runtime/JSON compatibility naming unless a
+- [x] Keep `workspace` as the public staged change workflow surface.
+- [x] Keep `sync` as internal runtime/JSON compatibility naming unless a
   deliberate contract migration is planned.
-- [ ] Keep shared staged/live aggregation under `status`, not `overview`.
-- [ ] Keep `overview` as human-first projection and handoff surface.
-- [ ] When replacing stale docs/help, use public terms only unless the text is
+- [x] Keep shared staged/live aggregation under `status`, not `overview`.
+- [x] Keep `overview` as human-first projection and handoff surface.
+- [x] When replacing stale docs/help, use public terms only unless the text is
   explicitly maintainer-only or compatibility-related.
 
 ### P1 - Internal Mutation Review Adapter
@@ -167,9 +175,9 @@ with narrow validation and a final full Rust test run when code changes.
 - [x] Pick one existing normalized shape as the seed, likely
   `ReviewMutationAction`.
 - [x] Map workspace review actions into the adapter without changing public JSON.
-- [ ] Map datasource plan actions into an internal `ReviewMutationAction`
+- [x] Map datasource plan actions into an internal `ReviewMutationAction`
   projection without adding a public `review` field to datasource plan JSON.
-- [ ] Keep `raw` payload available for domain-specific evidence.
+- [x] Keep `raw` payload available for domain-specific evidence.
 - [ ] Add `risk` only after real risk evidence exists in at least two domains.
 - [ ] Avoid introducing public `ReviewRequest` until two mutation-review domains
   prove the same request fields.
@@ -189,20 +197,20 @@ with narrow validation and a final full Rust test run when code changes.
 
 - [x] Identify the exact hot spot before changing concurrency or transport
   behavior.
-- [ ] Correct outdated assumptions before implementation: `JsonHttpClient`
+- [x] Correct outdated assumptions before implementation: `JsonHttpClient`
   already uses `response.bytes()` plus `serde_json::from_slice`, compression is
   enabled through reqwest features, and no explicit `Accept-Encoding: identity`
   or `http1_only()` setting is present.
-- [ ] First implementation: preserve the first useful underlying HTTP/API error
+- [x] First implementation: preserve the first useful underlying HTTP/API error
   when live status all-org or dashboard/datasource read-pass paths fall back to
   `live-read-failed`.
-- [ ] Defer new all-org concurrency until diagnostics are clear and live smoke
+- [x] Defer new all-org concurrency until diagnostics are clear and live smoke
   can confirm rate-limit behavior.
-- [ ] Preserve deterministic output ordering after concurrent reads.
-- [ ] Keep write/apply/import requests serial.
-- [ ] Use a conservative default concurrency constant and document why it is
+- [x] Preserve deterministic output ordering after concurrent reads.
+- [x] Keep write/apply/import requests serial.
+- [x] Use a conservative default concurrency constant and document why it is
   safe.
-- [ ] Add partial-failure tests that keep the first useful diagnostic visible.
+- [x] Add partial-failure tests that keep the first useful diagnostic visible.
 - [ ] Run `cargo test --manifest-path rust/Cargo.toml --quiet http`.
 - [ ] Run `cargo test --manifest-path rust/Cargo.toml --quiet sync_live`.
 - [ ] Run `cargo test --manifest-path rust/Cargo.toml --quiet dashboard`.
@@ -212,11 +220,11 @@ with narrow validation and a final full Rust test run when code changes.
 
 ### P2 - Dashboard v2 Adapter Boundary
 
-- [ ] Add focused tests proving v2 rejection coverage for raw import,
+- [x] Add focused tests proving v2 rejection coverage for raw import,
   provisioning import, dashboard plan raw/source, and dependency preflight.
-- [ ] Centralize v2 detection so raw-to-prompt, validate/import, plan, and
+- [x] Centralize v2 detection so raw-to-prompt, validate/import, plan, and
   provisioning lanes share one rejection rule.
-- [ ] Keep dashboard v2 rejected in classic prompt/raw/provisioning lanes until
+- [x] Keep dashboard v2 rejected in classic prompt/raw/provisioning lanes until
   a dedicated adapter exists.
 - [ ] Anchor fixtures to Grafana source testdata for datasource variables,
   selected current datasource handling, library panels, and v2 rejection.
@@ -279,7 +287,7 @@ changes stay reviewable and do not blur lane boundaries.
   Git Sync-managed dashboard folders should be treated as Git-owned targets:
   dashboard JSON deployment should go through the Git repository / PR path, not
   direct dashboard API import or workspace apply.
-- [ ] Detect and surface dashboard ownership/provenance in live inventory and
+- [x] Detect and surface dashboard ownership/provenance in live inventory and
   preflight evidence: API-managed, file-provisioned, or Git Sync-managed. Live
   inventory/review output now exposes provenance for non-write paths; keep Git
   Sync targets read-only for direct live dashboard writes by default.
@@ -294,10 +302,10 @@ changes stay reviewable and do not blur lane boundaries.
   datasource/access/alert lifecycle management.
 - [ ] Keep live library-panel `__elements` lookup limited to the live export / import-handoff path. Keep local raw-to-prompt conversion warning-only when a referenced library panel model is missing.
 - [ ] Keep prompt/export fixture parity anchored to Grafana source testdata for datasource variables, selected current datasource handling, library panels, and the classic-vs-v2 rejection boundary.
-- [ ] Extend the implemented dashboard import/plan ownership evidence into any
+- [x] Extend the implemented dashboard import/plan ownership evidence into any
   remaining publish or workspace paths that still lack provenance before live
   writes.
-- [ ] Keep dashboard v2 as a separate future adapter boundary. Continue rejecting v2-shaped input in the classic prompt lane rather than mixing it into `raw/`, `prompt/`, or provisioning behavior.
+- [x] Keep dashboard v2 as a separate future adapter boundary. Continue rejecting v2-shaped input in the classic prompt lane rather than mixing it into `raw/`, `prompt/`, or provisioning behavior.
 - [ ] Treat provisioning as a derived projection that can be compared later against Grafana file provisioning. Do not rebase the dashboard contract on provisioning as if it were the source of truth.
 - [ ] Keep dashboard permissions adjacent to access evidence and access workflows, not as dashboard JSON fields or as an extension of the prompt export shape.
 - [ ] Split large dashboard modules by responsibility, not by line count alone. Favor focused export planning, prompt conversion, live preflight, and provisioning projection boundaries over arbitrary file carving.
@@ -331,14 +339,11 @@ Action:
 
 Problem:
 
-Rust HTTP handling is reliable and centralized, but current live/export/status
-paths are conservative for large Grafana instances. `JsonHttpClient` reuses one
-reqwest blocking client, which is good, but successful responses are fully read
-and converted to `String` before JSON parsing, response compression is disabled
-with `Accept-Encoding: identity`, HTTP/2 is disabled with `http1_only()`, and
-dashboard/detail fetches, alert template details, dashboard/folder permission
-export reads, and the dashboard/datasource all-org status pass already avoid
-the known repeated reads.
+Rust HTTP handling is reliable and centralized, and live/export/status paths now
+have bounded read-only fan-out for the known repeated-read hot spots. Keep later
+transport changes evidence-led: `JsonHttpClient` already parses from response
+bytes, compression is provided by reqwest features, and no explicit
+`Accept-Encoding: identity` or `http1_only()` setting is present.
 
 Relevant areas:
 
@@ -351,7 +356,7 @@ Relevant areas:
 
 Action:
 
-- [ ] Keep write/apply paths serial unless dependency ordering and Grafana API safety are explicitly modeled.
+- [x] Keep write/apply paths serial unless dependency ordering and Grafana API safety are explicitly modeled.
 - [ ] Reduce `serde_json::Value` cloning only at proven hot spots; dashboard
   live-read detail normalization now moves the fetched dashboard body instead
   of deep-cloning it, while flexible JSON handling remains for version-varying
@@ -384,7 +389,7 @@ Action:
 - [ ] Introduce a shared `ReviewRequest` concept.
 - [ ] Keep domain-specific payloads behind a shared review wrapper.
 - [ ] Avoid changing public JSON contracts until a migration path is defined.
-- [ ] Start with one internal model or adapter. Do not force all domains to adopt the envelope in the first commit.
+- [x] Start with one internal model or adapter. Do not force all domains to adopt the envelope in the first commit.
 
 Current blocker:
 
