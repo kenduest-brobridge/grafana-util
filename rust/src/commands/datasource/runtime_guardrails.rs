@@ -47,6 +47,14 @@ pub(super) fn validate_datasource_command_inputs(command: &DatasourceGroupComman
                 "--output-columns is only supported with --dry-run --table or table-like --output-format for datasource import.",
             ));
         }
+        DatasourceGroupCommand::Import(args)
+            if args.use_export_org
+                && args.output_format == Some(super::DryRunOutputFormat::Interactive) =>
+        {
+            return Err(message(
+                "Datasource import --use-export-org does not support --output-format interactive yet. Use datasource plan --use-export-org --output-format interactive for routed review.",
+            ));
+        }
         DatasourceGroupCommand::Plan(args) => {
             if !args.output_columns.is_empty()
                 && args.output_format != super::DatasourcePlanOutputFormat::Table

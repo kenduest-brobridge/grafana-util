@@ -38,6 +38,13 @@ pub(crate) fn print_datasource_plan_report(
                 render_json_value(&build_datasource_plan_json(report)?)?
             );
         }
+        DatasourcePlanOutputFormat::Interactive => {
+            let envelope = report.build_review_envelope();
+            crate::review_browser::run_review_mutation_browser(
+                "Datasource plan review",
+                &envelope,
+            )?;
+        }
         DatasourcePlanOutputFormat::Table => {
             for line in render_plan_table(report, show_same, no_header, selected_columns) {
                 println!("{line}");

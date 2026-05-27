@@ -16,6 +16,7 @@ pub enum DryRunOutputFormat {
     Text,
     Table,
     Json,
+    Interactive,
 }
 
 #[derive(Debug, Clone, Copy, ValueEnum, PartialEq, Eq)]
@@ -23,6 +24,7 @@ pub enum DatasourcePlanOutputFormat {
     Text,
     Table,
     Json,
+    Interactive,
 }
 
 #[derive(Debug, Clone, Copy, ValueEnum, PartialEq, Eq)]
@@ -150,6 +152,6 @@ fn apply_dry_run_output_format(
     match output_format {
         Some(DryRunOutputFormat::Table) => *table = true,
         Some(DryRunOutputFormat::Json) => *json = true,
-        Some(DryRunOutputFormat::Text) | None => {}
+        Some(DryRunOutputFormat::Text) | Some(DryRunOutputFormat::Interactive) | None => {}
     }
 }

@@ -13,13 +13,18 @@
 - `--replace-existing`、`--update-existing-only`、`--require-matching-export-org`：匯入安全與重整控制。
 - `--secret-values`：在匯入時解析佔位秘密值。
 - `--secret-values-file`：從 JSON 檔提供佔位秘密值，供匯入時解析。
-- `--dry-run`、`--table`、`--json`、`--output-format`、`--no-header`、`--output-columns`、`--list-columns`、`--progress`、`--verbose`：預覽與回報控制。若想看完整 dry-run 表格欄位，可用 `--output-columns all`。
+- `--dry-run`、`--table`、`--json`、`--output-format`、`--no-header`、`--output-columns`、`--list-columns`、`--progress`、`--verbose`：預覽與回報控制。若要用唯讀終端機 review，可用 `--output-format interactive`；若想看完整 dry-run 表格欄位，可用 `--output-columns all`。
 - dry-run 輸出可包含 `target_uid`、`target_version`、`target_read_only` 與 `blocked_reason`，讓 read-only 或 provisioned target 在 live import 前就可見。
 
 ## 範例
 ```bash
 # 用 Grafana API 匯入 datasource inventory。
 grafana-util datasource import --profile prod --input-dir ./datasources --dry-run --table
+```
+
+```bash
+# live import 前先用互動式畫面 review datasource actions。
+grafana-util datasource import --profile prod --input-dir ./datasources --dry-run --output-format interactive
 ```
 
 ```bash
@@ -40,6 +45,7 @@ grafana-util datasource import --url http://localhost:3000 --token "$GRAFANA_API
 ## 成功判準
 
 - 匯入預覽會清楚顯示哪些 org 與 datasource 會被修改
+- interactive dry-run output 可讓 operator 檢查每個 action、blocker、warning 與 review hint，且不揭露 secret values
 - update 會使用 target datasource UID，並顯示 target version/read-only evidence
 - provisioning 與 inventory 兩種輸入都能正確路由
 - secrets 在 live import 前就已經解開，不會等到送出後才發現問題

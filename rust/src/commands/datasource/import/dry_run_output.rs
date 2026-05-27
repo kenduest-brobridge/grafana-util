@@ -4,9 +4,11 @@ use serde_json::{Map, Value};
 
 use crate::common::{render_json_value, tool_version, Result};
 
+use super::datasource_import_dry_run_review::build_datasource_import_dry_run_review_envelope;
 use super::datasource_import_export_support::DatasourceImportDryRunReport;
 use super::datasource_import_secret_visibility::build_import_secret_visibility_entries;
 use super::{render_import_table, DatasourceImportArgs};
+use crate::datasource::DryRunOutputFormat;
 
 pub(crate) fn format_datasource_import_dry_run_line(row: &[String]) -> String {
     format!(
@@ -125,7 +127,10 @@ pub(crate) fn print_datasource_import_dry_run_report(
     report: &DatasourceImportDryRunReport,
     args: &DatasourceImportArgs,
 ) -> Result<()> {
-    if args.json {
+    if args.output_format == Some(DryRunOutputFormat::Interactive) {
+        let envelope = build_datasource_import_dry_run_review_envelope(report);
+        crate::review_browser::run_review_mutation_browser("Datasource import dry-run", &envelope)?;
+    } else if args.json {
         print!(
             "{}",
             render_json_value(&build_datasource_import_dry_run_json_value(report))?

@@ -23,6 +23,13 @@ Current AI-maintained status only.
 - Older entries moved to [`ai-status-archive-2026-05-14.md`](/Users/ken/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-05-14.md).
 - Older entries moved to [`ai-status-archive-2026-05-16.md`](/Users/ken/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-05-16.md).
 - Older entries moved to [`ai-status-archive-2026-05-25.md`](/Users/ken/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-05-25.md).
+- Older entries moved to [`ai-status-archive-2026-05-28.md`](/Users/ken/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-05-28.md).
+
+## 2026-05-28 - Datasource interactive review output
+- State: Done
+- Scope: rust/src/commands/review_browser.rs; rust/src/commands/datasource/cli/formats.rs; rust/src/commands/datasource/cli/defs_sync.rs; rust/src/commands/datasource/runtime_guardrails.rs; rust/src/commands/datasource/import/dry_run_output.rs; rust/src/commands/datasource/plan/render.rs; docs/commands/en/datasource-{plan,import}.md; docs/commands/zh-TW/datasource-{plan,import}.md
+- Current Update: Added shared read-only mutation review browser projection and wired datasource plan/import dry-run interactive output.
+- Result: Operators can inspect datasource plan and import dry-run actions interactively with blockers, warnings, review hints, and safe diffs while public JSON remains unchanged.
 
 ## 2026-05-25 - TUI empty selection key handling
 - State: Done
@@ -53,9 +60,3 @@ Current AI-maintained status only.
 - Scope: rust/src/commands/review_contract.rs; rust/src/commands/access/access_plan_tui.rs; docs/internal/tui-architecture-roadmap.md
 - Current Update: Moved access plan warning and blocker context row projection into the shared review contract so mutation review surfaces can reuse blocked reasons, safe warning changed fields, and blocked target flag evidence.
 - Result: Access plan TUI keeps the same Blocked context, Warning context, and Blocked evidence rows while review_contract now owns the generic warning/blocker context projection for mutation actions. Public CLI paths, help text, generated docs, and command contracts are unchanged.
-
-## 2026-05-25 - Shared review target evidence projection
-- State: Done
-- Scope: rust/src/commands/review_contract.rs; rust/src/commands/access/access_plan_tui.rs; docs/internal/tui-architecture-roadmap.md
-- Current Update: Moved access plan live-target evidence row projection into the shared review contract so mutation review surfaces can reuse known target field rows.
-- Result: Access plan TUI keeps the same Live target: key=value rows while review_contract now owns the known target field projection for generic mutation actions. Public CLI paths, help text, generated docs, and command contracts are unchanged.

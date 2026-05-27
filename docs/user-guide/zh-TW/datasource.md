@@ -154,7 +154,7 @@ dehk4kxat5la8b  Prometheus  prometheus  http://prometheus:9090  true            
 | :--- | :--- |
 | **盤點 (List)** | `grafana-util datasource list --all-orgs --table` 或 `grafana-util datasource list --input-dir ./datasources --table` |
 | **匯出 (Export)** | `grafana-util datasource export --output-dir ./datasources --overwrite` |
-| **匯入 (Import)** | `grafana-util datasource import --input-dir ./datasources --replace-existing --dry-run --table` |
+| **匯入 (Import)** | `grafana-util datasource import --input-dir ./datasources --replace-existing --dry-run --output-format interactive` |
 | **比對 (Diff)** | `grafana-util datasource diff --input-dir ./datasources` |
 | **新增 (Add)** | `grafana-util datasource add --uid <UID> --name <NAME> --type prometheus --datasource-url <URL> --dry-run --table` |
 
@@ -178,6 +178,11 @@ Datasource export completed: 3 item(s)
 ```bash
 # 匯入前先預覽會 create 還是 update。
 grafana-util datasource import --input-dir ./datasources --replace-existing --dry-run --table
+```
+
+```bash
+# 用唯讀互動式 browser review datasource plan。
+grafana-util datasource plan --input-dir ./datasources --output-format interactive
 ```
 **範例輸出：**
 ```text

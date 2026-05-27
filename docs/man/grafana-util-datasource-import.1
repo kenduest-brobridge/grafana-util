@@ -34,12 +34,14 @@ resolve placeholder secrets during import.
 resolve placeholder secrets from a JSON file during import.
 .TP
 .B \-\-dry\-run, \-\-table, \-\-json, \-\-output\-format, \-\-no\-header, \-\-output\-columns, \-\-list\-columns, \-\-progress, \-\-verbose
-preview and reporting controls. Use \-\-output\-columns all for the full dry\-run table.
+preview and reporting controls. Use \-\-output\-format interactive for a read\-only terminal review, or \-\-output\-columns all for the full dry\-run table.
 .IP \(bu 2
 dry\-run output can include target_uid, target_version, target_read_only, and blocked_reason so read\-only or provisioned targets are visible before live import.
 .SH SUCCESS CRITERIA
 .IP \(bu 2
 the import preview shows which orgs and datasources will change
+.IP \(bu 2
+interactive dry\-run output lets an operator inspect each action, blocker, warning, and review hint without exposing secret values
 .IP \(bu 2
 updates use target datasource UIDs and show target version/read\-only evidence
 .IP \(bu 2

@@ -315,3 +315,38 @@ fn datasource_plan_builds_review_envelope_with_datasource_domain_summary() {
     assert_eq!(remote.status, PLAN_STATUS_WARNING);
     assert_eq!(remote.raw["targetOrgId"], json!("1"));
 }
+
+#[test]
+fn datasource_plan_review_envelope_builds_user_friendly_browser_items() {
+    let mut changed = record("prom", "Prometheus", "prometheus");
+    changed.url = "http://new-prometheus:9090".to_string();
+    changed.secure_json_data_placeholders = Some(Map::from_iter([(
+        "password".to_string(),
+        Value::String("${secret:prom-password}".to_string()),
+    )]));
+    let mut live_record = live("prom", "Prometheus", "prometheus");
+    live_record.insert("readOnly".to_string(), Value::Bool(true));
+    let report = report(vec![changed], vec![live_record], false);
+
+    let envelope = report.build_review_envelope();
+    let summary = crate::review_browser::build_review_mutation_browser_summary_lines(
+        "Datasource plan review",
+        &envelope,
+    );
+    let items = crate::review_browser::build_review_mutation_browser_items(&envelope);
+
+    assert!(summary.contains(&"Actions: 1  domains: 1  same: 0".to_string()));
+    assert!(summary.contains(&"Blocked: 1  warning: 0".to_string()));
+    assert!(summary.contains(&"Blocked reasons: target-read-only".to_string()));
+    assert_eq!(items.len(), 1);
+    assert_eq!(items[0].kind, "datasource");
+    assert_eq!(items[0].title, "prom");
+    assert!(items[0].meta.contains("blocked"));
+    assert!(items[0].meta.contains(PLAN_ACTION_BLOCKED_READ_ONLY));
+    let details = items[0].details.join("\n");
+    assert!(details.contains("Narrative:"));
+    assert!(details.contains("Review evidence:"));
+    assert!(details.contains("Review blocker status: blocked by target-read-only"));
+    assert!(details.contains("Check next:"));
+    assert!(!details.contains("${secret:prom-password}"));
+}

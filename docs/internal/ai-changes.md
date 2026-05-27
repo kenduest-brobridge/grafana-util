@@ -23,6 +23,14 @@ Current AI change log only.
 - Older entries moved to [`ai-changes-archive-2026-05-14.md`](/Users/ken/work/grafana-utils/docs/internal/archive/ai-changes-archive-2026-05-14.md).
 - Older entries moved to [`ai-changes-archive-2026-05-16.md`](/Users/ken/work/grafana-utils/docs/internal/archive/ai-changes-archive-2026-05-16.md).
 - Older entries moved to [`ai-changes-archive-2026-05-25.md`](/Users/ken/work/grafana-utils/docs/internal/archive/ai-changes-archive-2026-05-25.md).
+- Older entries moved to [`ai-changes-archive-2026-05-28.md`](/Users/ken/work/grafana-utils/docs/internal/archive/ai-changes-archive-2026-05-28.md).
+
+## 2026-05-28 - Datasource interactive review output
+- Summary: Added shared read-only mutation review browser projection and wired datasource plan/import dry-run interactive output.
+- Tests: cargo test --quiet datasource_plan_review_envelope_builds_user_friendly_browser_items; cargo test --quiet datasource_plan_parser_accepts_interactive_output; cargo test --quiet datasource_import_dry_run_parser_accepts_interactive_output; cargo test --quiet datasource_import_rejects_use_export_org_interactive_review_output; cargo test --quiet datasource_plan; cargo test --quiet datasource_import_dry_run_review; cargo test --quiet cli_mutation; cargo test --quiet datasource (outside sandbox for local mock-server coverage after sandbox denied binding); RUSTFLAGS=-Dwarnings cargo check --quiet --no-default-features --all-targets; cargo fmt --check; make quality-docs-surface; make man-check; make html-check; make quality-ai-workflow; git diff --check
+- Impact: Operators can inspect datasource plan and import dry-run actions interactively with blockers, warnings, review hints, and safe diffs while public JSON remains unchanged.
+- Rollback/Risk: Low to medium; public help/docs gain an interactive output value, runtime path is read-only and uses existing review envelopes.
+- Follow-up: Consider moving access plan TUI onto the shared review browser builder after comparing existing access-specific summary/resource rows.
 
 ## 2026-05-25 - TUI empty selection key handling
 - Summary: Kept datasource/access browse edit and delete keys inside the TUI when no row is selected, surfacing status messages instead of propagating selected-row errors.
@@ -86,10 +94,3 @@ Current AI change log only.
 - Impact: Access plan interactive reviews now consume shared review-contract next-check lines while preserving existing hint, blocker, warning, create/update/delete, and no-op guidance strings. Public CLI paths, help text, generated docs, and command contracts are unchanged.
 - Rollback/Risk: Low. This moves existing string projection into the shared review contract and focused access/review-contract tests cover the old output.
 - Follow-up: Continue migrating compatible review panes onto shared review-contract detail and diff projection helpers.
-
-## 2026-05-25 - Shared datasource artifact detail projection
-- Summary: Added a shared datasource browser detail projection for local artifact records and routed datasource local inspect plus snapshot datasource review rows through it before appending review evidence.
-- Tests: cargo test --quiet datasource_browser_detail_lines_from_details_formats_local_artifact_identity; cargo test --quiet tail_inspect; cargo test --quiet snapshot_review_browser; cargo test --quiet snapshot; cargo test --quiet datasource (outside sandbox for local mock-server coverage after sandbox denied binding); RUSTFLAGS=-Dwarnings cargo check --quiet --no-default-features --all-targets; cargo fmt --check; python3 scripts/tui_inventory_report.py; make quality-ai-workflow; git diff --check
-- Impact: Datasource local list and snapshot datasource review browser rows now share identity fact shaping for Name, UID, Type, Org, URL, Access, and Default while preserving existing shared review evidence projection and public CLI/doc surfaces.
-- Rollback/Risk: Low. The change centralizes equivalent datasource fact strings and focused datasource/snapshot tests cover both local artifact browser paths.
-- Follow-up: Continue migrating compatible local artifact browser detail sections onto shared projections where output contracts are already aligned.

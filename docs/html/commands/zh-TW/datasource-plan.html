@@ -955,20 +955,22 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <p>當你想先確認 datasource bundle 套到目標 Grafana 會造成什麼結果，再決定是否 import、重新 export，或處理遠端多出的 datasource 時，使用這個命令。</p>
 <p><code>datasource plan</code> 不會修改 Grafana。它會把 bundle-vs-live 差異轉成 operator action，例如 <code>would-create</code>、<code>would-update</code>、<code>extra-remote</code>、<code>would-delete</code>、<code>blocked-read-only</code>。</p>
 <h2 id="重要參數">重要參數</h2>
-<ul><li><code>--input-dir</code>: 本地 datasource bundle、workspace root、provisioning 目錄，或具體 provisioning YAML 檔案。</li><li><code>--input-format</code>: 選擇 <code>inventory</code> 或 <code>provisioning</code>。</li><li><code>--org-id</code>: 對指定 Grafana org 做 plan。</li><li><code>--use-export-org</code>, <code>--only-org-id</code>, <code>--create-missing-orgs</code>: 將 all-org datasource export 依匯出 org route 回目標 org。</li><li><code>--prune</code>: 將遠端多出的 datasource 顯示成 <code>would-delete</code> candidate。沒有這個參數時只顯示為 <code>extra-remote</code>。</li><li><code>--output-format</code>: 選擇 <code>text</code>、<code>table</code> 或 <code>json</code>。</li><li><code>--show-same</code>: 在 text/table 輸出中包含沒有變更的 row。</li><li><code>--output-columns</code>, <code>--list-columns</code>, <code>--no-header</code>: 調整 table 輸出。</li></ul>
+<ul><li><code>--input-dir</code>: 本地 datasource bundle、workspace root、provisioning 目錄，或具體 provisioning YAML 檔案。</li><li><code>--input-format</code>: 選擇 <code>inventory</code> 或 <code>provisioning</code>。</li><li><code>--org-id</code>: 對指定 Grafana org 做 plan。</li><li><code>--use-export-org</code>, <code>--only-org-id</code>, <code>--create-missing-orgs</code>: 將 all-org datasource export 依匯出 org route 回目標 org。</li><li><code>--prune</code>: 將遠端多出的 datasource 顯示成 <code>would-delete</code> candidate。沒有這個參數時只顯示為 <code>extra-remote</code>。</li><li><code>--output-format</code>: 選擇 <code>text</code>、<code>table</code>、<code>json</code> 或 <code>interactive</code>。</li><li><code>--show-same</code>: 在 text/table 輸出中包含沒有變更的 row。</li><li><code>--output-columns</code>, <code>--list-columns</code>, <code>--no-header</code>: 調整 table 輸出。</li></ul>
 <h2 id="範例">範例</h2>
 <pre><code># 對一份 datasource bundle 產生摘要 plan。
 grafana-util datasource plan --profile prod --input-dir ./datasources</code></pre>
 <pre><code># 用 table 顯示 action rows。
 grafana-util datasource plan --profile prod --input-dir ./datasources --output-format table</code></pre>
+<pre><code># 用互動式 review browser 檢視 action details、blockers、hints 與安全 diff。
+grafana-util datasource plan --profile prod --input-dir ./datasources --output-format interactive</code></pre>
 <pre><code># 將遠端多出的 datasource 納入刪除候選。
 grafana-util datasource plan --profile prod --input-dir ./datasources --prune --output-format json</code></pre>
 <pre><code># 對 all-org export 依來源 org route 回目標 org 做 plan。
 grafana-util datasource plan --url http://localhost:3000 --basic-user admin --basic-password admin --input-dir ./datasources --use-export-org --output-format table</code></pre>
 <h2 id="before-after">Before / After</h2>
-<ul><li><strong>Before</strong>: <code>datasource diff</code> 只顯示 local-vs-live 差異，<code>datasource import --dry-run</code> 只 preview import records，沒有一個完整 reconcile review surface。</li><li><strong>After</strong>: <code>datasource plan</code> 用同一個 review model 顯示 create、update、remote-only、delete-candidate 與 blocked actions。</li><li>JSON 輸出保留穩定 <code>actionId</code>、status、target evidence、changed fields 與 review hints，可供 CI 或後續 TUI 使用。</li></ul>
+<ul><li><strong>Before</strong>: <code>datasource diff</code> 只顯示 local-vs-live 差異，<code>datasource import --dry-run</code> 只 preview import records，沒有一個完整 reconcile review surface。</li><li><strong>After</strong>: <code>datasource plan</code> 用同一個 review model 顯示 create、update、remote-only、delete-candidate 與 blocked actions。</li><li>JSON 輸出保留穩定 <code>actionId</code>、status、target evidence、changed fields 與 review hints，適合 CI review；interactive 輸出則用同一個 action model 開啟唯讀終端機瀏覽器。</li></ul>
 <h2 id="成功狀態">成功狀態</h2>
-<ul><li>import 前可看出 create 與 update candidates</li><li>遠端多出的 datasource 預設只被標示，不會被刪除</li><li>read-only 或 provisioning 管理的 target 會先被 blocked</li><li>JSON output 可作為 review evidence 或 automation input</li></ul>
+<ul><li>import 前可看出 create 與 update candidates</li><li>遠端多出的 datasource 預設只被標示，不會被刪除</li><li>read-only 或 provisioning 管理的 target 會先被 blocked</li><li>JSON output 可作為 review evidence 或 automation input</li><li>interactive output 可讓 operator 在選擇 apply path 前檢查 blockers、warnings 與安全欄位 diff</li></ul>
 <h2 id="失敗檢查">失敗檢查</h2>
 <ul><li>如果 plan 指到錯誤 org，確認 <code>--org-id</code> 或 <code>--use-export-org</code></li><li>如果 <code>--use-export-org</code> 失敗，確認 input 是 combined inventory export root，且 credentials 可以列舉 org</li><li>如果 delete candidates 看起來不合理，先移除 <code>--prune</code> 並檢查 <code>extra-remote</code></li><li>如果 secret 相關差異無法完全判斷，記得 Grafana live API 不會回傳 plaintext datasource secrets</li></ul>
 <h2 id="相關命令">相關命令</h2>

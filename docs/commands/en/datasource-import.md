@@ -13,13 +13,18 @@ Use this when you have a local datasource bundle or provisioning tree and want t
 - `--replace-existing`, `--update-existing-only`, `--require-matching-export-org`: import safety and reconciliation controls.
 - `--secret-values`: resolve placeholder secrets during import.
 - `--secret-values-file`: resolve placeholder secrets from a JSON file during import.
-- `--dry-run`, `--table`, `--json`, `--output-format`, `--no-header`, `--output-columns`, `--list-columns`, `--progress`, `--verbose`: preview and reporting controls. Use `--output-columns all` for the full dry-run table.
+- `--dry-run`, `--table`, `--json`, `--output-format`, `--no-header`, `--output-columns`, `--list-columns`, `--progress`, `--verbose`: preview and reporting controls. Use `--output-format interactive` for a read-only terminal review, or `--output-columns all` for the full dry-run table.
 - dry-run output can include `target_uid`, `target_version`, `target_read_only`, and `blocked_reason` so read-only or provisioned targets are visible before live import.
 
 ## Examples
 ```bash
 # Import datasource inventory through the Grafana API.
 grafana-util datasource import --url http://localhost:3000 --basic-user admin --basic-password admin --input-dir ./datasources --dry-run --table
+```
+
+```bash
+# Review datasource import actions interactively before live import.
+grafana-util datasource import --url http://localhost:3000 --basic-user admin --basic-password admin --input-dir ./datasources --dry-run --output-format interactive
 ```
 
 ```bash
@@ -35,6 +40,7 @@ grafana-util datasource import --url http://localhost:3000 --basic-user admin --
 ## What success looks like
 
 - the import preview shows which orgs and datasources will change
+- interactive dry-run output lets an operator inspect each action, blocker, warning, and review hint without exposing secret values
 - updates use target datasource UIDs and show target version/read-only evidence
 - provisioning and inventory inputs both route correctly
 - secrets are resolved before the live import, not after the damage is done

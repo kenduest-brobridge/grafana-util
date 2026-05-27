@@ -276,6 +276,61 @@ fn datasource_plan_parser_accepts_prune_and_table_output() {
 }
 
 #[test]
+fn datasource_plan_parser_accepts_interactive_output() {
+    let args = DatasourceCliArgs::parse_normalized_from([
+        "grafana-util",
+        "plan",
+        "--url",
+        "http://grafana.example",
+        "--token",
+        "token",
+        "--input-dir",
+        "./datasources",
+        "--output-format",
+        "interactive",
+    ]);
+
+    match args.command {
+        DatasourceGroupCommand::Plan(inner) => {
+            assert_eq!(
+                inner.output_format,
+                super::DatasourcePlanOutputFormat::Interactive
+            );
+        }
+        _ => panic!("expected datasource plan"),
+    }
+}
+
+#[test]
+fn datasource_import_dry_run_parser_accepts_interactive_output() {
+    let args = DatasourceCliArgs::parse_normalized_from([
+        "grafana-util",
+        "import",
+        "--url",
+        "http://grafana.example",
+        "--token",
+        "token",
+        "--input-dir",
+        "./datasources",
+        "--dry-run",
+        "--output-format",
+        "interactive",
+    ]);
+
+    match args.command {
+        DatasourceGroupCommand::Import(inner) => {
+            assert_eq!(
+                inner.output_format,
+                Some(super::DryRunOutputFormat::Interactive)
+            );
+            assert!(!inner.table);
+            assert!(!inner.json);
+        }
+        _ => panic!("expected datasource import"),
+    }
+}
+
+#[test]
 fn resolve_delete_preview_type_uses_matching_live_datasource_type() {
     let live = vec![
         live_datasource(7, "prom-main", "Prometheus Main", "prometheus"),

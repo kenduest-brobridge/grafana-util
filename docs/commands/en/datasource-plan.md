@@ -14,7 +14,7 @@ Use this when you want to understand what a datasource bundle would mean against
 - `--org-id`: plan against one explicit Grafana org.
 - `--use-export-org`, `--only-org-id`, `--create-missing-orgs`: route an all-org datasource export back to matching destination orgs.
 - `--prune`: show remote-only datasources as `would-delete` candidates. Without this flag they remain `extra-remote`.
-- `--output-format`: choose `text`, `table`, or `json`.
+- `--output-format`: choose `text`, `table`, `json`, or `interactive`.
 - `--show-same`: include unchanged rows in text and table output.
 - `--output-columns`, `--list-columns`, `--no-header`: tune table output.
 
@@ -27,6 +27,11 @@ grafana-util datasource plan --profile prod --input-dir ./datasources
 ```bash
 # Render a table with action rows.
 grafana-util datasource plan --profile prod --input-dir ./datasources --output-format table
+```
+
+```bash
+# Open an interactive review browser with action details, blockers, hints, and safe diffs.
+grafana-util datasource plan --profile prod --input-dir ./datasources --output-format interactive
 ```
 
 ```bash
@@ -43,7 +48,7 @@ grafana-util datasource plan --url http://localhost:3000 --basic-user admin --ba
 
 - **Before**: `datasource diff` showed local-vs-live differences, and `datasource import --dry-run` previewed import records, but neither gave one full reconcile review surface.
 - **After**: `datasource plan` shows create, update, remote-only, delete-candidate, and blocked actions in one review model.
-- JSON output is structured for CI and future TUI review. Rows include stable `actionId`, status, target evidence, changed fields, and review hints.
+- JSON output is structured for CI review, and interactive output opens the same action model in a read-only terminal browser. Rows include stable `actionId`, status, target evidence, changed fields, and review hints.
 
 ## What success looks like
 
@@ -51,6 +56,7 @@ grafana-util datasource plan --url http://localhost:3000 --basic-user admin --ba
 - remote-only datasources are called out without deleting anything by default
 - read-only or provisioned targets are blocked before an operator treats the plan as ready
 - JSON output can be saved as review evidence or loaded by automation
+- interactive output lets an operator inspect blockers, warnings, and safe field diffs before choosing an apply path
 
 ## Failure checks
 

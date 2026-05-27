@@ -162,6 +162,9 @@ pub(crate) mod reference_graph;
 /// Generic Grafana resource discovery and read-only query commands.
 #[path = "commands/resource/mod.rs"]
 pub mod resource;
+/// Shared read-only browser projection for mutation review envelopes.
+#[path = "commands/review_browser.rs"]
+pub(crate) mod review_browser;
 /// Shared review/action vocabulary used by plan, preview, apply, and TUI layers.
 #[path = "commands/review_contract.rs"]
 pub(crate) mod review_contract;

@@ -163,9 +163,9 @@ dehk4kxat5la8b  Prometheus  prometheus  http://prometheus:9090  true            
 | :--- | :--- |
 | **List** | `grafana-util datasource list --all-orgs --table` or `grafana-util datasource list --input-dir ./datasources --table` |
 | **Export** | `grafana-util datasource export --output-dir ./datasources --overwrite` |
-| **Import** | `grafana-util datasource import --input-dir ./datasources --replace-existing --dry-run --table` |
+| **Import** | `grafana-util datasource import --input-dir ./datasources --replace-existing --dry-run --output-format interactive` |
 | **Diff** | `grafana-util datasource diff --diff-dir ./datasources` |
-| **Plan** | `grafana-util datasource plan --input-dir ./datasources --output-format table` |
+| **Plan** | `grafana-util datasource plan --input-dir ./datasources --output-format interactive` |
 | **Add** | `grafana-util datasource add --uid <UID> --name <NAME> --type prometheus --datasource-url <URL> --dry-run --table` |
 
 ---
@@ -188,6 +188,11 @@ Datasource export completed: 3 item(s)
 ```bash
 # Preview whether import would create or update records.
 grafana-util datasource import --input-dir ./datasources --replace-existing --dry-run --table
+```
+
+```bash
+# Review planned datasource changes in a read-only interactive browser.
+grafana-util datasource plan --input-dir ./datasources --output-format interactive
 ```
 **Output Excerpt:**
 ```text

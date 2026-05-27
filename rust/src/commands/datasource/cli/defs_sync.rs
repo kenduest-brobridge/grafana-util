@@ -187,7 +187,7 @@ pub struct DatasourceImportArgs {
         long,
         value_enum,
         conflicts_with_all = ["table", "json"],
-        help = "Alternative single-flag output selector for --dry-run output. Use text, table, or json."
+        help = "Alternative single-flag output selector for --dry-run output. Use text, table, json, or interactive."
     )]
     pub output_format: Option<DryRunOutputFormat>,
     #[arg(
@@ -368,7 +368,7 @@ pub struct DatasourcePlanArgs {
         long,
         value_enum,
         default_value_t = DatasourcePlanOutputFormat::Text,
-        help = "Render datasource plan output as text, table, or json.",
+        help = "Render datasource plan output as text, table, json, or interactive.",
         help_heading = "Output Options"
     )]
     pub output_format: DatasourcePlanOutputFormat,

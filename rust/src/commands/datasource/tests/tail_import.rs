@@ -41,6 +41,36 @@ fn datasource_import_rejects_output_columns_without_table_output() {
 }
 
 #[test]
+fn datasource_import_rejects_use_export_org_interactive_review_output() {
+    let temp = tempdir().unwrap();
+    let input_dir = temp.path().join("datasources");
+    fs::create_dir_all(&input_dir).unwrap();
+
+    let error = run_datasource_cli(
+        DatasourceCliArgs::parse_normalized_from([
+            "grafana-util",
+            "import",
+            "--input-dir",
+            input_dir.to_str().unwrap(),
+            "--basic-user",
+            "admin",
+            "--basic-password",
+            "admin",
+            "--dry-run",
+            "--use-export-org",
+            "--output-format",
+            "interactive",
+        ])
+        .command,
+    )
+    .unwrap_err();
+
+    assert!(error
+        .to_string()
+        .contains("Use datasource plan --use-export-org --output-format interactive"));
+}
+
+#[test]
 fn datasource_import_rejects_extra_secret_or_server_managed_fields() {
     let temp = tempdir().unwrap();
     let input_dir = temp.path().join("datasources");
