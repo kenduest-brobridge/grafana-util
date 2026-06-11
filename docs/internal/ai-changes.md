@@ -26,6 +26,13 @@ Current AI change log only.
 - Older entries moved to [`ai-changes-archive-2026-05-28.md`](/Users/ken/work/grafana-utils/docs/internal/archive/ai-changes-archive-2026-05-28.md).
 - Older entries moved to [`ai-changes-archive-2026-06-11.md`](/Users/ken/work/grafana-utils/docs/internal/archive/ai-changes-archive-2026-06-11.md).
 
+## 2026-06-11 - Shared browser detail and test split
+- Summary: Moved shared browser detail projection helpers into common/browser/detail.rs and session behavior tests into common/browser/session_tests.rs while preserving the crate::interactive_browser helper surface.
+- Tests: cargo test --quiet browser_ --features tui; make quality-rust; make quality-architecture; cargo check --quiet --no-default-features --all-targets; python3 scripts/tui_inventory_report.py --json; make quality-ai-workflow
+- Impact: `common/browser/session.rs` is now below the architecture warning threshold and `make quality-architecture` reports no warnings. Public CLI paths, help text, generated docs, and shared browser behavior are unchanged.
+- Rollback/Risk: Low; this is a structural move of existing helper/test code with re-exports preserving downstream call sites.
+- Follow-up: Keep future shared browser work split between detail projection, tests, and runtime/session responsibilities.
+
 ## 2026-06-11 - Review contract test split
 - Summary: Moved shared review contract inline tests into a file-backed test module while keeping production contract constants, action projection helpers, and envelope builders in review_contract.rs.
 - Tests: cargo test --quiet review_contract; make quality-rust; make quality-architecture; cargo check --quiet --no-default-features --all-targets; python3 scripts/tui_inventory_report.py --json; make quality-ai-workflow
@@ -88,10 +95,3 @@ Current AI change log only.
 - Impact: Access plan TUI keeps the same Narrative and Why this matters rows while review_contract now owns the generic action narrative and changed-field impact projection. Public CLI paths, help text, generated docs, and command contracts are unchanged.
 - Rollback/Risk: Low. This moves equivalent projection code into review_contract, removes the now-unused access review action alias, and focused access/review-contract tests cover the old output.
 - Follow-up: Continue auditing remaining compatible local artifact browser review/detail projections before declaring the broader TUI design work complete.
-
-## 2026-05-25 - Shared review context projection
-- Summary: Moved access plan warning and blocker context row projection into the shared review contract so mutation review surfaces can reuse blocked reasons, safe warning changed fields, and blocked target flag evidence.
-- Tests: cargo test --quiet review_mutation_action_context_lines_project_warning_and_blocker_evidence; cargo test --quiet access_plan_interactive_browser; cargo test --quiet review_contract; cargo test --quiet access (outside sandbox for local mock-server coverage after sandbox denied binding); RUSTFLAGS=-Dwarnings cargo check --quiet --no-default-features --all-targets; cargo fmt --check; python3 scripts/tui_inventory_report.py; make quality-ai-workflow; git diff --check
-- Impact: Access plan TUI keeps the same Blocked context, Warning context, and Blocked evidence rows while review_contract now owns the generic warning/blocker context projection for mutation actions. Public CLI paths, help text, generated docs, and command contracts are unchanged.
-- Rollback/Risk: Low. This moves equivalent context projection code into review_contract and focused access/review-contract tests cover the old output.
-- Follow-up: Continue auditing the remaining access-specific narrative and impact rows before deciding whether they belong in shared review projections.

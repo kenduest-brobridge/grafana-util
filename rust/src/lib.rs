@@ -113,6 +113,9 @@ pub mod http;
 /// Internal browser/session helpers for screenshot and interactive flows.
 #[path = "common/browser/session.rs"]
 pub(crate) mod interactive_browser;
+/// Shared browser/detail projection helpers used by interactive flows.
+#[path = "common/browser/detail.rs"]
+pub(crate) mod interactive_browser_detail;
 /// Artifact-driven project overview assembly for staged dashboard and sync inputs.
 #[path = "commands/status/overview/mod.rs"]
 pub mod overview;

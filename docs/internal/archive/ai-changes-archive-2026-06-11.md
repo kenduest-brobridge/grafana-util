@@ -27,3 +27,10 @@
 - Impact: Access plan TUI keeps the same Live target: key=value rows while review_contract now owns the known target field projection for generic mutation actions. Public CLI paths, help text, generated docs, and command contracts are unchanged.
 - Rollback/Risk: Low. This moves equivalent target projection code into review_contract and focused access/review-contract tests cover the old output.
 - Follow-up: Continue moving compatible warning/blocker context rows out of per-surface TUI renderers and into shared review projections.
+
+## 2026-05-25 - Shared review context projection
+- Summary: Moved access plan warning and blocker context row projection into the shared review contract so mutation review surfaces can reuse blocked reasons, safe warning changed fields, and blocked target flag evidence.
+- Tests: cargo test --quiet review_mutation_action_context_lines_project_warning_and_blocker_evidence; cargo test --quiet access_plan_interactive_browser; cargo test --quiet review_contract; cargo test --quiet access (outside sandbox for local mock-server coverage after sandbox denied binding); RUSTFLAGS=-Dwarnings cargo check --quiet --no-default-features --all-targets; cargo fmt --check; python3 scripts/tui_inventory_report.py; make quality-ai-workflow; git diff --check
+- Impact: Access plan TUI keeps the same Blocked context, Warning context, and Blocked evidence rows while review_contract now owns the generic warning/blocker context projection for mutation actions. Public CLI paths, help text, generated docs, and command contracts are unchanged.
+- Rollback/Risk: Low. This moves equivalent context projection code into review_contract and focused access/review-contract tests cover the old output.
+- Follow-up: Continue auditing the remaining access-specific narrative and impact rows before deciding whether they belong in shared review projections.

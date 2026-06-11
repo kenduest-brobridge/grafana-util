@@ -26,6 +26,12 @@ Current AI-maintained status only.
 - Older entries moved to [`ai-status-archive-2026-05-28.md`](/Users/ken/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-05-28.md).
 - Older entries moved to [`ai-status-archive-2026-06-11.md`](/Users/ken/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-06-11.md).
 
+## 2026-06-11 - Shared browser detail and test split
+- State: Done
+- Scope: rust/src/common/browser/session.rs; rust/src/common/browser/detail.rs; rust/src/common/browser/session_tests.rs; rust/src/lib.rs; docs/internal/tui-architecture-roadmap.md
+- Current Update: Moved shared browser detail projection helpers and session behavior tests out of session.rs while preserving the crate::interactive_browser public-in-crate helper surface.
+- Result: `session.rs` dropped below the architecture warning threshold and `make quality-architecture` is clean.
+
 ## 2026-06-11 - Review contract test split
 - State: Done
 - Scope: rust/src/commands/review_contract.rs; rust/src/commands/review_contract_tests.rs; docs/internal/tui-architecture-roadmap.md
@@ -55,9 +61,3 @@ Current AI-maintained status only.
 - Scope: rust/src/commands/review_browser.rs; rust/src/commands/datasource/cli/formats.rs; rust/src/commands/datasource/cli/defs_sync.rs; rust/src/commands/datasource/runtime_guardrails.rs; rust/src/commands/datasource/import/dry_run_output.rs; rust/src/commands/datasource/plan/render.rs; docs/commands/en/datasource-{plan,import}.md; docs/commands/zh-TW/datasource-{plan,import}.md
 - Current Update: Added shared read-only mutation review browser projection and wired datasource plan/import dry-run interactive output.
 - Result: Operators can inspect datasource plan and import dry-run actions interactively with blockers, warnings, review hints, and safe diffs while public JSON remains unchanged.
-
-## 2026-05-25 - TUI empty selection key handling
-- State: Done
-- Scope: rust/src/commands/datasource/browse/input.rs; rust/src/commands/access/user_browse_dispatch.rs; rust/src/commands/access/user_browse_input.rs; rust/src/commands/access/team_browse_dispatch.rs; rust/src/commands/access/team_browse_input_tests.rs
-- Current Update: Kept datasource/access browse edit and delete keys inside the TUI when no row is selected, surfacing status messages instead of propagating selected-row errors.
-- Result: Datasource browse, access user browse, and access team browse now treat empty edit/delete key presses as in-browser no-selection states.

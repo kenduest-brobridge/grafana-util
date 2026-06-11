@@ -23,3 +23,9 @@
 - Scope: rust/src/commands/status/overview/tui.rs
 - Current Update: Changed status overview interactive mode to start with the Items pane focused so Up/Down moves rows immediately after launch instead of requiring Tab first.
 - Result: Operators entering status overview interactive mode can navigate the item list with arrow keys immediately. Project Home remains available via h and its handoff behavior is preserved. Public CLI paths, help text, generated docs, and command contracts are unchanged.
+
+## 2026-05-25 - TUI empty selection key handling
+- State: Done
+- Scope: rust/src/commands/datasource/browse/input.rs; rust/src/commands/access/user_browse_dispatch.rs; rust/src/commands/access/user_browse_input.rs; rust/src/commands/access/team_browse_dispatch.rs; rust/src/commands/access/team_browse_input_tests.rs
+- Current Update: Kept datasource/access browse edit and delete keys inside the TUI when no row is selected, surfacing status messages instead of propagating selected-row errors.
+- Result: Datasource browse, access user browse, and access team browse now treat empty edit/delete key presses as in-browser no-selection states.
