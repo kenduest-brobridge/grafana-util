@@ -26,6 +26,13 @@ Current AI change log only.
 - Older entries moved to [`ai-changes-archive-2026-05-28.md`](/Users/ken/work/grafana-utils/docs/internal/archive/ai-changes-archive-2026-05-28.md).
 - Older entries moved to [`ai-changes-archive-2026-06-11.md`](/Users/ken/work/grafana-utils/docs/internal/archive/ai-changes-archive-2026-06-11.md).
 
+## 2026-06-11 - Datasource browse TUI chrome split
+- Summary: Moved datasource browse footer controls and search prompt rendering into a dedicated TUI chrome module while keeping the main renderer focused on frame, list, and detail layout.
+- Tests: cargo test --quiet datasource_browse --features tui; make quality-rust; make quality-architecture; cargo check --quiet --no-default-features --all-targets; python3 scripts/tui_inventory_report.py --json; make quality-ai-workflow
+- Impact: `datasource/browse/render.rs` is now below the architecture warning threshold, reducing the warning list from four files to three without changing public CLI paths, help text, generated docs, or interactive behavior.
+- Rollback/Risk: Low; this is a structural move of existing footer/search rendering covered by focused datasource browse render tests.
+- Follow-up: Continue reducing the remaining TUI/shared warning-threshold files: datasource browse support, review_contract, and shared browser session.
+
 ## 2026-06-11 - Status overview TUI support split
 - Summary: Split status overview TUI runtime and focused tests out of the state/search module while preserving existing interactive behavior.
 - Tests: cargo test --quiet overview_tui --features tui; make quality-rust; make quality-architecture; cargo check --quiet --no-default-features --all-targets; python3 scripts/tui_inventory_report.py --json; make quality-ai-workflow
@@ -88,10 +95,3 @@ Current AI change log only.
 - Impact: Access plan TUI keeps the same Change: field bundle/live rows while the reusable review contract now owns safe changed-field filtering and compact value formatting for generic mutation action changes. Public CLI paths, help text, generated docs, and command contracts are unchanged.
 - Rollback/Risk: Low. This moves equivalent projection code into review_contract and focused access/review-contract tests cover safe field filtering plus existing TUI output.
 - Follow-up: Continue moving compatible mutation review target/context rows out of per-surface TUI renderers and into shared review projections.
-
-## 2026-05-25 - Shared review diff preview projection
-- Summary: Moved access plan action diff-preview line projection into the shared review contract so mutation review surfaces can reuse safe live/desired preview rows.
-- Tests: cargo test --quiet review_mutation_action_diff_preview_lines_hide_secret_like_fields; cargo test --quiet access_plan_interactive_shared_diff_preview_hides_secret_like_fields; cargo test --quiet access_plan_interactive_browser; cargo test --quiet review_contract; cargo test --quiet access (outside sandbox for local mock-server coverage after sandbox denied binding); RUSTFLAGS=-Dwarnings cargo check --quiet --no-default-features --all-targets; cargo fmt --check; python3 scripts/tui_inventory_report.py; make quality-ai-workflow; git diff --check
-- Impact: Access plan TUI keeps the same shared diff preview output and secret-like field filtering while the reusable review contract now owns the generic action changes to ReviewDiffModel preview projection. Public CLI paths, help text, generated docs, and command contracts are unchanged.
-- Rollback/Risk: Low. This moves equivalent projection code into review_contract and focused access/review-contract tests cover safe field filtering plus existing TUI output.
-- Follow-up: Continue moving compatible mutation review detail rows out of per-surface TUI renderers and into shared review projections.

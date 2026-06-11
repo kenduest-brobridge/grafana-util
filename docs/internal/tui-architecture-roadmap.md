@@ -80,6 +80,10 @@ still look like possible shared-helper follow-up work.
 
 ## Recent Follow-Up
 
+- Datasource browse footer controls and search prompt rendering now live in
+  `render_chrome.rs`, keeping `render.rs` focused on frame, list, and detail
+  layout. This removed `datasource/browse/render.rs` from the architecture
+  warning-threshold list without changing public CLI behavior.
 - Status overview TUI now follows the smaller facade/runtime/tests shape used by
   the newer status TUI module: `tui.rs` owns state and search behavior,
   `tui_runtime.rs` owns the terminal event loop, and `tui_tests.rs` owns the

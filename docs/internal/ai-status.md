@@ -26,6 +26,12 @@ Current AI-maintained status only.
 - Older entries moved to [`ai-status-archive-2026-05-28.md`](/Users/ken/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-05-28.md).
 - Older entries moved to [`ai-status-archive-2026-06-11.md`](/Users/ken/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-06-11.md).
 
+## 2026-06-11 - Datasource browse TUI chrome split
+- State: Done
+- Scope: rust/src/commands/datasource/browse/render.rs; rust/src/commands/datasource/browse/render_chrome.rs; rust/src/commands/datasource/mod.rs; docs/internal/tui-architecture-roadmap.md
+- Current Update: Moved datasource browse footer controls and search prompt rendering into a dedicated chrome module while preserving the existing renderer tests.
+- Result: `datasource/browse/render.rs` dropped below the architecture warning threshold; datasource browse rendering remains behavior-compatible and the remaining architecture warnings are datasource browse support, review_contract, and shared browser session.
+
 ## 2026-06-11 - Status overview TUI support split
 - State: Done
 - Scope: rust/src/commands/status/overview/tui.rs; rust/src/commands/status/overview/tui_runtime.rs; rust/src/commands/status/overview/tui_tests.rs; docs/internal/tui-architecture-roadmap.md
@@ -55,9 +61,3 @@ Current AI-maintained status only.
 - Scope: docs/internal/tui-architecture-roadmap.md
 - Current Update: Replaced the open-ended TUI follow-up section with a completion audit that maps current evidence to the finished shared review/detail/diff projection work and records why domain-specific input loops remain local.
 - Result: The roadmap now has an evidence-backed completion audit instead of stale continue-follow-up items. Public CLI paths, help text, generated docs, Rust runtime behavior, and command contracts are unchanged.
-
-## 2026-05-25 - Shared review narrative and impact projection
-- State: Done
-- Scope: rust/src/commands/review_contract.rs; rust/src/commands/access/access_plan_tui.rs; rust/src/commands/access/access_plan_types.rs; docs/internal/tui-architecture-roadmap.md
-- Current Update: Moved access plan narrative and impact row projection into the shared review contract so mutation review surfaces can reuse action/status/changed-field guidance text.
-- Result: Access plan TUI keeps the same Narrative and Why this matters rows while review_contract now owns the generic action narrative and changed-field impact projection. Public CLI paths, help text, generated docs, and command contracts are unchanged.

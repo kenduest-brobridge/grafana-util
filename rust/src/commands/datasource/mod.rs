@@ -28,6 +28,9 @@ mod datasource_browse_input;
 #[path = "browse/render.rs"]
 mod datasource_browse_render;
 #[cfg(feature = "tui")]
+#[path = "browse/render_chrome.rs"]
+mod datasource_browse_render_chrome;
+#[cfg(feature = "tui")]
 #[path = "browse/state.rs"]
 mod datasource_browse_state;
 #[path = "browse/support.rs"]
