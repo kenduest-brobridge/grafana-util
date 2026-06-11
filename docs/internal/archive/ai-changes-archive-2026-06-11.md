@@ -20,3 +20,10 @@
 - Impact: Access plan TUI keeps the same Change: field bundle/live rows while the reusable review contract now owns safe changed-field filtering and compact value formatting for generic mutation action changes. Public CLI paths, help text, generated docs, and command contracts are unchanged.
 - Rollback/Risk: Low. This moves equivalent projection code into review_contract and focused access/review-contract tests cover safe field filtering plus existing TUI output.
 - Follow-up: Continue moving compatible mutation review target/context rows out of per-surface TUI renderers and into shared review projections.
+
+## 2026-05-25 - Shared review target evidence projection
+- Summary: Moved access plan live-target evidence row projection into the shared review contract so mutation review surfaces can reuse known target field rows.
+- Tests: cargo test --quiet review_mutation_action_target_evidence_lines_project_known_live_target_fields; cargo test --quiet access_plan_interactive_browser; cargo test --quiet review_contract; cargo test --quiet access (outside sandbox for local mock-server coverage after sandbox denied binding); RUSTFLAGS=-Dwarnings cargo check --quiet --no-default-features --all-targets; cargo fmt --check; python3 scripts/tui_inventory_report.py; make quality-ai-workflow; git diff --check
+- Impact: Access plan TUI keeps the same Live target: key=value rows while review_contract now owns the known target field projection for generic mutation actions. Public CLI paths, help text, generated docs, and command contracts are unchanged.
+- Rollback/Risk: Low. This moves equivalent target projection code into review_contract and focused access/review-contract tests cover the old output.
+- Follow-up: Continue moving compatible warning/blocker context rows out of per-surface TUI renderers and into shared review projections.

@@ -17,3 +17,9 @@
 - Scope: docs/internal/tui-architecture-roadmap.md
 - Current Update: Replaced the open-ended TUI follow-up section with a completion audit that maps current evidence to the finished shared review/detail/diff projection work and records why domain-specific input loops remain local.
 - Result: The roadmap now has an evidence-backed completion audit instead of stale continue-follow-up items. Public CLI paths, help text, generated docs, Rust runtime behavior, and command contracts are unchanged.
+
+## 2026-05-25 - Status overview starts on items
+- State: Done
+- Scope: rust/src/commands/status/overview/tui.rs
+- Current Update: Changed status overview interactive mode to start with the Items pane focused so Up/Down moves rows immediately after launch instead of requiring Tab first.
+- Result: Operators entering status overview interactive mode can navigate the item list with arrow keys immediately. Project Home remains available via h and its handoff behavior is preserved. Public CLI paths, help text, generated docs, and command contracts are unchanged.

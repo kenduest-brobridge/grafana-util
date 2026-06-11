@@ -80,6 +80,10 @@ still look like possible shared-helper follow-up work.
 
 ## Recent Follow-Up
 
+- Shared review contract tests now live in `review_contract_tests.rs`, leaving
+  `review_contract.rs` focused on contract constants, action projection helpers,
+  and envelope builders. This removed `review_contract.rs` from the architecture
+  warning-threshold list without changing public CLI behavior.
 - Datasource browse review-evidence projection now lives in `support_review.rs`,
   leaving `support.rs` focused on browse documents, item rows, and detail facts.
   This removed `datasource/browse/support.rs` from the architecture

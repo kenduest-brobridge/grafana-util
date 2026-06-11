@@ -26,6 +26,12 @@ Current AI-maintained status only.
 - Older entries moved to [`ai-status-archive-2026-05-28.md`](/Users/ken/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-05-28.md).
 - Older entries moved to [`ai-status-archive-2026-06-11.md`](/Users/ken/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-06-11.md).
 
+## 2026-06-11 - Review contract test split
+- State: Done
+- Scope: rust/src/commands/review_contract.rs; rust/src/commands/review_contract_tests.rs; docs/internal/tui-architecture-roadmap.md
+- Current Update: Moved shared review contract inline tests into a file-backed test module while preserving the same private-helper coverage.
+- Result: `review_contract.rs` dropped below the architecture warning threshold; the only remaining architecture warning is shared browser session.
+
 ## 2026-06-11 - Datasource browse support review split
 - State: Done
 - Scope: rust/src/commands/datasource/browse/support.rs; rust/src/commands/datasource/browse/support_review.rs; rust/src/commands/datasource/mod.rs; docs/internal/tui-architecture-roadmap.md
@@ -55,9 +61,3 @@ Current AI-maintained status only.
 - Scope: rust/src/commands/datasource/browse/input.rs; rust/src/commands/access/user_browse_dispatch.rs; rust/src/commands/access/user_browse_input.rs; rust/src/commands/access/team_browse_dispatch.rs; rust/src/commands/access/team_browse_input_tests.rs
 - Current Update: Kept datasource/access browse edit and delete keys inside the TUI when no row is selected, surfacing status messages instead of propagating selected-row errors.
 - Result: Datasource browse, access user browse, and access team browse now treat empty edit/delete key presses as in-browser no-selection states.
-
-## 2026-05-25 - Status overview starts on items
-- State: Done
-- Scope: rust/src/commands/status/overview/tui.rs
-- Current Update: Changed status overview interactive mode to start with the Items pane focused so Up/Down moves rows immediately after launch instead of requiring Tab first.
-- Result: Operators entering status overview interactive mode can navigate the item list with arrow keys immediately. Project Home remains available via h and its handoff behavior is preserved. Public CLI paths, help text, generated docs, and command contracts are unchanged.
