@@ -26,6 +26,12 @@ Current AI-maintained status only.
 - Older entries moved to [`ai-status-archive-2026-05-28.md`](/Users/ken/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-05-28.md).
 - Older entries moved to [`ai-status-archive-2026-06-11.md`](/Users/ken/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-06-11.md).
 
+## 2026-06-11 - Datasource browse support review split
+- State: Done
+- Scope: rust/src/commands/datasource/browse/support.rs; rust/src/commands/datasource/browse/support_review.rs; rust/src/commands/datasource/mod.rs; docs/internal/tui-architecture-roadmap.md
+- Current Update: Moved datasource browse review-evidence projection and safe changed-field filtering into a dedicated support review module while preserving existing detail/review tests.
+- Result: `datasource/browse/support.rs` dropped below the architecture warning threshold; the remaining architecture warnings are review_contract and shared browser session.
+
 ## 2026-06-11 - Datasource browse TUI chrome split
 - State: Done
 - Scope: rust/src/commands/datasource/browse/render.rs; rust/src/commands/datasource/browse/render_chrome.rs; rust/src/commands/datasource/mod.rs; docs/internal/tui-architecture-roadmap.md
@@ -55,9 +61,3 @@ Current AI-maintained status only.
 - Scope: rust/src/commands/status/overview/tui.rs
 - Current Update: Changed status overview interactive mode to start with the Items pane focused so Up/Down moves rows immediately after launch instead of requiring Tab first.
 - Result: Operators entering status overview interactive mode can navigate the item list with arrow keys immediately. Project Home remains available via h and its handoff behavior is preserved. Public CLI paths, help text, generated docs, and command contracts are unchanged.
-
-## 2026-05-25 - TUI completion audit
-- State: Done
-- Scope: docs/internal/tui-architecture-roadmap.md
-- Current Update: Replaced the open-ended TUI follow-up section with a completion audit that maps current evidence to the finished shared review/detail/diff projection work and records why domain-specific input loops remain local.
-- Result: The roadmap now has an evidence-backed completion audit instead of stale continue-follow-up items. Public CLI paths, help text, generated docs, Rust runtime behavior, and command contracts are unchanged.

@@ -80,6 +80,10 @@ still look like possible shared-helper follow-up work.
 
 ## Recent Follow-Up
 
+- Datasource browse review-evidence projection now lives in `support_review.rs`,
+  leaving `support.rs` focused on browse documents, item rows, and detail facts.
+  This removed `datasource/browse/support.rs` from the architecture
+  warning-threshold list without changing public CLI behavior.
 - Datasource browse footer controls and search prompt rendering now live in
   `render_chrome.rs`, keeping `render.rs` focused on frame, list, and detail
   layout. This removed `datasource/browse/render.rs` from the architecture

@@ -35,6 +35,8 @@ mod datasource_browse_render_chrome;
 mod datasource_browse_state;
 #[path = "browse/support.rs"]
 mod datasource_browse_support;
+#[path = "browse/support_review.rs"]
+mod datasource_browse_support_review;
 #[cfg(feature = "tui")]
 #[path = "browse/terminal.rs"]
 mod datasource_browse_terminal;
@@ -70,11 +72,11 @@ mod datasource_runtime_mutation;
 #[path = "runtime_sync.rs"]
 mod datasource_runtime_sync;
 
-pub(crate) use datasource_browse_support::is_safe_changed_field;
 #[cfg(any(feature = "tui", test))]
-pub(crate) use datasource_browse_support::{
-    datasource_browser_detail_lines_from_details, review_lines_from_datasource_details,
-};
+pub(crate) use datasource_browse_support::datasource_browser_detail_lines_from_details;
+pub(crate) use datasource_browse_support_review::is_safe_changed_field;
+#[cfg(any(feature = "tui", test))]
+pub(crate) use datasource_browse_support_review::review_lines_from_datasource_details;
 pub(crate) use datasource_cli_defs::{normalize_datasource_group_command, root_command};
 pub use datasource_cli_defs::{
     ArtifactRunMode, DatasourceAddArgs, DatasourceBrowseArgs, DatasourceCliArgs,
