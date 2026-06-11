@@ -971,9 +971,9 @@ grafana-util config profile current --profile prod</code></pre>
 <pre><code># Validate the selected profile and check Grafana reachability.
 grafana-util config profile validate --profile prod --live</code></pre>
 <pre><code># Create a reusable production profile with prompt-based secrets.
-grafana-util config profile add prod --url https://grafana.example.com --basic-user admin --prompt-password --store-secret encrypted-file</code></pre>
+grafana-util config profile add prod --url https://grafana.example.com --verify-ssl --basic-user admin --prompt-password --store-secret encrypted-file</code></pre>
 <pre><code># Create a CI profile that reads the token from an environment variable.
-grafana-util config profile add ci --url https://grafana.example.com --token-env GRAFANA_CI_TOKEN --store-secret os</code></pre>
+grafana-util config profile add ci --url https://grafana.example.com --verify-ssl --token-env GRAFANA_CI_TOKEN --store-secret os</code></pre>
 <pre><code># Print a fully annotated profile template.
 grafana-util config profile example --mode full</code></pre>
 <pre><code># Initialize a fresh grafana-util.yaml in the current checkout.
@@ -1037,7 +1037,7 @@ grafana-util config profile validate --profile prod --live --output-format json<
 <pre><code># add.
 grafana-util config profile add dev --url http://127.0.0.1:3000 --basic-user admin --password-env GRAFANA_DEV_PASSWORD</code></pre>
 <pre><code># add.
-grafana-util config profile add prod --url https://grafana.example.com --basic-user admin --prompt-password --store-secret os --set-default</code></pre>
+grafana-util config profile add prod --url https://grafana.example.com --verify-ssl --basic-user admin --prompt-password --store-secret os --set-default</code></pre>
 <pre><code># add.
 grafana-util config profile add stage --url https://grafana-stage.example.com --token-env GRAFANA_STAGE_TOKEN --store-secret encrypted-file --prompt-secret-passphrase</code></pre>
 <p>Notes:</p>

@@ -2,7 +2,7 @@ use std::fs;
 use std::path::Path;
 
 use crate::common::{validation, Result};
-use crate::profile_secret_store::ensure_owner_only_permissions;
+use crate::profile_secret_store::write_owner_only_file;
 
 use super::ProfileConfigFile;
 
@@ -31,13 +31,12 @@ pub fn save_profile_config_file(path: &Path, config: &ProfileConfigFile) -> Resu
             ))
         })?;
     }
-    fs::write(path, rendered).map_err(|error| {
+    write_owner_only_file(path, &rendered).map_err(|error| {
         validation(format!(
             "Failed to write grafana-util profile config {}: {error}",
             path.display()
         ))
     })?;
-    ensure_owner_only_permissions(path)?;
     Ok(())
 }
 

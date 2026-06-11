@@ -22,7 +22,7 @@ Options:
       --timeout <TIMEOUT>
           HTTP timeout in seconds. [default: 30]
       --verify-ssl
-          Enable TLS certificate verification. Verification is disabled by default.
+          Require TLS certificate verification. HTTPS URLs are verified by default.
       --page-size <PAGE_SIZE>
           Dashboard search page size. [default: 500]
       --concurrency <CONCURRENCY>

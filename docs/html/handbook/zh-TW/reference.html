@@ -1037,7 +1037,7 @@ grafana-util config profile init --overwrite</code></pre>
 <pre><code># 建立會互動輸入密碼的 dev profile。
 grafana-util config profile add dev --url http://127.0.0.1:3000 --basic-user admin --prompt-password</code></pre>
 <pre><code># 建立從環境變數讀 token 的 CI profile。
-grafana-util config profile add ci --url https://grafana.example.com --token-env GRAFANA_CI_TOKEN --store-secret os</code></pre>
+grafana-util config profile add ci --url https://grafana.example.com --verify-ssl --token-env GRAFANA_CI_TOKEN --store-secret os</code></pre>
 <pre><code># 列出目前設定檔解析到的 profile 名稱。
 grafana-util config profile list</code></pre>
 <pre><code># 印出完整註解版 profile 範本。
@@ -1125,20 +1125,20 @@ grafana-util status overview live --url http://localhost:3000 --token &quot;$GRA
 <h3 id="6-完整的-secret-handling-範例">6. 完整的 secret-handling 範例</h3>
 <pre><code># 用環境變數承載密碼，建立可重複使用的本機 profile。
 export GRAFANA_PROD_PASSWORD=&#x27;workspace-me&#x27;
-grafana-util config profile add prod --url https://grafana.example.com --basic-user admin --password-env GRAFANA_PROD_PASSWORD</code></pre>
+grafana-util config profile add prod --url https://grafana.example.com --verify-ssl --basic-user admin --password-env GRAFANA_PROD_PASSWORD</code></pre>
 <pre><code># 用環境變數承載密碼，建立可重複使用的本機 profile。
 grafana-util status live --profile prod --output-format yaml</code></pre>
 <pre><code># 在 macOS 或 Linux 桌面上，把 secret 放進 OS secret store。
-grafana-util config profile add prod-os --url https://grafana.example.com --basic-user admin --prompt-password --store-secret os</code></pre>
+grafana-util config profile add prod-os --url https://grafana.example.com --verify-ssl --basic-user admin --prompt-password --store-secret os</code></pre>
 <pre><code># 在 macOS 或 Linux 桌面上，把 secret 放進 OS secret store。
 grafana-util status overview live --profile prod-os --output-format interactive</code></pre>
 <pre><code># 使用帶 passphrase 的加密 secret file。
-grafana-util config profile add prod-encrypted --url https://grafana.example.com --basic-user admin --prompt-password --store-secret encrypted-file --prompt-secret-passphrase</code></pre>
+grafana-util config profile add prod-encrypted --url https://grafana.example.com --verify-ssl --basic-user admin --prompt-password --store-secret encrypted-file --prompt-secret-passphrase</code></pre>
 <pre><code># 使用帶 passphrase 的加密 secret file。
 grafana-util status live --profile prod-encrypted --output-format yaml</code></pre>
 <pre><code># 在自動化流程中，以環境變數承載 scoped token。
 export GRAFANA_CI_TOKEN=&#x27;replace-me&#x27;
-grafana-util config profile add ci --url https://grafana.example.com --token-env GRAFANA_CI_TOKEN</code></pre>
+grafana-util config profile add ci --url https://grafana.example.com --verify-ssl --token-env GRAFANA_CI_TOKEN</code></pre>
 <pre><code># 在自動化流程中，以環境變數承載 scoped token。
 grafana-util status overview live --profile ci --output-format json</code></pre>
 <p>這組範例的重點是：</p>

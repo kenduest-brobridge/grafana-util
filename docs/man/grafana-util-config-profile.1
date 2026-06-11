@@ -50,11 +50,11 @@ grafana\-util config profile validate \-\-profile prod \-\-live
 .PP
 # Create a reusable production profile with prompt\-based secrets.
 .PP
-grafana\-util config profile add prod \-\-url https://grafana.example.com \-\-basic\-user admin \-\-prompt\-password \-\-store\-secret encrypted\-file
+grafana\-util config profile add prod \-\-url https://grafana.example.com \-\-verify\-ssl \-\-basic\-user admin \-\-prompt\-password \-\-store\-secret encrypted\-file
 .PP
 # Create a CI profile that reads the token from an environment variable.
 .PP
-grafana\-util config profile add ci \-\-url https://grafana.example.com \-\-token\-env GRAFANA_CI_TOKEN \-\-store\-secret os
+grafana\-util config profile add ci \-\-url https://grafana.example.com \-\-verify\-ssl \-\-token\-env GRAFANA_CI_TOKEN \-\-store\-secret os
 .PP
 # Print a fully annotated profile template.
 .PP

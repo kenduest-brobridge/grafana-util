@@ -104,7 +104,7 @@ grafana-util config profile init --overwrite
 
 ```bash
 # 建立可重複使用的 production profile。
-grafana-util config profile add prod --url https://grafana.example.com --basic-user admin --prompt-password --store-secret encrypted-file
+grafana-util config profile add prod --url https://grafana.example.com --verify-ssl --basic-user admin --prompt-password --store-secret encrypted-file
 ```
 
 ## 相關指令

@@ -952,7 +952,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <ol><li><code>config profile</code> with <code>password_env</code> or <code>token_env</code> for repeatable jobs and repo-local config.</li><li>Direct Basic auth only for bootstrap or one-off validation in a safe local shell.</li><li>Token auth is the normal steady state for narrow automation, as long as the token scope matches the exact resource set you need.</li></ol>
 <h2 id="first-commands-to-run">First commands to run</h2>
 <pre><code># First commands to run.
-grafana-util config profile add ci --url https://grafana.example.com --token-env GRAFANA_CI_TOKEN</code></pre>
+grafana-util config profile add ci --url https://grafana.example.com --verify-ssl --token-env GRAFANA_CI_TOKEN</code></pre>
 <pre><code># First commands to run.
 grafana-util config profile show --profile ci --output-format yaml</code></pre>
 <pre><code># First commands to run.

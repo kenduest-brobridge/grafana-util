@@ -158,7 +158,7 @@ pub struct ProjectStatusLiveArgs {
     #[arg(
         long,
         default_value_t = false,
-        help = "Enable TLS certificate verification. Verification is disabled by default."
+        help = "Require TLS certificate verification. HTTPS URLs are verified by default."
     )]
     pub verify_ssl: bool,
     #[arg(

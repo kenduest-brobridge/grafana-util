@@ -271,7 +271,7 @@ grafana-util config profile add dev --url http://127.0.0.1:3000 --basic-user adm
 
 ```bash
 # 建立從環境變數讀 token 的 CI profile。
-grafana-util config profile add ci --url https://grafana.example.com --token-env GRAFANA_CI_TOKEN --store-secret os
+grafana-util config profile add ci --url https://grafana.example.com --verify-ssl --token-env GRAFANA_CI_TOKEN --store-secret os
 ```
 
 ```bash
@@ -392,7 +392,7 @@ grafana-util status overview live --url http://localhost:3000 --token "$GRAFANA_
 ```bash
 # 用環境變數承載密碼，建立可重複使用的本機 profile。
 export GRAFANA_PROD_PASSWORD='workspace-me'
-grafana-util config profile add prod --url https://grafana.example.com --basic-user admin --password-env GRAFANA_PROD_PASSWORD
+grafana-util config profile add prod --url https://grafana.example.com --verify-ssl --basic-user admin --password-env GRAFANA_PROD_PASSWORD
 ```
 
 ```bash
@@ -402,7 +402,7 @@ grafana-util status live --profile prod --output-format yaml
 
 ```bash
 # 在 macOS 或 Linux 桌面上，把 secret 放進 OS secret store。
-grafana-util config profile add prod-os --url https://grafana.example.com --basic-user admin --prompt-password --store-secret os
+grafana-util config profile add prod-os --url https://grafana.example.com --verify-ssl --basic-user admin --prompt-password --store-secret os
 ```
 
 ```bash
@@ -412,7 +412,7 @@ grafana-util status overview live --profile prod-os --output-format interactive
 
 ```bash
 # 使用帶 passphrase 的加密 secret file。
-grafana-util config profile add prod-encrypted --url https://grafana.example.com --basic-user admin --prompt-password --store-secret encrypted-file --prompt-secret-passphrase
+grafana-util config profile add prod-encrypted --url https://grafana.example.com --verify-ssl --basic-user admin --prompt-password --store-secret encrypted-file --prompt-secret-passphrase
 ```
 
 ```bash
@@ -423,7 +423,7 @@ grafana-util status live --profile prod-encrypted --output-format yaml
 ```bash
 # 在自動化流程中，以環境變數承載 scoped token。
 export GRAFANA_CI_TOKEN='replace-me'
-grafana-util config profile add ci --url https://grafana.example.com --token-env GRAFANA_CI_TOKEN
+grafana-util config profile add ci --url https://grafana.example.com --verify-ssl --token-env GRAFANA_CI_TOKEN
 ```
 
 ```bash

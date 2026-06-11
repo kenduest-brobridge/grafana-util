@@ -19,6 +19,7 @@ mod secrets;
 mod selection;
 
 pub use connection::resolve_connection_settings;
+pub(crate) use connection::url_requires_tls_verification;
 pub use io::{load_profile_config_file, render_profile_init_template, save_profile_config_file};
 pub use models::{
     ConnectionMergeInput, ConnectionProfile, ProfileConfigFile, ResolvedConnectionSettings,
@@ -225,6 +226,41 @@ mod tests {
         env::remove_var("GRAFANA_URL");
 
         assert_eq!(resolved.url, "https://env-grafana.example.com");
+        assert!(resolved.verify_ssl);
+    }
+
+    #[test]
+    fn resolve_connection_settings_verifies_https_profile_by_default() {
+        let _env_guard = env_lock();
+        env::remove_var("GRAFANA_URL");
+        let selected_profile = super::SelectedProfile {
+            name: "prod".to_string(),
+            source_path: PathBuf::from("./grafana-util.yaml"),
+            profile: ConnectionProfile {
+                url: Some("https://grafana.example.com".to_string()),
+                token: Some("profile-token".to_string()),
+                ..ConnectionProfile::default()
+            },
+        };
+        let resolved = resolve_connection_settings(
+            ConnectionMergeInput {
+                url: "",
+                url_default: "",
+                api_token: None,
+                username: None,
+                password: None,
+                org_id: None,
+                timeout: 30,
+                timeout_default: 30,
+                verify_ssl: false,
+                insecure: false,
+                ca_cert: None,
+            },
+            Some(&selected_profile),
+        )
+        .unwrap();
+
+        assert!(resolved.verify_ssl);
     }
 
     #[test]

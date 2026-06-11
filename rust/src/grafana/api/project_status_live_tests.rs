@@ -14,13 +14,22 @@ mod test_support;
 
 use test_support::{build_test_client, http_response};
 
+macro_rules! test_client_or_skip {
+    ($responses:expr) => {
+        match build_test_client($responses) {
+            Some(client) => client,
+            None => return,
+        }
+    };
+}
+
 #[test]
 fn list_visible_orgs_parses_orgs() {
     let responses = vec![http_response(
         "200 OK",
         r#"[{"id":1,"name":"Main"},{"id":2,"name":"Edge"}]"#,
     )];
-    let (client, requests, handle) = build_test_client(responses);
+    let (client, requests, handle) = test_client_or_skip!(responses);
     let orgs = list_visible_orgs(&client).unwrap();
     handle.join().unwrap();
 
@@ -57,7 +66,7 @@ fn fetch_current_org_with_request_parses_org() {
 #[test]
 fn fetch_current_org_parses_org() {
     let responses = vec![http_response("200 OK", r#"{"id":1,"name":"Main"}"#)];
-    let (client, requests, handle) = build_test_client(responses);
+    let (client, requests, handle) = test_client_or_skip!(responses);
     let org = fetch_current_org(&client).unwrap();
     handle.join().unwrap();
 
@@ -71,7 +80,7 @@ fn latest_dashboard_version_timestamp_uses_first_summary_uid() {
         "200 OK",
         r#"[{"version":7,"created":"2026-01-01T00:00:00Z"}]"#,
     )];
-    let (client, requests, handle) = build_test_client(responses);
+    let (client, requests, handle) = test_client_or_skip!(responses);
     let timestamp = latest_dashboard_version_timestamp(
         &client,
         &[json!({"uid":"cpu-main","title":"CPU"})
@@ -100,7 +109,7 @@ fn collect_live_dashboard_project_status_inputs_reads_dashboard_and_datasource_s
             r#"[{"uid":"prom-main","name":"Prometheus Main","type":"prometheus"}]"#,
         ),
     ];
-    let (client, requests, handle) = build_test_client(responses);
+    let (client, requests, handle) = test_client_or_skip!(responses);
     let inputs = collect_live_dashboard_project_status_inputs(&client, DEFAULT_PAGE_SIZE).unwrap();
     handle.join().unwrap();
 
@@ -115,7 +124,7 @@ fn collect_live_dashboard_project_status_inputs_reads_dashboard_and_datasource_s
 
 #[test]
 fn dashboard_project_status_freshness_samples_collects_dashboard_and_datasource_timestamps() {
-    let (client, _, handle) = build_test_client(vec![
+    let (client, _, handle) = test_client_or_skip!(vec![
         http_response(
             "200 OK",
             r#"[{"uid":"cpu-main","title":"CPU Main","updatedAt":"2026-01-01T00:00:00Z"}]"#,
@@ -162,7 +171,7 @@ fn load_alert_surface_documents_tolerates_null_templates() {
         http_response("200 OK", "{}"),
         http_response("200 OK", "null"),
     ];
-    let (client, requests, handle) = build_test_client(responses);
+    let (client, requests, handle) = test_client_or_skip!(responses);
     let docs = load_alert_surface_documents(&client);
     handle.join().unwrap();
 

@@ -50,7 +50,7 @@
 
 ```bash
 # 建議先跑的 5 個指令。
-grafana-util config profile add ci --url https://grafana.example.com --token-env GRAFANA_CI_TOKEN
+grafana-util config profile add ci --url https://grafana.example.com --verify-ssl --token-env GRAFANA_CI_TOKEN
 ```
 
 ```bash

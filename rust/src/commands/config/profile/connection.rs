@@ -69,7 +69,7 @@ pub fn resolve_connection_settings(
         .ca_cert
         .map(Path::to_path_buf)
         .or_else(|| profile.and_then(|item| item.ca_cert.clone()));
-    let verify_ssl = resolve_verify_ssl(input, selected_profile, profile, ca_cert.is_some())?;
+    let verify_ssl = resolve_verify_ssl(input, selected_profile, profile, ca_cert.is_some(), &url)?;
 
     Ok(ResolvedConnectionSettings {
         url,
@@ -103,6 +103,7 @@ fn resolve_verify_ssl(
     selected_profile: Option<&SelectedProfile>,
     profile: Option<&ConnectionProfile>,
     ca_cert_present: bool,
+    url: &str,
 ) -> Result<bool> {
     if input.insecure && input.verify_ssl {
         return Err(validation(
@@ -140,5 +141,11 @@ fn resolve_verify_ssl(
             return Ok(value);
         }
     }
-    Ok(ca_cert_present)
+    Ok(ca_cert_present || url_requires_tls_verification(url))
+}
+
+pub(crate) fn url_requires_tls_verification(url: &str) -> bool {
+    reqwest::Url::parse(url)
+        .map(|parsed| parsed.scheme().eq_ignore_ascii_case("https"))
+        .unwrap_or(false)
 }

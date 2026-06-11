@@ -274,7 +274,7 @@ grafana-util config profile add dev --url http://127.0.0.1:3000 --basic-user adm
 
 ```bash
 # Create a CI profile that reads its token from the environment.
-grafana-util config profile add ci --url https://grafana.example.com --token-env GRAFANA_CI_TOKEN --store-secret os
+grafana-util config profile add ci --url https://grafana.example.com --verify-ssl --token-env GRAFANA_CI_TOKEN --store-secret os
 ```
 
 ```bash
@@ -395,7 +395,7 @@ Use the `--profile` form by default. Keep direct Basic auth for admin-heavy work
 ```bash
 # Environment-backed password for a repeatable local profile.
 export GRAFANA_PROD_PASSWORD='workspace-me'
-grafana-util config profile add prod --url https://grafana.example.com --basic-user admin --password-env GRAFANA_PROD_PASSWORD
+grafana-util config profile add prod --url https://grafana.example.com --verify-ssl --basic-user admin --password-env GRAFANA_PROD_PASSWORD
 ```
 
 ```bash
@@ -405,7 +405,7 @@ grafana-util status live --profile prod --output-format yaml
 
 ```bash
 # OS secret store for a desktop operator workflow on macOS or Linux.
-grafana-util config profile add prod-os --url https://grafana.example.com --basic-user admin --prompt-password --store-secret os
+grafana-util config profile add prod-os --url https://grafana.example.com --verify-ssl --basic-user admin --prompt-password --store-secret os
 ```
 
 ```bash
@@ -415,7 +415,7 @@ grafana-util status overview live --profile prod-os --output-format interactive
 
 ```bash
 # Encrypted file with a prompted passphrase.
-grafana-util config profile add prod-encrypted --url https://grafana.example.com --basic-user admin --prompt-password --store-secret encrypted-file --prompt-secret-passphrase
+grafana-util config profile add prod-encrypted --url https://grafana.example.com --verify-ssl --basic-user admin --prompt-password --store-secret encrypted-file --prompt-secret-passphrase
 ```
 
 ```bash
@@ -426,7 +426,7 @@ grafana-util status live --profile prod-encrypted --output-format yaml
 ```bash
 # Scoped token from the environment for automation.
 export GRAFANA_CI_TOKEN='replace-me'
-grafana-util config profile add ci --url https://grafana.example.com --token-env GRAFANA_CI_TOKEN
+grafana-util config profile add ci --url https://grafana.example.com --verify-ssl --token-env GRAFANA_CI_TOKEN
 ```
 
 ```bash

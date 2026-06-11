@@ -105,7 +105,7 @@ pub struct AlertCommonArgs {
     #[arg(
         long,
         default_value_t = false,
-        help = "Enable TLS certificate verification. Verification is disabled by default.",
+        help = "Require TLS certificate verification. HTTPS URLs are verified by default.",
         help_heading = "Transport Options"
     )]
     pub verify_ssl: bool,

@@ -951,7 +951,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <ol><li>CI 內優先用 <code>--profile</code> 搭配 <code>token_env</code> 或 <code>password_env</code>，讓 pipeline 不直接持有明文秘密。</li><li>direct Basic auth 只留給 bootstrap、除錯或手動救援，不要當成預設做法。</li><li>token 只適合單一 org 或權限邊界很明確的自動化，不要拿它去碰管理員操作。</li><li>若流程會產生 service account token，請把它視為敏感憑證並規劃輪替與撤銷。</li></ol>
 <h2 id="建議先跑的-5-個指令">建議先跑的 5 個指令</h2>
 <pre><code># 建議先跑的 5 個指令。
-grafana-util config profile add ci --url https://grafana.example.com --token-env GRAFANA_CI_TOKEN</code></pre>
+grafana-util config profile add ci --url https://grafana.example.com --verify-ssl --token-env GRAFANA_CI_TOKEN</code></pre>
 <pre><code># 建議先跑的 5 個指令。
 grafana-util config profile show --profile ci --output-format yaml</code></pre>
 <pre><code># 建議先跑的 5 個指令。

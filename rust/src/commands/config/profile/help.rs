@@ -7,7 +7,7 @@ pub(crate) const PROFILE_HELP_TEXT: &str = r#"Examples:
   grafana-util config profile show --profile prod --output-format yaml
   grafana-util config profile validate --profile prod
   grafana-util config profile validate --profile prod --live --output-format json
-  grafana-util config profile add prod --url https://grafana.example.com --basic-user admin --prompt-password --store-secret encrypted-file
+  grafana-util config profile add prod --url https://grafana.example.com --verify-ssl --basic-user admin --prompt-password --store-secret encrypted-file
   grafana-util config profile example --mode basic
   grafana-util config profile example --mode full
   grafana-util config profile init --overwrite"#;
@@ -40,8 +40,8 @@ pub(crate) const PROFILE_ADD_AFTER_HELP: &str = r#"Creates or updates one profil
 
 Examples:
 
-  grafana-util config profile add prod --url https://grafana.example.com --token-env GRAFANA_API_TOKEN --set-default
-  grafana-util config profile add prod --url https://grafana.example.com --basic-user admin --prompt-password --store-secret encrypted-file"#;
+  grafana-util config profile add prod --url https://grafana.example.com --verify-ssl --token-env GRAFANA_API_TOKEN --set-default
+  grafana-util config profile add prod --url https://grafana.example.com --verify-ssl --basic-user admin --prompt-password --store-secret encrypted-file"#;
 pub(crate) const PROFILE_INIT_AFTER_HELP: &str = r#"Creates grafana-util.yaml from the built-in profile template and refuses to overwrite it unless --overwrite is set.
 
 Examples:

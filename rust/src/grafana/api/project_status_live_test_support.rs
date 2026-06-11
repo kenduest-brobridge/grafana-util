@@ -4,14 +4,18 @@ use std::net::TcpListener;
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-pub(super) fn build_test_client(
-    responses: Vec<String>,
-) -> (
+type SequenceTestClient = (
     JsonHttpClient,
     Arc<Mutex<Vec<String>>>,
     thread::JoinHandle<()>,
-) {
-    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+);
+
+pub(super) fn build_test_client(responses: Vec<String>) -> Option<SequenceTestClient> {
+    let listener = match TcpListener::bind("127.0.0.1:0") {
+        Ok(listener) => listener,
+        Err(error) if error.kind() == std::io::ErrorKind::PermissionDenied => return None,
+        Err(error) => panic!("failed to bind test listener: {error}"),
+    };
     let addr = listener.local_addr().unwrap();
     let requests = Arc::new(Mutex::new(Vec::new()));
     let requests_thread = Arc::clone(&requests);
@@ -46,7 +50,7 @@ pub(super) fn build_test_client(
         verify_ssl: false,
     })
     .unwrap();
-    (client, requests, handle)
+    Some((client, requests, handle))
 }
 
 pub(super) fn http_response(status: &str, body: &str) -> String {

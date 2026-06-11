@@ -170,6 +170,45 @@ fn profile_add_creates_encrypted_file_store_ref_and_runtime_can_resolve_it() {
 }
 
 #[test]
+fn profile_add_sets_verify_ssl_for_https_profiles_by_default() {
+    let temp = tempdir().unwrap();
+    let config_path = temp.path().join("grafana-util.yaml");
+    let store = MemoryOsSecretStore::default();
+
+    apply_profile_add_with_store(
+        &ProfileAddArgs {
+            name: "prod".to_string(),
+            url: "https://grafana.example.com".to_string(),
+            token: None,
+            token_env: Some("GRAFANA_API_TOKEN".to_string()),
+            prompt_token: false,
+            basic_user: None,
+            basic_password: None,
+            password_env: None,
+            prompt_password: false,
+            org_id: None,
+            timeout: None,
+            verify_ssl: false,
+            insecure: false,
+            ca_cert: None,
+            set_default: true,
+            replace_existing: false,
+            store_secret: ProfileSecretStorageMode::File,
+            secret_file: None,
+            prompt_secret_passphrase: false,
+            secret_passphrase_env: None,
+        },
+        &config_path,
+        &store,
+    )
+    .unwrap();
+
+    let config = load_profile_config_file(&config_path).unwrap();
+    let profile = config.profiles.get("prod").unwrap();
+    assert_eq!(profile.verify_ssl, Some(true));
+}
+
+#[test]
 fn build_display_profile_masks_and_reveals_plaintext_secrets() {
     let selected = SelectedProfile {
         name: "prod".to_string(),

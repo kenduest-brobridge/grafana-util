@@ -80,10 +80,12 @@ mod tests {
     };
     use crate::project_status_command::{ProjectStatusLiveArgs, ProjectStatusOutputFormat};
     use reqwest::Method;
-    use std::io::{Read, Write};
+    use std::io::{ErrorKind, Read, Write};
     use std::net::TcpListener;
     use std::sync::{Arc, Mutex};
     use std::thread;
+
+    type SequenceServer = (String, Arc<Mutex<Vec<String>>>, thread::JoinHandle<()>);
 
     fn http_response(status: &str, body: &str) -> String {
         format!(
@@ -92,10 +94,12 @@ mod tests {
         )
     }
 
-    fn spawn_sequence_server(
-        responses: Vec<String>,
-    ) -> (String, Arc<Mutex<Vec<String>>>, thread::JoinHandle<()>) {
-        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    fn spawn_sequence_server(responses: Vec<String>) -> Option<SequenceServer> {
+        let listener = match TcpListener::bind("127.0.0.1:0") {
+            Ok(listener) => listener,
+            Err(error) if error.kind() == ErrorKind::PermissionDenied => return None,
+            Err(error) => panic!("failed to bind test listener: {error}"),
+        };
         let address = listener.local_addr().unwrap();
         let requests = Arc::new(Mutex::new(Vec::new()));
         let requests_thread = Arc::clone(&requests);
@@ -121,7 +125,7 @@ mod tests {
                 stream.write_all(response.as_bytes()).unwrap();
             }
         });
-        (format!("http://{address}"), requests, handle)
+        Some((format!("http://{address}"), requests, handle))
     }
 
     #[test]
@@ -158,7 +162,9 @@ mod tests {
     #[test]
     fn build_live_project_status_client_from_api_reuses_root_headers_and_adds_org_scope() {
         let responses = vec![http_response("200 OK", "{}")];
-        let (base_url, requests, handle) = spawn_sequence_server(responses);
+        let Some((base_url, requests, handle)) = spawn_sequence_server(responses) else {
+            return;
+        };
         let args = ProjectStatusLiveArgs {
             profile: None,
             url: base_url,

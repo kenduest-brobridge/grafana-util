@@ -987,7 +987,7 @@ grafana-util config --help</code></pre>
 <pre><code># initialize a starter config file in the current checkout.
 grafana-util config profile init --overwrite</code></pre>
 <pre><code># add a reusable production profile backed by prompt-based secrets.
-grafana-util config profile add prod --url https://grafana.example.com --basic-user admin --prompt-password --store-secret encrypted-file</code></pre>
+grafana-util config profile add prod --url https://grafana.example.com --verify-ssl --basic-user admin --prompt-password --store-secret encrypted-file</code></pre>
 <h2 id="related-commands">Related commands</h2>
 <ul><li><a href="profile.html">config profile</a></li><li><a href="status.html">status</a></li><li><a href="workspace.html">workspace</a></li><li><a href="version.html">version</a></li></ul>
 

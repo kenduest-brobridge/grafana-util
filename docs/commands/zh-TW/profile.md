@@ -53,12 +53,12 @@ grafana-util config profile validate --profile prod --live
 
 ```bash
 # 建立可重複使用的 production profile，並用互動式密碼保存 secret。
-grafana-util config profile add prod --url https://grafana.example.com --basic-user admin --prompt-password --store-secret encrypted-file
+grafana-util config profile add prod --url https://grafana.example.com --verify-ssl --basic-user admin --prompt-password --store-secret encrypted-file
 ```
 
 ```bash
 # 建立會從環境變數讀取 token 的 CI profile。
-grafana-util config profile add ci --url https://grafana.example.com --token-env GRAFANA_CI_TOKEN --store-secret os
+grafana-util config profile add ci --url https://grafana.example.com --verify-ssl --token-env GRAFANA_CI_TOKEN --store-secret os
 ```
 
 ```bash
@@ -203,7 +203,7 @@ grafana-util config profile add dev --url http://127.0.0.1:3000 --basic-user adm
 
 ```bash
 # add。
-grafana-util config profile add prod --url https://grafana.example.com --basic-user admin --prompt-password --store-secret os --set-default
+grafana-util config profile add prod --url https://grafana.example.com --verify-ssl --basic-user admin --prompt-password --store-secret os --set-default
 ```
 
 ```bash

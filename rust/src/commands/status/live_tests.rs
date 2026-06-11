@@ -29,6 +29,12 @@ use tempfile::tempdir;
 
 const TEST_DASHBOARD_LIMIT: &str = "500";
 
+type SequenceTestClient = (
+    JsonHttpClient,
+    Arc<Mutex<Vec<String>>>,
+    thread::JoinHandle<()>,
+);
+
 #[test]
 fn build_live_instance_discovery_records_api_health_payload() {
     let mut calls = 0usize;
@@ -463,7 +469,9 @@ fn build_live_dashboard_and_datasource_statuses_reuses_datasource_read() {
         http_response("200 OK", r#"[{"id":1,"name":"Main"}]"#),
         http_response("200 OK", r#"{"id":1,"name":"Main"}"#),
     ];
-    let (client, requests, handle) = build_sequence_test_client(responses);
+    let Some((client, requests, handle)) = build_sequence_test_client(responses) else {
+        return;
+    };
 
     let (dashboard, datasource) = build_live_dashboard_and_datasource_statuses(&client);
     handle.join().unwrap();
@@ -496,7 +504,9 @@ fn build_live_dashboard_and_datasource_statuses_preserves_datasource_read_error(
         ),
         http_response("403 Forbidden", r#"{"message":"datasource denied"}"#),
     ];
-    let (client, _requests, handle) = build_sequence_test_client(responses);
+    let Some((client, _requests, handle)) = build_sequence_test_client(responses) else {
+        return;
+    };
 
     let (dashboard, datasource) = build_live_dashboard_and_datasource_statuses(&client);
     handle.join().unwrap();
@@ -573,14 +583,12 @@ fn ready_test_domain(id: &str, mode: &str, primary_count: usize) -> ProjectDomai
     }
 }
 
-fn build_sequence_test_client(
-    responses: Vec<String>,
-) -> (
-    JsonHttpClient,
-    Arc<Mutex<Vec<String>>>,
-    thread::JoinHandle<()>,
-) {
-    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+fn build_sequence_test_client(responses: Vec<String>) -> Option<SequenceTestClient> {
+    let listener = match TcpListener::bind("127.0.0.1:0") {
+        Ok(listener) => listener,
+        Err(error) if error.kind() == std::io::ErrorKind::PermissionDenied => return None,
+        Err(error) => panic!("failed to bind test listener: {error}"),
+    };
     let address = listener.local_addr().unwrap();
     let requests = Arc::new(Mutex::new(Vec::new()));
     let requests_thread = Arc::clone(&requests);
@@ -615,7 +623,7 @@ fn build_sequence_test_client(
         verify_ssl: false,
     })
     .unwrap();
-    (client, requests, handle)
+    Some((client, requests, handle))
 }
 
 fn http_response(status: &str, body: &str) -> String {

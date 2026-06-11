@@ -50,7 +50,7 @@ Use a `config profile` first, with env-backed secrets for CI.
 
 ```bash
 # First commands to run.
-grafana-util config profile add ci --url https://grafana.example.com --token-env GRAFANA_CI_TOKEN
+grafana-util config profile add ci --url https://grafana.example.com --verify-ssl --token-env GRAFANA_CI_TOKEN
 ```
 
 ```bash

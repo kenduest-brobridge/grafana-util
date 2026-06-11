@@ -3,33 +3,22 @@
 
 #[path = "render.rs"]
 mod project_status_tui_render;
+#[cfg(feature = "tui")]
+#[path = "runtime.rs"]
+mod project_status_tui_runtime;
 
 use crate::project_status::{
     ProjectDomainStatus, ProjectStatus, ProjectStatusAction, ProjectStatusFinding,
     PROJECT_STATUS_BLOCKED,
 };
 #[cfg(any(feature = "tui", test))]
-use crossterm::event::{self, Event, KeyCode, KeyEventKind};
-#[cfg(feature = "tui")]
-use crossterm::execute;
-#[cfg(feature = "tui")]
-use crossterm::terminal::{
-    disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
-};
-#[cfg(feature = "tui")]
-use ratatui::backend::CrosstermBackend;
+use crossterm::event::KeyCode;
 use ratatui::widgets::ListState;
-#[cfg(feature = "tui")]
-use ratatui::Terminal;
-#[cfg(feature = "tui")]
-use std::io::{self, Stdout};
-#[cfg(feature = "tui")]
-use std::time::Duration;
-
-#[cfg(feature = "tui")]
-use crate::common::Result;
 
 pub(crate) use project_status_tui_render::render_project_status_frame;
+#[cfg(feature = "tui")]
+#[cfg_attr(test, allow(unused_imports))]
+pub(crate) use project_status_tui_runtime::run_project_status_interactive;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum ProjectStatusPane {
@@ -99,32 +88,6 @@ pub(crate) struct ProjectStatusTuiState {
     pending_search: Option<SearchPromptState>,
     last_search: Option<SearchState>,
     search_status: String,
-}
-
-#[cfg(feature = "tui")]
-struct TerminalSession {
-    terminal: Terminal<CrosstermBackend<Stdout>>,
-}
-
-#[cfg(feature = "tui")]
-impl TerminalSession {
-    fn enter() -> Result<Self> {
-        enable_raw_mode()?;
-        let mut stdout = io::stdout();
-        execute!(stdout, EnterAlternateScreen)?;
-        let backend = CrosstermBackend::new(stdout);
-        let terminal = Terminal::new(backend)?;
-        Ok(Self { terminal })
-    }
-}
-
-#[cfg(feature = "tui")]
-impl Drop for TerminalSession {
-    fn drop(&mut self) {
-        let _ = disable_raw_mode();
-        let _ = execute!(self.terminal.backend_mut(), LeaveAlternateScreen);
-        let _ = self.terminal.show_cursor();
-    }
 }
 
 impl ProjectStatusTuiState {
@@ -770,261 +733,6 @@ fn finding_search_text(finding: &ProjectStatusFinding) -> String {
     format!("{} {} {}", finding.kind, finding.count, finding.source)
 }
 
-#[cfg(feature = "tui")]
-pub(crate) fn run_project_status_interactive(document: ProjectStatus) -> Result<()> {
-    let mut session = TerminalSession::enter()?;
-    let mut state = ProjectStatusTuiState::new(document);
-
-    loop {
-        session
-            .terminal
-            .draw(|frame| render_project_status_frame(frame, &mut state))?;
-
-        if !event::poll(Duration::from_millis(250))? {
-            continue;
-        }
-        let Event::Key(key) = event::read()? else {
-            continue;
-        };
-        if key.kind != KeyEventKind::Press {
-            continue;
-        }
-        if state.pending_search().is_some() {
-            state.handle_search_key(key.code);
-            continue;
-        }
-
-        let detail_lines_len = state.current_domain_lines().len();
-        match key.code {
-            KeyCode::Char('q') | KeyCode::Esc => return Ok(()),
-            KeyCode::Tab => state.focus_next(),
-            KeyCode::BackTab => state.focus_previous(),
-            KeyCode::Char('h') => state.focus_home(),
-            KeyCode::Char('/') => state.start_search(SearchDirection::Forward),
-            KeyCode::Char('?') => state.start_search(SearchDirection::Backward),
-            KeyCode::Char('n') => state.repeat_search(),
-            KeyCode::Enter if state.focus() == ProjectStatusPane::Home => {
-                state.handoff_from_home();
-            }
-            KeyCode::Up => match state.focus() {
-                ProjectStatusPane::Home => {}
-                ProjectStatusPane::Domains => state.move_domain_selection(-1),
-                ProjectStatusPane::Details => state.move_detail_scroll(-1),
-                ProjectStatusPane::Actions => state.move_action_selection(-1),
-            },
-            KeyCode::Down => match state.focus() {
-                ProjectStatusPane::Home => {}
-                ProjectStatusPane::Domains => state.move_domain_selection(1),
-                ProjectStatusPane::Details => state.move_detail_scroll(1),
-                ProjectStatusPane::Actions => state.move_action_selection(1),
-            },
-            KeyCode::PageUp if state.focus() == ProjectStatusPane::Details => {
-                state.move_detail_scroll(-10);
-            }
-            KeyCode::PageDown if state.focus() == ProjectStatusPane::Details => {
-                state.move_detail_scroll(10);
-            }
-            KeyCode::Home => match state.focus() {
-                ProjectStatusPane::Home => {}
-                ProjectStatusPane::Domains => {
-                    let current = state.current_domain_index().unwrap_or(0) as isize;
-                    state.move_domain_selection(-current);
-                }
-                ProjectStatusPane::Details => state.detail_scroll = 0,
-                ProjectStatusPane::Actions => {
-                    let current = state.current_action_index().unwrap_or(0) as isize;
-                    state.move_action_selection(-current);
-                }
-            },
-            KeyCode::End => match state.focus() {
-                ProjectStatusPane::Home => {}
-                ProjectStatusPane::Domains => {
-                    let len = state.document().domains.len();
-                    if len > 0 {
-                        let current = state.current_domain_index().unwrap_or(0) as isize;
-                        state.move_domain_selection(len.saturating_sub(1) as isize - current);
-                    }
-                }
-                ProjectStatusPane::Details => {
-                    state.detail_scroll = detail_lines_len.saturating_sub(1) as u16;
-                }
-                ProjectStatusPane::Actions => {
-                    let len = state.document().next_actions.len();
-                    if len > 0 {
-                        let current = state.current_action_index().unwrap_or(0) as isize;
-                        state.move_action_selection(len.saturating_sub(1) as isize - current);
-                    }
-                }
-            },
-            _ => {}
-        }
-    }
-}
-
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::common::TOOL_VERSION;
-    use crate::project_status::{
-        ProjectStatusFreshness, ProjectStatusOverall, PROJECT_STATUS_READY,
-    };
-
-    #[test]
-    fn detail_scroll_clamps_to_current_domain_lines() {
-        let mut state = ProjectStatusTuiState::new(sample_project_status());
-        let max_scroll = state.current_domain_lines().len().saturating_sub(1) as u16;
-
-        state.move_detail_scroll(999);
-        assert_eq!(state.detail_scroll(), max_scroll);
-
-        state.move_detail_scroll(-999);
-        assert_eq!(state.detail_scroll(), 0);
-    }
-
-    #[test]
-    fn domain_search_submit_and_repeat_wrap_selection() {
-        let mut state = ProjectStatusTuiState::new(sample_project_status());
-
-        state.start_search(SearchDirection::Forward);
-        for ch in ['s', 't', 'a', 'g', 'e', 'd'] {
-            state.handle_search_key(KeyCode::Char(ch));
-        }
-        state.handle_search_key(KeyCode::Enter);
-
-        assert_eq!(state.pending_search(), None);
-        assert_eq!(state.current_domain_index(), Some(0));
-        assert_eq!(state.search_status(), "Matched 'staged' at domain 1 of 2.");
-
-        state.repeat_search();
-        assert_eq!(state.current_domain_index(), Some(1));
-        assert_eq!(
-            state.search_status(),
-            "Next match for 'staged' at domain 2 of 2."
-        );
-
-        state.repeat_search();
-        assert_eq!(state.current_domain_index(), Some(0));
-        assert_eq!(
-            state.search_status(),
-            "Next match for 'staged' at domain 1 of 2."
-        );
-    }
-
-    #[test]
-    fn action_search_uses_action_focus_and_cancel_keeps_selection() {
-        let mut state = ProjectStatusTuiState::new(sample_project_status());
-        state.focus = ProjectStatusPane::Actions;
-
-        state.start_search(SearchDirection::Backward);
-        assert_eq!(
-            state.pending_search(),
-            Some(&SearchPromptState {
-                direction: SearchDirection::Backward,
-                target: SearchTarget::Actions,
-                query: String::new(),
-            })
-        );
-
-        for ch in ['s', 'y', 'n', 'c'] {
-            state.handle_search_key(KeyCode::Char(ch));
-        }
-        state.handle_search_key(KeyCode::Esc);
-
-        assert_eq!(state.pending_search(), None);
-        assert_eq!(state.current_action_index(), Some(0));
-        assert_eq!(state.search_status(), "Cancelled status search.");
-    }
-
-    #[test]
-    fn action_search_submit_selects_matching_action_and_domain() {
-        let mut state = ProjectStatusTuiState::new(sample_project_status());
-        state.focus = ProjectStatusPane::Actions;
-
-        state.start_search(SearchDirection::Forward);
-        for ch in ['s', 'y', 'n', 'c'] {
-            state.handle_search_key(KeyCode::Char(ch));
-        }
-        state.handle_search_key(KeyCode::Enter);
-
-        assert_eq!(state.current_action_index(), Some(0));
-        assert_eq!(state.current_domain_index(), Some(1));
-        assert_eq!(state.search_status(), "Matched 'sync' at action 1 of 1.");
-    }
-
-    fn sample_project_status() -> ProjectStatus {
-        ProjectStatus {
-            schema_version: 1,
-            tool_version: TOOL_VERSION.to_string(),
-            discovery: None,
-            scope: "live".to_string(),
-            overall: ProjectStatusOverall {
-                status: PROJECT_STATUS_READY.to_string(),
-                domain_count: 2,
-                present_count: 2,
-                blocked_count: 1,
-                blocker_count: 3,
-                warning_count: 0,
-                freshness: ProjectStatusFreshness {
-                    status: "current".to_string(),
-                    source_count: 1,
-                    newest_age_seconds: Some(30),
-                    oldest_age_seconds: Some(30),
-                },
-            },
-            domains: vec![
-                ProjectDomainStatus {
-                    id: "dashboard".to_string(),
-                    scope: "staged".to_string(),
-                    mode: "inspect-summary".to_string(),
-                    status: PROJECT_STATUS_READY.to_string(),
-                    reason_code: PROJECT_STATUS_READY.to_string(),
-                    primary_count: 4,
-                    blocker_count: 0,
-                    warning_count: 0,
-                    source_kinds: vec!["dashboard-export".to_string()],
-                    signal_keys: vec!["summary.dashboardCount".to_string()],
-                    blockers: Vec::new(),
-                    warnings: Vec::new(),
-                    next_actions: vec!["review dashboard governance warnings".to_string()],
-                    freshness: ProjectStatusFreshness {
-                        status: "current".to_string(),
-                        source_count: 1,
-                        newest_age_seconds: Some(30),
-                        oldest_age_seconds: Some(30),
-                    },
-                },
-                ProjectDomainStatus {
-                    id: "sync".to_string(),
-                    scope: "staged".to_string(),
-                    mode: "staged-documents".to_string(),
-                    status: PROJECT_STATUS_BLOCKED.to_string(),
-                    reason_code: "blocked-by-blockers".to_string(),
-                    primary_count: 6,
-                    blocker_count: 3,
-                    warning_count: 0,
-                    source_kinds: vec!["sync-summary".to_string()],
-                    signal_keys: vec!["summary.syncBlockingCount".to_string()],
-                    blockers: vec![crate::project_status::status_finding(
-                        "sync-blocking",
-                        3,
-                        "summary.syncBlockingCount",
-                    )],
-                    warnings: Vec::new(),
-                    next_actions: vec!["resolve sync workflow blockers".to_string()],
-                    freshness: ProjectStatusFreshness {
-                        status: "current".to_string(),
-                        source_count: 1,
-                        newest_age_seconds: Some(10),
-                        oldest_age_seconds: Some(10),
-                    },
-                },
-            ],
-            top_blockers: Vec::new(),
-            next_actions: vec![ProjectStatusAction {
-                domain: "sync".to_string(),
-                reason_code: "blocked-by-blockers".to_string(),
-                action: "resolve sync workflow blockers".to_string(),
-            }],
-        }
-    }
-}
+#[path = "tests.rs"]
+mod tests;

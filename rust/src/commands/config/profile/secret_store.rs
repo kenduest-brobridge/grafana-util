@@ -12,7 +12,8 @@ use rand::RngCore;
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 use std::collections::BTreeMap;
-use std::fs;
+use std::fs::{self, OpenOptions};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use crate::common::{message, validation, Result};
@@ -173,6 +174,76 @@ pub fn ensure_owner_only_permissions(path: &Path) -> Result<()> {
     Ok(())
 }
 
+pub fn validate_owner_only_permissions(path: &Path) -> Result<()> {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mode = fs::metadata(path)
+            .map_err(|error| {
+                message(format!(
+                    "Failed to inspect permissions on {}: {error}",
+                    path.display()
+                ))
+            })?
+            .permissions()
+            .mode()
+            & 0o777;
+        if mode & 0o077 != 0 {
+            return Err(validation(format!(
+                "{} must use owner-only permissions; run chmod 600 {}.",
+                path.display(),
+                path.display()
+            )));
+        }
+    }
+    Ok(())
+}
+
+pub fn write_owner_only_file(path: &Path, contents: &str) -> Result<()> {
+    if path.exists() {
+        ensure_owner_only_permissions(path)?;
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .mode(0o600)
+            .open(path)
+            .map_err(|error| {
+                message(format!(
+                    "Failed to write owner-only file {}: {error}",
+                    path.display()
+                ))
+            })?;
+        file.write_all(contents.as_bytes()).map_err(|error| {
+            message(format!(
+                "Failed to write owner-only file {}: {error}",
+                path.display()
+            ))
+        })?;
+        file.sync_all().map_err(|error| {
+            message(format!(
+                "Failed to sync owner-only file {}: {error}",
+                path.display()
+            ))
+        })?;
+    }
+    #[cfg(not(unix))]
+    {
+        fs::write(path, contents).map_err(|error| {
+            message(format!(
+                "Failed to write owner-only file {}: {error}",
+                path.display()
+            ))
+        })?;
+    }
+    ensure_owner_only_permissions(path)?;
+    Ok(())
+}
+
 pub fn write_secret_to_os_store<S: OsSecretStore>(store: &S, key: &str, value: &str) -> Result<()> {
     store.set_secret(key, value)
 }
@@ -320,6 +391,7 @@ fn derive_encrypted_secret_key(
 
 fn read_or_create_local_key(path: &Path) -> Result<[u8; 32]> {
     if path.exists() {
+        validate_owner_only_permissions(path)?;
         let raw = fs::read_to_string(path).map_err(|error| {
             message(format!(
                 "Failed to read local secret key file {}: {error}",
@@ -351,13 +423,7 @@ fn read_or_create_local_key(path: &Path) -> Result<[u8; 32]> {
             ))
         })?;
     }
-    fs::write(path, format!("{}\n", STANDARD.encode(key))).map_err(|error| {
-        message(format!(
-            "Failed to write local secret key file {}: {error}",
-            path.display()
-        ))
-    })?;
-    ensure_owner_only_permissions(path)?;
+    write_owner_only_file(path, &format!("{}\n", STANDARD.encode(key)))?;
     Ok(key)
 }
 
@@ -387,13 +453,7 @@ fn save_encrypted_secret_file(path: &Path, document: &EncryptedSecretFile) -> Re
             ))
         })?;
     }
-    fs::write(path, rendered).map_err(|error| {
-        message(format!(
-            "Failed to write encrypted secret file {}: {error}",
-            path.display()
-        ))
-    })?;
-    ensure_owner_only_permissions(path)?;
+    write_owner_only_file(path, &rendered)?;
     Ok(())
 }
 
@@ -475,6 +535,32 @@ mod tests {
         )
         .unwrap();
         assert_eq!(value, "token-value");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn encrypted_secret_file_rejects_world_readable_existing_local_key_file() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let dir = tempdir().unwrap();
+        let path = dir.path().join(".grafana-util.secrets.yaml");
+        let key_path = dir.path().join(".grafana-util.secrets.key");
+        write_secret_to_encrypted_file(
+            &path,
+            &EncryptedSecretKeySource::LocalKeyFile(key_path.clone()),
+            "grafana-util/profile/dev/token",
+            "token-value",
+        )
+        .unwrap();
+        fs::set_permissions(&key_path, fs::Permissions::from_mode(0o644)).unwrap();
+
+        let error = read_secret_from_encrypted_file(
+            &path,
+            &EncryptedSecretKeySource::LocalKeyFile(key_path),
+            "grafana-util/profile/dev/token",
+        )
+        .unwrap_err();
+        assert!(error.to_string().contains("owner-only permissions"));
     }
 
     #[test]

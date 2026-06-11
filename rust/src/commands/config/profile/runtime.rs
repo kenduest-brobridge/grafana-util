@@ -10,7 +10,8 @@ use crate::http::{JsonHttpClient, JsonHttpClientConfig};
 use crate::profile_config::{
     default_profile_config_path, load_profile_config_file, render_profile_init_template,
     resolve_connection_settings, resolve_profile_config_path, save_profile_config_file,
-    select_profile, ConnectionMergeInput, ConnectionProfile, ProfileConfigFile, SelectedProfile,
+    select_profile, url_requires_tls_verification, ConnectionMergeInput, ConnectionProfile,
+    ProfileConfigFile, SelectedProfile,
 };
 use crate::profile_secret_store::{
     ensure_owner_only_permissions, normalize_secret_ref_path, resolve_secret_file_path,
@@ -345,7 +346,13 @@ pub(crate) fn apply_profile_add_with_store<S: OsSecretStore>(
         password_store: None,
         org_id: args.org_id,
         timeout: args.timeout,
-        verify_ssl: if args.verify_ssl { Some(true) } else { None },
+        verify_ssl: if args.verify_ssl
+            || (!args.insecure && url_requires_tls_verification(&args.url))
+        {
+            Some(true)
+        } else {
+            None
+        },
         insecure: if args.insecure { Some(true) } else { None },
         ca_cert: args.ca_cert.clone(),
     };

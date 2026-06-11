@@ -1038,7 +1038,7 @@ grafana-util config profile init --overwrite</code></pre>
 <pre><code># Create a dev profile that prompts for the password.
 grafana-util config profile add dev --url http://127.0.0.1:3000 --basic-user admin --prompt-password</code></pre>
 <pre><code># Create a CI profile that reads its token from the environment.
-grafana-util config profile add ci --url https://grafana.example.com --token-env GRAFANA_CI_TOKEN --store-secret os</code></pre>
+grafana-util config profile add ci --url https://grafana.example.com --verify-ssl --token-env GRAFANA_CI_TOKEN --store-secret os</code></pre>
 <pre><code># List the profile names resolved from the current config.
 grafana-util config profile list</code></pre>
 <pre><code># Print the fully commented profile template.
@@ -1126,20 +1126,20 @@ grafana-util status overview live --url http://localhost:3000 --token &quot;$GRA
 <h3 id="6-complete-secret-handling-examples">6. Complete secret-handling examples</h3>
 <pre><code># Environment-backed password for a repeatable local profile.
 export GRAFANA_PROD_PASSWORD=&#x27;workspace-me&#x27;
-grafana-util config profile add prod --url https://grafana.example.com --basic-user admin --password-env GRAFANA_PROD_PASSWORD</code></pre>
+grafana-util config profile add prod --url https://grafana.example.com --verify-ssl --basic-user admin --password-env GRAFANA_PROD_PASSWORD</code></pre>
 <pre><code># Environment-backed password for a repeatable local profile.
 grafana-util status live --profile prod --output-format yaml</code></pre>
 <pre><code># OS secret store for a desktop operator workflow on macOS or Linux.
-grafana-util config profile add prod-os --url https://grafana.example.com --basic-user admin --prompt-password --store-secret os</code></pre>
+grafana-util config profile add prod-os --url https://grafana.example.com --verify-ssl --basic-user admin --prompt-password --store-secret os</code></pre>
 <pre><code># OS secret store for a desktop operator workflow on macOS or Linux.
 grafana-util status overview live --profile prod-os --output-format interactive</code></pre>
 <pre><code># Encrypted file with a prompted passphrase.
-grafana-util config profile add prod-encrypted --url https://grafana.example.com --basic-user admin --prompt-password --store-secret encrypted-file --prompt-secret-passphrase</code></pre>
+grafana-util config profile add prod-encrypted --url https://grafana.example.com --verify-ssl --basic-user admin --prompt-password --store-secret encrypted-file --prompt-secret-passphrase</code></pre>
 <pre><code># Encrypted file with a prompted passphrase.
 grafana-util status live --profile prod-encrypted --output-format yaml</code></pre>
 <pre><code># Scoped token from the environment for automation.
 export GRAFANA_CI_TOKEN=&#x27;replace-me&#x27;
-grafana-util config profile add ci --url https://grafana.example.com --token-env GRAFANA_CI_TOKEN</code></pre>
+grafana-util config profile add ci --url https://grafana.example.com --verify-ssl --token-env GRAFANA_CI_TOKEN</code></pre>
 <pre><code># Scoped token from the environment for automation.
 grafana-util status overview live --profile ci --output-format json</code></pre>
 <p>Why these examples matter:</p>

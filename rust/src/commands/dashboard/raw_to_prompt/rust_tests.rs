@@ -69,7 +69,7 @@ fn load_grafana_source_fixture(name: &str) -> serde_json::Value {
         .unwrap_or_else(|| panic!("missing Grafana source dashboard fixture case {name}"))
 }
 
-fn start_live_export_mock_server() -> (String, thread::JoinHandle<()>) {
+fn start_live_export_mock_server() -> Option<(String, thread::JoinHandle<()>)> {
     start_live_export_mock_server_with_library_model(json!({
         "id": 11,
         "type": "graph",
@@ -83,8 +83,12 @@ fn start_live_export_mock_server() -> (String, thread::JoinHandle<()>) {
 
 fn start_live_export_mock_server_with_library_model(
     _library_model: serde_json::Value,
-) -> (String, thread::JoinHandle<()>) {
-    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+) -> Option<(String, thread::JoinHandle<()>)> {
+    let listener = match TcpListener::bind("127.0.0.1:0") {
+        Ok(listener) => listener,
+        Err(error) if error.kind() == std::io::ErrorKind::PermissionDenied => return None,
+        Err(error) => panic!("failed to bind test listener: {error}"),
+    };
     let address = listener.local_addr().unwrap();
     let server = thread::spawn(move || {
         let mut served = 0usize;
@@ -146,7 +150,7 @@ fn start_live_export_mock_server_with_library_model(
             served += 1;
         }
     });
-    (format!("http://{address}"), server)
+    Some((format!("http://{address}"), server))
 }
 
 fn write_fixture(path: &Path, name: &str) {
@@ -993,7 +997,9 @@ fn raw_to_prompt_keeps_live_lookup_scoped_to_datasources_and_does_not_inline_lib
         }),
     );
 
-    let (base_url, server) = start_live_export_mock_server();
+    let Some((base_url, server)) = start_live_export_mock_server() else {
+        return;
+    };
 
     let mut args = make_args();
     args.input_file = vec![input.clone()];
@@ -1065,7 +1071,7 @@ fn raw_to_prompt_keeps_library_panel_references_warning_only_during_live_datasou
         }),
     );
 
-    let (base_url, server) = start_live_export_mock_server_with_library_model(json!({
+    let Some((base_url, server)) = start_live_export_mock_server_with_library_model(json!({
         "id": 11,
         "type": "graph",
         "datasource": {"uid": "$datasource", "type": "prometheus"},
@@ -1073,7 +1079,9 @@ fn raw_to_prompt_keeps_library_panel_references_warning_only_during_live_datasou
             "refId": "A",
             "datasource": {"uid": "$datasource", "type": "prometheus"}
         }]
-    }));
+    })) else {
+        return;
+    };
 
     let mut args = make_args();
     args.input_file = vec![input.clone()];

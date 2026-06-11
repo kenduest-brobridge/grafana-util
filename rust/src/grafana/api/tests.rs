@@ -1,4 +1,4 @@
-use std::io::{Read, Write};
+use std::io::{ErrorKind, Read, Write};
 use std::net::TcpListener;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
@@ -15,6 +15,8 @@ use crate::profile_config::ConnectionMergeInput;
 use crate::sync::live::SyncApplyOperation;
 use serde_json::json;
 
+type SequenceServer = (String, Arc<Mutex<Vec<String>>>, thread::JoinHandle<()>);
+
 fn http_response(status: &str, body: &str) -> String {
     format!(
         "HTTP/1.1 {status}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
@@ -22,10 +24,12 @@ fn http_response(status: &str, body: &str) -> String {
     )
 }
 
-fn spawn_sequence_server(
-    responses: Vec<String>,
-) -> (String, Arc<Mutex<Vec<String>>>, thread::JoinHandle<()>) {
-    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+fn spawn_sequence_server(responses: Vec<String>) -> Option<SequenceServer> {
+    let listener = match TcpListener::bind("127.0.0.1:0") {
+        Ok(listener) => listener,
+        Err(error) if error.kind() == ErrorKind::PermissionDenied => return None,
+        Err(error) => panic!("failed to bind test listener: {error}"),
+    };
     listener.set_nonblocking(false).unwrap();
     let address = listener.local_addr().unwrap();
     let requests = Arc::new(Mutex::new(Vec::new()));
@@ -63,7 +67,16 @@ fn spawn_sequence_server(
             let _ = stream.flush();
         }
     });
-    (format!("http://{address}"), requests, handle)
+    Some((format!("http://{address}"), requests, handle))
+}
+
+macro_rules! sequence_server_or_skip {
+    ($responses:expr) => {
+        match spawn_sequence_server($responses) {
+            Some(server) => server,
+            None => return,
+        }
+    };
 }
 
 fn build_test_api(base_url: String) -> GrafanaApiClient {
@@ -185,7 +198,7 @@ fn dashboard_resource_client_lists_orgs_and_current_org() {
             r#"[{"id":1,"name":"Alpha"},{"id":2,"name":"Beta"}]"#,
         ),
     ];
-    let (base_url, requests, handle) = spawn_sequence_server(responses);
+    let (base_url, requests, handle) = sequence_server_or_skip!(responses);
     let api = build_test_api(base_url);
     let dashboard = api.dashboard();
 
@@ -215,7 +228,7 @@ fn access_resource_client_lists_orgs_and_current_org() {
             r#"[{"id":1,"name":"Alpha"},{"id":2,"name":"Beta"}]"#,
         ),
     ];
-    let (base_url, requests, handle) = spawn_sequence_server(responses);
+    let (base_url, requests, handle) = sequence_server_or_skip!(responses);
     let api = build_test_api(base_url);
     let access = AccessResourceClient::new(api.http_client());
 
@@ -256,7 +269,7 @@ fn access_resource_client_lists_users_teams_and_service_accounts() {
             r#"{"serviceAccounts":[{"id":21,"name":"ci","role":"Viewer","isDisabled":false,"tokens":1}]}"#,
         ),
     ];
-    let (base_url, requests, handle) = spawn_sequence_server(responses);
+    let (base_url, requests, handle) = sequence_server_or_skip!(responses);
     let api = build_test_api(base_url);
     let access = AccessResourceClient::new(api.http_client());
 
@@ -293,7 +306,7 @@ fn sync_live_client_fetches_availability_with_shared_transport() {
             r#"[{"uid":"cp-main","name":"PagerDuty Primary"}]"#,
         ),
     ];
-    let (base_url, requests, handle) = spawn_sequence_server(responses);
+    let (base_url, requests, handle) = sequence_server_or_skip!(responses);
     let api = build_test_api(base_url);
     let client = SyncLiveClient::new(&api);
 
@@ -321,7 +334,7 @@ fn sync_live_client_applies_alert_create_with_shared_transport() {
         "200 OK",
         r#"{"uid":"cpu-high","status":"created"}"#,
     )];
-    let (base_url, requests, handle) = spawn_sequence_server(responses);
+    let (base_url, requests, handle) = sequence_server_or_skip!(responses);
     let api = build_test_api(base_url);
     let client = SyncLiveClient::new(&api);
     let operations = vec![SyncApplyOperation {
@@ -406,7 +419,7 @@ fn sync_live_client_rejects_owned_dashboard_before_transport() {
 #[test]
 fn sync_live_client_allows_api_managed_dashboard_create() {
     let responses = vec![http_response("200 OK", r#"{"status":"success"}"#)];
-    let (base_url, requests, handle) = spawn_sequence_server(responses);
+    let (base_url, requests, handle) = sequence_server_or_skip!(responses);
     let api = build_test_api(base_url);
     let client = SyncLiveClient::new(&api);
     let operations = vec![SyncApplyOperation {
@@ -462,7 +475,7 @@ fn dashboard_resource_client_builds_expected_dashboard_requests() {
         http_response("200 OK", r#"{"uid":"platform","title":"Platform"}"#),
         http_response("200 OK", r#"[{"uid":"ds-main"}]"#),
     ];
-    let (base_url, requests, handle) = spawn_sequence_server(responses);
+    let (base_url, requests, handle) = sequence_server_or_skip!(responses);
     let api = build_test_api(base_url);
     let dashboard = api.dashboard();
 
@@ -531,7 +544,7 @@ fn dashboard_resource_client_lists_and_updates_folders() {
         http_response("200 OK", r#"[{"uid":"ops","title":"Operations"}]"#),
         http_response("200 OK", r#"{"uid":"ops","title":"Operations"}"#),
     ];
-    let (base_url, requests, handle) = spawn_sequence_server(responses);
+    let (base_url, requests, handle) = sequence_server_or_skip!(responses);
     let api = build_test_api(base_url);
     let dashboard = api.dashboard();
 
@@ -568,7 +581,7 @@ fn datasource_resource_client_crud_requests() {
         ),
         http_response("200 OK", r#"{"status":"deleted"}"#),
     ];
-    let (base_url, requests, handle) = spawn_sequence_server(responses);
+    let (base_url, requests, handle) = sequence_server_or_skip!(responses);
     let api = build_test_api(base_url);
     let datasource = DatasourceResourceClient::new(api.http_client());
 
@@ -618,7 +631,7 @@ fn datasource_resource_client_falls_back_to_id_when_uid_write_endpoint_is_missin
         http_response("404 Not Found", r#"{"message":"Not found"}"#),
         http_response("200 OK", r#"{"status":"deleted"}"#),
     ];
-    let (base_url, requests, handle) = spawn_sequence_server(responses);
+    let (base_url, requests, handle) = sequence_server_or_skip!(responses);
     let api = build_test_api(base_url);
     let datasource = DatasourceResourceClient::new(api.http_client());
 
@@ -659,7 +672,7 @@ fn datasource_resource_client_lists_orgs_current_org_and_creates_org() {
         ),
         http_response("200 OK", r#"{"orgId":9,"name":"Gamma"}"#),
     ];
-    let (base_url, requests, handle) = spawn_sequence_server(responses);
+    let (base_url, requests, handle) = sequence_server_or_skip!(responses);
     let api = build_test_api(base_url);
     let datasource = api.datasource();
 
@@ -693,7 +706,7 @@ fn alerting_resource_client_deletes_policies_and_resources() {
         http_response("200 OK", r#"{"status":"deleted"}"#),
         http_response("200 OK", r#"{"status":"deleted"}"#),
     ];
-    let (base_url, requests, handle) = spawn_sequence_server(responses);
+    let (base_url, requests, handle) = sequence_server_or_skip!(responses);
     let api = build_test_api(base_url);
     let alerting = AlertingResourceClient::new(api.http_client());
 
@@ -723,7 +736,7 @@ fn datasource_resource_client_lists_datasources() {
         "200 OK",
         r#"[{"uid":"prom-main","name":"Prometheus"}]"#,
     )];
-    let (base_url, requests, handle) = spawn_sequence_server(responses);
+    let (base_url, requests, handle) = sequence_server_or_skip!(responses);
     let api = build_test_api(base_url);
     let datasource = api.datasource();
 
