@@ -24,6 +24,13 @@ Current AI-maintained status only.
 - Older entries moved to [`ai-status-archive-2026-05-16.md`](/Users/ken/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-05-16.md).
 - Older entries moved to [`ai-status-archive-2026-05-25.md`](/Users/ken/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-05-25.md).
 - Older entries moved to [`ai-status-archive-2026-05-28.md`](/Users/ken/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-05-28.md).
+- Older entries moved to [`ai-status-archive-2026-06-11.md`](/Users/ken/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-06-11.md).
+
+## 2026-06-11 - Status overview TUI support split
+- State: Done
+- Scope: rust/src/commands/status/overview/tui.rs; rust/src/commands/status/overview/tui_runtime.rs; rust/src/commands/status/overview/tui_tests.rs; docs/internal/tui-architecture-roadmap.md
+- Current Update: Split status overview TUI runtime and focused tests out of the state/search module while preserving existing keyboard behavior and render tests.
+- Result: `status/overview/tui.rs` dropped below the architecture warning threshold, `make quality-architecture` no longer reports it, and default plus no-default Rust gates pass.
 
 ## 2026-05-28 - Datasource interactive review output
 - State: Done
@@ -54,9 +61,3 @@ Current AI-maintained status only.
 - Scope: rust/src/commands/review_contract.rs; rust/src/commands/access/access_plan_tui.rs; rust/src/commands/access/access_plan_types.rs; docs/internal/tui-architecture-roadmap.md
 - Current Update: Moved access plan narrative and impact row projection into the shared review contract so mutation review surfaces can reuse action/status/changed-field guidance text.
 - Result: Access plan TUI keeps the same Narrative and Why this matters rows while review_contract now owns the generic action narrative and changed-field impact projection. Public CLI paths, help text, generated docs, and command contracts are unchanged.
-
-## 2026-05-25 - Shared review context projection
-- State: Done
-- Scope: rust/src/commands/review_contract.rs; rust/src/commands/access/access_plan_tui.rs; docs/internal/tui-architecture-roadmap.md
-- Current Update: Moved access plan warning and blocker context row projection into the shared review contract so mutation review surfaces can reuse blocked reasons, safe warning changed fields, and blocked target flag evidence.
-- Result: Access plan TUI keeps the same Blocked context, Warning context, and Blocked evidence rows while review_contract now owns the generic warning/blocker context projection for mutation actions. Public CLI paths, help text, generated docs, and command contracts are unchanged.

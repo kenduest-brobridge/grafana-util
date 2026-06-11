@@ -80,6 +80,11 @@ still look like possible shared-helper follow-up work.
 
 ## Recent Follow-Up
 
+- Status overview TUI now follows the smaller facade/runtime/tests shape used by
+  the newer status TUI module: `tui.rs` owns state and search behavior,
+  `tui_runtime.rs` owns the terminal event loop, and `tui_tests.rs` owns the
+  focused behavior tests. This removed `status/overview/tui.rs` from the
+  architecture warning-threshold list without changing public CLI behavior.
 - `access user browse` and `access team browse` repeat-search behavior now skips
   the selected row and wraps in line with datasource browse and status overview,
   so `n` can continue within the current result set after reaching the first or
