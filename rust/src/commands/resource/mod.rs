@@ -13,7 +13,7 @@ mod runtime;
 mod resource_help;
 
 pub use cli_defs::{
-    ResourceCliArgs, ResourceCommand, ResourceDescribeArgs, ResourceGetArgs, ResourceKind,
-    ResourceKindsArgs, ResourceListArgs, ResourceOutputFormat,
+    ResourceApiMode, ResourceCliArgs, ResourceCommand, ResourceDescribeArgs, ResourceGetArgs,
+    ResourceKind, ResourceKindsArgs, ResourceListArgs, ResourceOutputFormat,
 };
 pub use runtime::run_resource_cli;

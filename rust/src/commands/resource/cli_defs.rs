@@ -16,6 +16,12 @@ pub enum ResourceOutputFormat {
     Yaml,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+pub enum ResourceApiMode {
+    Auto,
+    Legacy,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum, Serialize)]
 pub enum ResourceKind {
     Dashboards,
@@ -123,7 +129,7 @@ pub struct ResourceListArgs {
     pub common: CommonCliArgs,
     #[arg(
         value_enum,
-        help = "Grafana resource kind to list. Use grafana-util resource describe to see the current selector patterns and endpoints."
+        help = "Grafana resource kind to list. Use grafana-util status resource describe to see the current selector patterns and endpoints."
     )]
     pub kind: ResourceKind,
     #[arg(
@@ -133,6 +139,13 @@ pub struct ResourceListArgs {
         help = "Render live resource inventory as text, table, json, or yaml."
     )]
     pub output_format: ResourceOutputFormat,
+    #[arg(
+        long,
+        value_enum,
+        default_value_t = ResourceApiMode::Auto,
+        help = "Choose API probing mode. auto uses primary endpoints and falls back to legacy alternatives where available; legacy prefers those alternatives when supported."
+    )]
+    pub api_mode: ResourceApiMode,
 }
 
 #[derive(Debug, Clone, Args)]
@@ -141,7 +154,7 @@ pub struct ResourceGetArgs {
     pub common: CommonCliArgs,
     #[arg(
         value_name = "SELECTOR",
-        help = "Fetch one live resource by selector. Use <kind>/<identity>, for example dashboards/cpu-main or folders/infra. Run grafana-util resource describe first if you need the supported selector patterns."
+        help = "Fetch one live resource by selector. Use <kind>/<identity>, for example dashboards/cpu-main or folders/infra. Run grafana-util status resource describe first if you need the supported selector patterns."
     )]
     pub selector: String,
     #[arg(
@@ -151,6 +164,13 @@ pub struct ResourceGetArgs {
         help = "Render the fetched live resource as text, table, json, or yaml."
     )]
     pub output_format: ResourceOutputFormat,
+    #[arg(
+        long,
+        value_enum,
+        default_value_t = ResourceApiMode::Auto,
+        help = "Choose API probing mode. auto uses primary endpoints and falls back to legacy alternatives where available; legacy prefers those alternatives when supported."
+    )]
+    pub api_mode: ResourceApiMode,
 }
 
 #[derive(Debug, Clone, Subcommand)]

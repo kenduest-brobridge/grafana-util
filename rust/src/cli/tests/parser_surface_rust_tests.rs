@@ -9,7 +9,7 @@ use crate::dashboard::{
     SimpleOutputFormat,
 };
 use crate::profile_cli::ProfileCommand;
-use crate::resource::{ResourceCommand, ResourceKind, ResourceOutputFormat};
+use crate::resource::{ResourceApiMode, ResourceCommand, ResourceKind, ResourceOutputFormat};
 use crate::sync::SyncGroupCommand;
 use clap::Parser;
 use std::path::Path;
@@ -145,6 +145,58 @@ fn parse_cli_supports_status_surface() {
                     assert_eq!(inner.output_format, ResourceOutputFormat::Json);
                 }
                 _ => panic!("expected status resource describe"),
+            },
+            _ => panic!("expected status resource"),
+        },
+        _ => panic!("expected status command"),
+    }
+}
+
+#[test]
+fn parse_status_resource_list_defaults_api_mode_auto() {
+    let args: CliArgs = parse_cli_from([
+        "grafana-util",
+        "status",
+        "resource",
+        "list",
+        "datasources",
+        "--url",
+        "http://localhost:3000",
+    ]);
+
+    match args.command {
+        UnifiedCommand::Status { command } => match command {
+            StatusCommand::Resource { command } => match command {
+                ResourceCommand::List(inner) => {
+                    assert_eq!(inner.api_mode, ResourceApiMode::Auto);
+                }
+                _ => panic!("expected status resource list"),
+            },
+            _ => panic!("expected status resource"),
+        },
+        _ => panic!("expected status command"),
+    }
+}
+
+#[test]
+fn parse_status_resource_get_accepts_legacy_api_mode() {
+    let args: CliArgs = parse_cli_from([
+        "grafana-util",
+        "status",
+        "resource",
+        "get",
+        "datasources/prom-main",
+        "--api-mode",
+        "legacy",
+    ]);
+
+    match args.command {
+        UnifiedCommand::Status { command } => match command {
+            StatusCommand::Resource { command } => match command {
+                ResourceCommand::Get(inner) => {
+                    assert_eq!(inner.api_mode, ResourceApiMode::Legacy);
+                }
+                _ => panic!("expected status resource get"),
             },
             _ => panic!("expected status resource"),
         },

@@ -172,7 +172,7 @@ pub(crate) fn render_describe(args: &ResourceDescribeArgs) -> Result<()> {
 
 pub(crate) fn render_list(args: &ResourceListArgs) -> Result<()> {
     let client = build_client(&args.common)?;
-    let items = list_resource_items(&client, args.kind)?;
+    let items = list_resource_items(&client, args.kind, args.api_mode)?;
     let document = ResourceListDocument {
         kind: args.kind.as_str(),
         count: items.len(),
@@ -208,7 +208,7 @@ pub(crate) fn render_list(args: &ResourceListArgs) -> Result<()> {
 pub(crate) fn render_get(args: &ResourceGetArgs) -> Result<()> {
     let client = build_client(&args.common)?;
     let selector = parse_selector(&args.selector)?;
-    let value = get_resource_item(&client, &selector)?;
+    let value = get_resource_item(&client, &selector, args.api_mode)?;
     match args.output_format {
         ResourceOutputFormat::Text => {
             let object = value

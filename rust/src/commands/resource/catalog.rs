@@ -77,7 +77,7 @@ pub(crate) fn parse_selector(input: &str) -> Result<ResourceSelector> {
         .split_once('/')
         .ok_or_else(|| {
             message(
-                "Resource selector must use <kind>/<identity>. Use grafana-util resource describe to see selector patterns and grafana-util resource kinds to list supported kinds.",
+                "Resource selector must use <kind>/<identity>. Use grafana-util status resource describe to see selector patterns and grafana-util status resource kinds to list supported kinds.",
             )
         })?;
     let kind = kind.trim();
@@ -95,7 +95,7 @@ pub(crate) fn parse_selector(input: &str) -> Result<ResourceSelector> {
         "orgs" => ResourceKind::Orgs,
         _ => {
             return Err(message(format!(
-                "Unsupported resource selector kind '{kind}'. Use grafana-util resource describe to see selector patterns. Supported kinds: {}.",
+                "Unsupported resource selector kind '{kind}'. Use grafana-util status resource describe to see selector patterns. Supported kinds: {}.",
                 supported_kind_names()
             )))
         }
