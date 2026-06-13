@@ -10,6 +10,7 @@
 - 位置參數 `KIND`：例如 `dashboards`、`folders`、`datasources`、`alert-rules`、`orgs`
 - `--profile`、`--url`、`--token`、`--basic-user`、`--basic-password`：live Grafana 連線設定
 - `--output-format`：選擇 `text`、`table`、`json` 或 `yaml`
+- `--api-mode`：有 alternate endpoint path 的 kind 會使用的相容偏好（預設 `auto`）
 
 ## 範例
 ```bash

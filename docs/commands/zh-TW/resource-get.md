@@ -10,6 +10,7 @@
 - 位置參數 `SELECTOR`：必填 `<kind>/<identity>`，例如 `dashboards/cpu-main` 或 `datasources/prom-main`
 - `--profile`、`--url`、`--token`、`--basic-user`、`--basic-password`：live Grafana 連線設定
 - `--output-format`：選擇 `text`、`table`、`json` 或 `yaml`
+- `--api-mode`：endpoint 相容偏好（預設 `auto`；datasource `get` 會在 UID path 404 時 fallback 到 legacy 數字 ID path）
 
 ## 補充說明
 - selector 的 kind 目前必須是 `dashboards`、`folders`、`datasources`、`alert-rules`、`orgs` 之一。
@@ -29,6 +30,11 @@ grafana-util status resource get datasources/prom-main --profile prod --output-f
 ```bash
 # 依數字 ID 取得單一 org payload。
 grafana-util status resource get orgs/1 --profile prod --output-format json
+```
+
+```bash
+# 偏好 legacy datasource 數字 ID path。
+grafana-util status resource get datasources/10 --api-mode legacy --url http://localhost:3000
 ```
 
 ## 相關指令

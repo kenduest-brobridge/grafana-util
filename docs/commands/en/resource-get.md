@@ -10,6 +10,7 @@ Use this when you need the live payload for one supported resource item and want
 - positional `SELECTOR`: required `<kind>/<identity>` selector, for example `dashboards/cpu-main` or `datasources/prom-main`
 - `--profile`, `--url`, `--token`, `--basic-user`, `--basic-password`: live Grafana connection settings
 - `--output-format`: choose `text`, `table`, `json`, or `yaml`
+- `--api-mode`: compatibility preference (`auto` default; datasource `get` falls back from UID path to legacy numeric-ID path on 404)
 
 ## Notes
 - The selector kind must currently be one of `dashboards`, `folders`, `datasources`, `alert-rules`, or `orgs`.
@@ -29,6 +30,11 @@ grafana-util status resource get datasources/prom-main --profile prod --output-f
 ```bash
 # Fetch one org payload by numeric ID.
 grafana-util status resource get orgs/1 --profile prod --output-format json
+```
+
+```bash
+# Prefer the legacy datasource numeric-ID path.
+grafana-util status resource get datasources/10 --api-mode legacy --url http://localhost:3000
 ```
 
 ## Related commands

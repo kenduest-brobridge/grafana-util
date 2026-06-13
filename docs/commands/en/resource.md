@@ -26,6 +26,10 @@ This namespace is intentionally narrower and more generic than the main operator
 - `kinds` supports `text`, `table`, `json`, and `yaml`
 - `list` supports `text`, `table`, `json`, and `yaml`
 - `get` supports `text`, `table`, `json`, and `yaml`
+- `--api-mode` on `list`/`get` defaults to `auto`; for datasource `get`, `auto` falls back from the UID endpoint to the legacy numeric-ID endpoint on 404.
+
+## Recommended mode
+- Prefer default `auto` for mixed-version environments; use `legacy` only for datasource lookups that are known to require the classic numeric-ID endpoint.
 
 ## Examples
 ```bash
@@ -46,6 +50,11 @@ grafana-util status resource list dashboards --url http://localhost:3000 --basic
 ```bash
 # Fetch one datasource payload as YAML.
 grafana-util status resource get datasources/prom-main --profile prod --output-format yaml
+```
+
+```bash
+# Force legacy compatibility mode when needed.
+grafana-util status resource get datasources/10 --api-mode legacy
 ```
 
 ## Related commands

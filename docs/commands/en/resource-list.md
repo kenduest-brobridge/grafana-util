@@ -10,6 +10,7 @@ Use this when you need a read-only live inventory for one supported resource kin
 - positional `KIND`: one supported resource kind such as `dashboards`, `folders`, `datasources`, `alert-rules`, or `orgs`
 - `--profile`, `--url`, `--token`, `--basic-user`, `--basic-password`: live Grafana connection settings
 - `--output-format`: choose `text`, `table`, `json`, or `yaml`
+- `--api-mode`: compatibility preference for kinds that have alternate endpoint paths (`auto` default)
 
 ## Examples
 ```bash

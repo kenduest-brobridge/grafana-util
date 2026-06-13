@@ -26,6 +26,10 @@
 - `kinds` 支援 `text`、`table`、`json`、`yaml`
 - `list` 支援 `text`、`table`、`json`、`yaml`
 - `get` 支援 `text`、`table`、`json`、`yaml`
+- `list` / `get` 的 `--api-mode` 預設為 `auto`；對 datasource `get` 來說，`auto` 會先嘗試 UID endpoint，404 時改走 legacy 數字 ID endpoint。
+
+## 建議模式
+- 混合版本環境優先用預設 `auto`；確認 datasource 查詢需要舊版數字 ID endpoint 時才使用 `--api-mode legacy`。
 
 ## 範例
 ```bash
@@ -46,6 +50,11 @@ grafana-util status resource list dashboards --url http://localhost:3000 --basic
 ```bash
 # 以 YAML 取得單一 datasource payload。
 grafana-util status resource get datasources/prom-main --profile prod --output-format yaml
+```
+
+```bash
+# 有需要時，強制 legacy 相容模式。
+grafana-util status resource get datasources/10 --api-mode legacy
 ```
 
 ## 相關指令
