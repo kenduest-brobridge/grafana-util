@@ -11,10 +11,13 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+REGISTRY_PATH = REPO_ROOT / "scripts" / "contracts" / "tui-registry.json"
 SCAN_ROOTS = (
     Path("rust/src"),
     Path("docs/commands/en"),
+    Path("docs/commands/zh-TW"),
     Path("docs/user-guide/en"),
+    Path("docs/user-guide/zh-TW"),
     Path("docs/internal"),
 )
 SKIP_PARTS = {"target", "html", "archive", "__pycache__"}
@@ -169,7 +172,101 @@ def build_helper_drift() -> list[HelperDriftItem]:
     return sorted(items, key=lambda item: (item.path, item.line, item.helper))
 
 
-def print_text_report(items: list[InventoryItem], helper_drift: list[HelperDriftItem]) -> None:
+@dataclass(frozen=True)
+class RegistryFinding:
+    kind: str
+    surface: str
+    message: str
+
+
+def load_registry() -> dict:
+    return json.loads(REGISTRY_PATH.read_text(encoding="utf-8"))
+
+
+def check_registry(items: list[InventoryItem]) -> list[RegistryFinding]:
+    registry = load_registry()
+    findings: list[RegistryFinding] = []
+
+    detected_doc_paths = {item.path for item in items if item.kind == "docs"}
+    detected_rust_paths = {item.path for item in items if item.kind != "docs"}
+
+    for entry in registry.get("surfaces", []):
+        command = entry["command"]
+        docs_en = entry.get("docs_en")
+        docs_zh_tw = entry.get("docs_zh_TW")
+
+        # Check English docs exist
+        if docs_en:
+            if docs_en not in detected_doc_paths:
+                path_text = docs_en.replace("/en/", "/zh-TW/")
+                findings.append(
+                    RegistryFinding(
+                        kind="missing-doc",
+                        surface=command,
+                        message=f"English doc `{docs_en}` not detected in TUI scan; may be missing or not contain TUI/interactive signals",
+                    )
+                )
+        # Check zh-TW docs exist
+        if docs_zh_tw:
+            if docs_zh_tw not in detected_doc_paths:
+                findings.append(
+                    RegistryFinding(
+                        kind="missing-doc-zh-TW",
+                        surface=command,
+                        message=f"zh-TW doc `{docs_zh_tw}` not detected in TUI scan; may be missing or not contain TUI/interactive signals",
+                    )
+                )
+
+        # Check that at least one matching Rust file is detected for this surface
+        domain = entry.get("domain", "")
+        matching_rust = [
+            p
+            for p in detected_rust_paths
+            if p.startswith(f"rust/src/commands/{domain}/")
+        ]
+        if not matching_rust:
+            # Also check infrastructure paths
+            matching_infra = [
+                p
+                for p in detected_rust_paths
+                if domain in p and p.startswith("rust/src/common/")
+            ]
+            if not matching_infra:
+                findings.append(
+                    RegistryFinding(
+                        kind="missing-code",
+                        surface=command,
+                        message=f"no Rust file detected under `rust/src/commands/{domain}/` matching TUI signals",
+                    )
+                )
+
+    # Check for undocumented surfaces: English command docs with TUI signals not in registry
+    registry_doc_paths = {
+        entry.get("docs_en")
+        for entry in registry.get("surfaces", [])
+        if entry.get("docs_en")
+    }
+    for doc_path in sorted(detected_doc_paths):
+        if not doc_path.startswith("docs/commands/en/"):
+            continue
+        if doc_path in registry_doc_paths:
+            continue
+        findings.append(
+            RegistryFinding(
+                kind="undocumented-surface",
+                surface=doc_path,
+                message=f"command doc has TUI signals but is not claimed in registry; add a registry entry or verify TUI scope",
+            )
+        )
+
+    return findings
+
+
+def print_text_report(
+    items: list[InventoryItem],
+    helper_drift: list[HelperDriftItem],
+    registry_findings: list[RegistryFinding] | None = None,
+) -> None:
     by_kind: dict[str, list[InventoryItem]] = {}
     for item in items:
         by_kind.setdefault(item.kind, []).append(item)
@@ -193,27 +290,47 @@ def print_text_report(items: list[InventoryItem], helper_drift: list[HelperDrift
         print(f"    signal: {item.signal}")
     print()
 
+    if registry_findings is not None:
+        print(f"registry findings ({len(registry_findings)})")
+        by_kind_rf: dict[str, list[RegistryFinding]] = {}
+        for finding in registry_findings:
+            by_kind_rf.setdefault(finding.kind, []).append(finding)
+        for kind in sorted(by_kind_rf):
+            grouped = by_kind_rf[kind]
+            print(f"  {kind} ({len(grouped)})")
+            for finding in grouped:
+                print(f"    - {finding.surface}")
+                print(f"      {finding.message}")
+        print()
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--json", action="store_true", help="emit machine-readable inventory")
+    parser.add_argument(
+        "--registry-check",
+        action="store_true",
+        help="load tui-registry.json and report mismatches (advisory only)",
+    )
     args = parser.parse_args()
 
     items = build_inventory()
     helper_drift = build_helper_drift()
+
+    registry_findings: list[RegistryFinding] = []
+    if args.registry_check:
+        registry_findings = check_registry(items)
+
     if args.json:
-        print(
-            json.dumps(
-                {
-                    "items": [asdict(item) for item in items],
-                    "helperDrift": [asdict(item) for item in helper_drift],
-                },
-                indent=2,
-                sort_keys=True,
-            )
-        )
+        output: dict[str, object] = {
+            "items": [asdict(item) for item in items],
+            "helperDrift": [asdict(item) for item in helper_drift],
+        }
+        if args.registry_check:
+            output["registryFindings"] = [asdict(f) for f in registry_findings]
+        print(json.dumps(output, indent=2, sort_keys=True))
     else:
-        print_text_report(items, helper_drift)
+        print_text_report(items, helper_drift, registry_findings)
     return 0
 
 

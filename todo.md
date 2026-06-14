@@ -34,6 +34,48 @@ Scope rules:
   dashboard source ownership/Git Sync routing, operator docs, and cross-domain
   balance.
 
+## Active TUI Completion Backlog
+
+Detailed TUI inventory and execution requirements live in
+[`docs/todo/tui-completion-spec.md`](docs/todo/tui-completion-spec.md).
+
+Spec:
+
+- Complete the Rust TUI surface as a consistent, testable operator experience
+  across browse, document-backed review, mutation review, status, snapshot, and
+  sync/workspace-adjacent flows.
+- Treat shared shell/browser helpers as primitives, not as a finished
+  domain-neutral workbench framework.
+- Add a maintained TUI registry before large behavioral changes so every public
+  `--interactive` and `--output-format interactive` path has a documented
+  owner, tier, docs page, fallback behavior, and focused tests.
+
+Requirements:
+
+- Keep read-only surfaces on typed domain documents or typed review
+  projections.
+- Keep mutation surfaces explicit about blockers, confirmation, provenance, and
+  secret redaction.
+- Keep English and zh-TW docs in parity for public interactive surfaces.
+- Keep `tui` as the default supported Rust feature lane and `browser` as opt-in.
+
+Constraints:
+
+- Do not claim `--no-default-features` as a supported release artifact.
+- Do not change public JSON contracts just to simplify TUI rendering.
+- Do not introduce shared `ReviewRisk`, `ReviewRequest`, or global workbench
+  state until at least two domains prove the same fields and semantics.
+- Keep root `todo.md` short; update the linked spec for detailed state.
+
+Unit/validation gate:
+
+- Focused Rust tests for parser/help, feature-disabled fallback, search/repeat,
+  detail scrolling, confirmation, and secret-redaction behavior.
+- Inventory tests for `scripts/tui_inventory_report.py`, including future
+  registry and zh-TW docs coverage.
+- Run `make quality-rust`, `make quality-architecture`, and docs surface checks
+  for TUI-related code or public docs changes.
+
 ## First Priority - Architecture Deficit Audit
 
 This is the current first-priority backlog. Treat it as the ordering lens
