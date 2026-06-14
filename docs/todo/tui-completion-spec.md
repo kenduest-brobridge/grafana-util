@@ -34,7 +34,7 @@ make quality-architecture
 
 Observed baseline on 2026-06-14:
 
-- `scripts/tui_inventory_report.py` matched 182 TUI/interactive files.
+- `scripts/tui_inventory_report.py` matched 203 TUI/interactive files (English + zh-TW canonical docs scanned).
 - Inventory categories: `browse` 54, `docs` 29, `feature-gated` 45,
   `interactive` 20, `other` 17, `shared` 2, `workbench` 15.
 - `helperDrift` is empty, so the current gap is not obvious duplicated helper
@@ -309,9 +309,9 @@ make quality-docs-surface
 
 ### Phase B - Feature Fallback And Terminology Cleanup
 
-1. Check every public interactive dispatch path for `tui_feature_required`.
-2. Align prompt/TUI wording in help and docs.
-3. Add focused fallback tests for newly touched paths.
+- [x] 1. Check every public interactive dispatch path for `tui_feature_required`.
+- [x] 2. Align prompt/TUI wording in help and docs.
+- [x] 3. Add focused fallback tests for newly touched paths.
 
 Validation:
 
@@ -320,6 +320,13 @@ make quality-rust-feature-matrix
 make quality-architecture
 cd rust && cargo test --quiet tui_feature
 ```
+
+Completed:
+- 17 of 19 interactive surfaces were already correct.
+- Fixed `access_browse.rs`: replaced raw `tui()` with canonical `tui_feature_required("Access browse")`.
+- Fixed `snapshot_review.rs`: replaced silent fallback to `OverviewOutputFormat::Text` with `tui_feature_required("Snapshot review --interactive")` error.
+- No terminology drift found (`--prompt` vs `--interactive` vs `--output-format interactive`).
+- Non-tui branches verified by feature-matrix checks; tui-enabled tests pass.
 
 ### Phase C - Review Projection Consolidation
 
