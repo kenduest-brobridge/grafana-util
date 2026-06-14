@@ -501,9 +501,7 @@ pub(crate) fn browse_access_with_request<F>(
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
-    Err(crate::common::tui(
-        "Access browse requires the `tui` feature.",
-    ))
+    Err(crate::common::tui_feature_required("Access browse"))
 }
 
 #[cfg(test)]

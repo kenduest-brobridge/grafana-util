@@ -6,7 +6,9 @@ use serde_json::{json, Value};
 
 use crate::common::Result;
 use crate::dashboard::TempInspectDir;
-use crate::overview::{OverviewArgs, OverviewOutputFormat};
+use crate::overview::OverviewArgs;
+#[cfg(feature = "tui")]
+use crate::overview::OverviewOutputFormat;
 use crate::staged_export_scopes::resolve_datasource_export_scope_dirs;
 
 use super::snapshot_artifacts::{build_snapshot_paths, resolve_snapshot_review_input_dir};
@@ -148,7 +150,9 @@ pub fn run_snapshot_review(args: super::super::SnapshotReviewArgs) -> Result<()>
         }
         #[cfg(not(feature = "tui"))]
         {
-            OverviewOutputFormat::Text
+            return Err(crate::common::tui_feature_required(
+                "Snapshot review --interactive",
+            ));
         }
     } else {
         args.output_format
