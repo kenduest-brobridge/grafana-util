@@ -293,6 +293,34 @@ impl BrowserState {
         }
     }
 
+    #[cfg(test)]
+    pub(crate) fn detail_line_count(&self) -> usize {
+        self.selected_detail_line_count().max(1)
+    }
+
+    pub(crate) fn move_detail_scroll(&mut self, delta: isize) {
+        if !matches!(self.focus, PaneFocus::Facts) {
+            return;
+        }
+        let max_scroll = self.max_detail_scroll();
+        let next = (self.detail_scroll as isize + delta).clamp(0, max_scroll as isize);
+        self.detail_scroll = next as u16;
+    }
+
+    pub(crate) fn scroll_detail_to_end(&mut self) {
+        if !matches!(self.focus, PaneFocus::Facts) {
+            self.detail_scroll = 0;
+            return;
+        }
+        self.detail_scroll = self.max_detail_scroll().min(u16::MAX as usize) as u16;
+    }
+
+    #[cfg(test)]
+    pub(crate) fn clamp_detail_scroll(&mut self) {
+        let max_scroll = self.max_detail_scroll().min(u16::MAX as usize) as u16;
+        self.detail_scroll = self.detail_scroll.min(max_scroll);
+    }
+
     pub(crate) fn selected_position_summary(&self) -> String {
         match (self.list_state.selected(), self.document.nodes.len()) {
             (Some(index), total) if total > 0 => {
@@ -469,6 +497,25 @@ impl BrowserState {
             }
         }
     }
+
+    fn selected_detail_line_count(&self) -> usize {
+        self.selected_node()
+            .map(|node| {
+                if let Some(uid) = node.uid.as_ref() {
+                    if let Some(lines) =
+                        self.live_view_cache.get(&format!("{}::{uid}", node.org_id))
+                    {
+                        return lines.len();
+                    }
+                }
+                node.details.len()
+            })
+            .unwrap_or(0)
+    }
+
+    fn max_detail_scroll(&self) -> usize {
+        self.selected_detail_line_count().saturating_sub(1)
+    }
 }
 
 fn selection_key_for_node(node: &DashboardBrowseNode) -> Option<String> {
@@ -515,6 +562,15 @@ mod tests {
     use super::*;
 
     fn dashboard_node(uid: &str, title: &str, org_id: &str) -> DashboardBrowseNode {
+        dashboard_node_with_details(uid, title, org_id, Vec::new())
+    }
+
+    fn dashboard_node_with_details(
+        uid: &str,
+        title: &str,
+        org_id: &str,
+        details: Vec<String>,
+    ) -> DashboardBrowseNode {
         DashboardBrowseNode {
             kind: DashboardBrowseNodeKind::Dashboard,
             title: title.to_string(),
@@ -522,7 +578,7 @@ mod tests {
             uid: Some(uid.to_string()),
             depth: 1,
             meta: format!("uid={uid}"),
-            details: Vec::new(),
+            details,
             url: None,
             org_name: format!("Org {org_id}"),
             org_id: org_id.to_string(),
@@ -619,6 +675,47 @@ mod tests {
         });
 
         assert_eq!(state.repeat_last_search(), Some(2));
+    }
+
+    #[test]
+    fn detail_scroll_moves_and_clamps_within_detail_lines() {
+        let mut state = BrowserState::new(document(vec![dashboard_node_with_details(
+            "cpu-main",
+            "CPU Main",
+            "1",
+            vec![
+                "overview".to_string(),
+                "metrics".to_string(),
+                "alerts".to_string(),
+            ],
+        )]));
+        state.focus_next_pane();
+        state.select_index(0);
+
+        state.move_detail_scroll(10);
+        assert_eq!(state.detail_scroll, (state.detail_line_count() - 1) as u16);
+
+        state.move_detail_scroll(-10);
+        assert_eq!(state.detail_scroll, 0);
+    }
+
+    #[test]
+    fn detail_scroll_end_targets_last_visible_line() {
+        let mut state = BrowserState::new(document(vec![dashboard_node_with_details(
+            "cpu-main",
+            "CPU Main",
+            "1",
+            vec![
+                "overview".to_string(),
+                "metrics".to_string(),
+                "alerts".to_string(),
+            ],
+        )]));
+        state.focus_next_pane();
+        state.select_index(0);
+        state.scroll_detail_to_end();
+
+        assert_eq!(state.detail_scroll, (state.detail_line_count() - 1) as u16);
     }
 
     #[test]

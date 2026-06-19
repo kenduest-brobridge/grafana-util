@@ -109,7 +109,7 @@ where
                 state.detail_scroll = 0;
                 ensure_selected_dashboard_view(request_json, args, state, false)?;
             } else {
-                state.detail_scroll = state.detail_scroll.saturating_sub(1);
+                state.move_detail_scroll(-1);
             }
             Ok(BrowserLoopAction::Continue)
         }
@@ -119,7 +119,7 @@ where
                 state.detail_scroll = 0;
                 ensure_selected_dashboard_view(request_json, args, state, false)?;
             } else {
-                state.detail_scroll = state.detail_scroll.saturating_add(1);
+                state.move_detail_scroll(1);
             }
             Ok(BrowserLoopAction::Continue)
         }
@@ -139,16 +139,16 @@ where
                 state.detail_scroll = 0;
                 ensure_selected_dashboard_view(request_json, args, state, false)?;
             } else {
-                state.detail_scroll = u16::MAX.saturating_sub(32);
+                state.scroll_detail_to_end();
             }
             Ok(BrowserLoopAction::Continue)
         }
         KeyCode::PageUp => {
-            state.detail_scroll = state.detail_scroll.saturating_sub(8);
+            state.move_detail_scroll(-8);
             Ok(BrowserLoopAction::Continue)
         }
         KeyCode::PageDown => {
-            state.detail_scroll = state.detail_scroll.saturating_add(8);
+            state.move_detail_scroll(8);
             Ok(BrowserLoopAction::Continue)
         }
         KeyCode::Char('l') => {

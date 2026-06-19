@@ -51,7 +51,7 @@ pub(crate) fn handle_browser_key(
                 state.move_selection(-1);
                 state.detail_scroll = 0;
             } else {
-                state.detail_scroll = state.detail_scroll.saturating_sub(1);
+                state.move_detail_scroll(-1);
             }
         }
         KeyCode::Down if state.pending_delete.is_none() => {
@@ -59,7 +59,7 @@ pub(crate) fn handle_browser_key(
                 state.move_selection(1);
                 state.detail_scroll = 0;
             } else {
-                state.detail_scroll = state.detail_scroll.saturating_add(1);
+                state.move_detail_scroll(1);
             }
         }
         KeyCode::Home if state.pending_delete.is_none() => {
@@ -75,11 +75,11 @@ pub(crate) fn handle_browser_key(
                 state.select_last();
                 state.detail_scroll = 0;
             } else {
-                state.detail_scroll = u16::MAX.saturating_sub(32);
+                state.scroll_detail_to_end();
             }
         }
-        KeyCode::PageUp => state.detail_scroll = state.detail_scroll.saturating_sub(10),
-        KeyCode::PageDown => state.detail_scroll = state.detail_scroll.saturating_add(10),
+        KeyCode::PageUp => state.move_detail_scroll(-10),
+        KeyCode::PageDown => state.move_detail_scroll(10),
         KeyCode::Char('l') => refresh_browser_document(client, args, state)?,
         KeyCode::Char('/') => state.start_search(SearchDirection::Forward),
         KeyCode::Char('?') => state.start_search(SearchDirection::Backward),
@@ -322,11 +322,14 @@ fn confirm_delete(
 
 #[cfg(test)]
 mod tests {
-    use super::super::datasource_browse_support::DatasourceBrowseDocument;
+    use super::super::datasource_browse_support::{
+        DatasourceBrowseDocument, DatasourceBrowseItem, DatasourceBrowseItemKind,
+    };
     use super::*;
     use crate::common::CliColorChoice;
     use crate::dashboard::CommonCliArgs;
     use crate::http::{JsonHttpClient, JsonHttpClientConfig};
+    use serde_json::Map;
 
     fn empty_document() -> DatasourceBrowseDocument {
         DatasourceBrowseDocument {
@@ -368,6 +371,48 @@ mod tests {
         }
     }
 
+    fn sample_state() -> BrowserState {
+        BrowserState::new(DatasourceBrowseDocument {
+            scope_label: "All visible orgs".to_string(),
+            org: "All visible orgs".to_string(),
+            org_id: "-".to_string(),
+            items: vec![
+                DatasourceBrowseItem {
+                    kind: DatasourceBrowseItemKind::Org,
+                    depth: 0,
+                    id: 0,
+                    uid: String::new(),
+                    name: "Audit Org".to_string(),
+                    datasource_type: "org".to_string(),
+                    access: String::new(),
+                    url: String::new(),
+                    is_default: false,
+                    org: "Audit Org".to_string(),
+                    org_id: "4".to_string(),
+                    details: Map::new(),
+                    datasource_count: 1,
+                },
+                DatasourceBrowseItem {
+                    kind: DatasourceBrowseItemKind::Datasource,
+                    depth: 1,
+                    id: 1,
+                    uid: "audit-prom".to_string(),
+                    name: "Audit Prometheus".to_string(),
+                    datasource_type: "prometheus".to_string(),
+                    access: "proxy".to_string(),
+                    url: "http://prom".to_string(),
+                    is_default: false,
+                    org: "Audit Org".to_string(),
+                    org_id: "4".to_string(),
+                    details: Map::new(),
+                    datasource_count: 0,
+                },
+            ],
+            org_count: 1,
+            datasource_count: 1,
+        })
+    }
+
     #[test]
     fn search_prompt_treats_q_as_query_text() {
         let mut state = BrowserState::new(empty_document());
@@ -387,6 +432,79 @@ mod tests {
                 .map(|search| search.query.as_str()),
             Some("q")
         );
+    }
+
+    #[test]
+    fn detail_end_jumps_to_last_line_in_facts_pane() {
+        let client = test_client();
+        let args = browse_args();
+        let mut state = sample_state();
+        state.select_index(1);
+        state.focus_next_pane();
+        state.detail_scroll = 2;
+
+        let action = handle_browser_key(
+            &client,
+            &args,
+            &mut state,
+            &KeyEvent::new(KeyCode::End, KeyModifiers::NONE),
+        )
+        .expect("end should jump to detail end");
+
+        assert!(matches!(action, BrowserLoopAction::Continue));
+        assert_eq!(state.detail_scroll, (state.detail_line_count() - 1) as u16);
+    }
+
+    #[test]
+    fn detail_page_keys_are_clamped_in_facts_pane() {
+        let client = test_client();
+        let args = browse_args();
+        let mut state = sample_state();
+        state.select_index(1);
+        state.focus_next_pane();
+        state.detail_scroll = 0;
+
+        let mut action = handle_browser_key(
+            &client,
+            &args,
+            &mut state,
+            &KeyEvent::new(KeyCode::PageDown, KeyModifiers::NONE),
+        )
+        .expect("page down should scroll");
+        assert!(matches!(action, BrowserLoopAction::Continue));
+        assert_eq!(state.detail_scroll, (state.detail_line_count() - 1) as u16);
+
+        action = handle_browser_key(
+            &client,
+            &args,
+            &mut state,
+            &KeyEvent::new(KeyCode::PageUp, KeyModifiers::NONE),
+        )
+        .expect("page up should scroll");
+        assert!(matches!(action, BrowserLoopAction::Continue));
+        assert_eq!(state.detail_scroll, 0);
+    }
+
+    #[test]
+    fn review_pane_uses_safe_fallback_for_empty_review_rows() {
+        let client = test_client();
+        let args = browse_args();
+        let mut state = sample_state();
+        state.select_index(1);
+        state.focus_next_pane();
+        state.focus_next_pane();
+        state.detail_scroll = 10;
+
+        let action = handle_browser_key(
+            &client,
+            &args,
+            &mut state,
+            &KeyEvent::new(KeyCode::End, KeyModifiers::NONE),
+        )
+        .expect("end should be safe with empty review data");
+
+        assert!(matches!(action, BrowserLoopAction::Continue));
+        assert_eq!(state.detail_scroll, 0);
     }
 
     #[test]

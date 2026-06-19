@@ -4,7 +4,8 @@ use ratatui::widgets::ListState;
 
 use super::datasource_browse_edit_dialog::EditDialogState;
 use super::datasource_browse_support::{
-    DatasourceBrowseDocument, DatasourceBrowseItem, DatasourceBrowseItemKind,
+    detail_lines, review_lines, DatasourceBrowseDocument, DatasourceBrowseItem,
+    DatasourceBrowseItemKind,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -188,6 +189,34 @@ impl BrowserState {
         }
     }
 
+    #[cfg(test)]
+    pub(crate) fn detail_line_count(&self) -> usize {
+        self.detail_lines_for_focus().max(1)
+    }
+
+    pub(crate) fn move_detail_scroll(&mut self, delta: isize) {
+        if matches!(self.focus, PaneFocus::List) {
+            return;
+        }
+        let max_scroll = self.max_detail_scroll();
+        let next = (self.detail_scroll as isize + delta).clamp(0, max_scroll as isize);
+        self.detail_scroll = next as u16;
+    }
+
+    pub(crate) fn scroll_detail_to_end(&mut self) {
+        if matches!(self.focus, PaneFocus::List) {
+            self.detail_scroll = 0;
+            return;
+        }
+        self.detail_scroll = self.max_detail_scroll().min(u16::MAX as usize) as u16;
+    }
+
+    #[cfg(test)]
+    pub(crate) fn clamp_detail_scroll(&mut self) {
+        let max_scroll = self.max_detail_scroll().min(u16::MAX as usize) as u16;
+        self.detail_scroll = self.detail_scroll.min(max_scroll);
+    }
+
     pub(crate) fn start_search(&mut self, direction: SearchDirection) {
         self.pending_search = Some(SearchPromptState {
             direction,
@@ -229,6 +258,24 @@ impl BrowserState {
             self.list_state.select(Some(index));
             self.detail_scroll = 0;
         }
+    }
+
+    fn detail_lines_for_focus(&self) -> usize {
+        match self.focus {
+            PaneFocus::List => 0,
+            PaneFocus::Facts => self
+                .selected_item()
+                .map(|item| detail_lines(item).len())
+                .unwrap_or(0),
+            PaneFocus::Review => self
+                .selected_item()
+                .map(|item| review_lines(item).len())
+                .unwrap_or(0),
+        }
+    }
+
+    fn max_detail_scroll(&self) -> usize {
+        self.detail_lines_for_focus().saturating_sub(1)
     }
 
     fn find_match_from(
@@ -423,5 +470,39 @@ mod tests {
 
         state.focus_previous_pane();
         assert_eq!(state.focus_label(), "review");
+    }
+
+    #[test]
+    fn detail_scroll_moves_within_focus_line_range() {
+        let mut state = state();
+        state.select_index(1);
+        state.focus_next_pane();
+
+        state.move_detail_scroll(100);
+        assert_eq!(state.detail_scroll, (state.detail_line_count() - 1) as u16);
+
+        state.move_detail_scroll(-100);
+        assert_eq!(state.detail_scroll, 0);
+    }
+
+    #[test]
+    fn detail_scroll_end_goes_to_last_line_for_active_focus_pane() {
+        let mut state = state();
+        state.select_index(1);
+        state.focus_next_pane();
+
+        state.scroll_detail_to_end();
+        assert_eq!(state.detail_scroll, (state.detail_line_count() - 1) as u16);
+    }
+
+    #[test]
+    fn detail_scroll_clamps_empty_review_detail_to_fallback_line() {
+        let mut state = state();
+        state.select_index(0);
+        state.focus = PaneFocus::Review;
+        state.detail_scroll = 10;
+        state.clamp_detail_scroll();
+
+        assert_eq!(state.detail_scroll, 0);
     }
 }
