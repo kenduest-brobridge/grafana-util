@@ -76,6 +76,19 @@ Unit/validation gate:
 - Run `make quality-rust`, `make quality-architecture`, and docs surface checks
   for TUI-related code or public docs changes.
 
+Next TUI coding priority:
+
+1. Datasource browse/list/snapshot: highest risk because secret redaction must
+   be proven across live, local, and snapshot review details.
+2. Dashboard browse/import/inspect: broadest feature surface; complete
+   confirmation, scroll, search, footer, and provenance evidence coverage.
+3. Access browse/plan/user/team: mutation-capable flows need confirmation,
+   blocker, and shared review-detail tests.
+4. Status overview/status TUI: read-only surfaces are best for tightening
+   search, detail scrolling, and footer consistency.
+5. Sync/workspace review: keep domain-owned for now; do not extract a shared
+   framework until more fields and semantics are proven.
+
 ## First Priority - Architecture Deficit Audit
 
 This is the current first-priority backlog. Treat it as the ordering lens
@@ -154,6 +167,20 @@ changes priority.
 - [x] P2: Move the shared prompt-lane transform into a dedicated
   `dashboard/export_prompt/` boundary after the inventory identified it as the
   next mixed-responsibility hotspot.
+
+## Current TUI Status (2026-06-19)
+
+- [x] Completed: datasource/dash browse detail-scroll now uses focus-aware
+  state helpers, with clamped `End`/`PageUp`/`PageDown` behavior and fallback
+  line handling for empty review rows.
+- [x] Completed: added datasource browse/list input tests for `End` and page
+  navigation, including empty review fallback safety.
+- [ ] In progress: dashboard browse/import/inspect full confirmation, footer,
+  search/repeat, and source/provenance evidence checks.
+- [ ] In progress: access browse/plan/user/team blocker, mutation confirmation,
+  and shared review-detail coverage.
+- [ ] In progress: status overview/status and workspace/sync review search,
+  detail scrolling, and docs parity.
 
 ## Next Architecture Checklists
 

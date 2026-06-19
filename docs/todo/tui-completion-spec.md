@@ -328,6 +328,15 @@ Completed:
 - No terminology drift found (`--prompt` vs `--interactive` vs `--output-format interactive`).
 - Non-tui branches verified by feature-matrix checks; tui-enabled tests pass.
 
+Current registry tooling state:
+- `scripts/tui_inventory_report.py --registry-check` now emits a per-surface
+  summary with owner, tier, entrypoint kind, docs/code detection, fallback, and
+  operator-friendliness support notes.
+- Registry findings are expected to be empty; namespace docs and future-TUI
+  wording no longer produce false positives.
+- zh-TW command docs are included in signal detection for Chinese interactive
+  terminal wording.
+
 ### Phase C - Review Projection Consolidation
 
 1. Pick one already-compatible surface pair.
@@ -346,12 +355,11 @@ cd rust && cargo test --quiet access_plan_interactive
 
 Work through one surface at a time:
 
-1. dashboard browse/import/inspect;
-2. datasource browse/local/snapshot;
+1. datasource browse/list/snapshot;
+2. dashboard browse/import/inspect;
 3. access browse/plan/user/team;
 4. status overview/status TUI;
-5. sync audit/review;
-6. snapshot review.
+5. sync audit/workspace review.
 
 Each pass must include:
 
@@ -360,6 +368,42 @@ Each pass must include:
 - focused unit tests;
 - docs/help update if public behavior changes;
 - `make quality-rust` before completion.
+
+Priority detail:
+
+- Datasource browse/list/snapshot is first because it carries the highest
+  operator-safety risk. Prove secret redaction for `password`, `token`,
+  `apiKey`, and `secureJsonData.*` across live browse details, local list
+  interactive details, snapshot review details, review diffs, and confirmation
+  panes where applicable.
+- Dashboard browse/import/inspect is second because it has the broadest surface.
+  Complete confirmation copy, destructive key behavior, detail scroll clamping,
+  `/` search and repeat search, footer accuracy, source/provenance/ownership
+  evidence, and TTY/fallback behavior without forcing other domains into its
+  workbench state.
+- Access browse/plan/user/team is third because it is mutation-capable. Cover
+  confirm/cancel behavior, blocker visibility, target/context/detail rows,
+  shared review-contract projections where compatible, and no-secret rendering
+  in mutation review details.
+- Status overview/status TUI is fourth because it is read-only and
+  document-backed. Use it to tighten shared search semantics, no-match state,
+  detail scrolling, footer copy, and English/zh-TW docs parity.
+- Sync/workspace review is fifth. Keep it domain-owned, preserve workspace
+  terminology in public docs, reuse shared diff helpers only where already
+  compatible, and defer any global workbench abstraction until at least one more
+  domain proves the same fields and semantics.
+
+Current execution snapshot:
+
+- Implemented: datasource browse/list `End` and `PageUp/PageDown` now route to
+  scroll helpers; detail scrolling is clamped to rendered line count.
+- Implemented: datasource browse/list input tests now cover facts/detail/end scroll
+  behavior and empty-review fallback (scroll remains safe at one line).
+- In progress: dashboard browse/detail scroller now uses the same clamped helper
+  path; add input-level regression tests around footer/search/repeat in the same
+  style.
+- In progress: access/workspace/status surfaces and sync audit/doc parity are still
+  next with blocker, secret-redaction, and docs parity validations.
 
 ## Definition Of Done
 
@@ -373,4 +417,3 @@ The TUI backlog is complete when:
 - focused tests cover each surface's search/navigation/footer/fallback behavior;
 - mutation-capable surfaces cover confirmation, blockers, and secret redaction;
 - `todo.md` points here instead of carrying detailed TUI state.
-
