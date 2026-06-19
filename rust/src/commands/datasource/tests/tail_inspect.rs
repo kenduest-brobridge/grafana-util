@@ -5,8 +5,8 @@ use crate::datasource::{
     load_datasource_export_root_manifest, load_datasource_inspect_export_source,
     load_datasource_inventory_records_from_export_root,
     prompt_datasource_inspect_export_input_format, render_datasource_inspect_export_output,
-    resolve_datasource_inspect_export_input_format, DatasourceCliArgs,
-    DatasourceExportRootScopeKind, DatasourceImportInputFormat,
+    resolve_datasource_inspect_export_input_format, run_datasource_cli, DatasourceCliArgs,
+    DatasourceExportRootScopeKind, DatasourceGroupCommand, DatasourceImportInputFormat,
     DatasourceInspectExportRenderFormat, DatasourceInspectExportSource,
 };
 use std::fs;
@@ -79,6 +79,21 @@ fn datasource_inspect_export_renders_inventory_root_in_multiple_output_modes() {
     assert!(yaml_output.contains("datasourceCount: 1"));
 
     fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn datasource_list_interactive_without_input_dir_returns_guidance_error() {
+    let args = DatasourceCliArgs::parse_from(["grafana-util datasource", "list", "--interactive"]);
+
+    let command = match args.command {
+        DatasourceGroupCommand::List(inner) => DatasourceGroupCommand::List(inner),
+        _ => panic!("expected datasource list"),
+    };
+    let error = run_datasource_cli(command).unwrap_err();
+
+    assert!(error
+        .to_string()
+        .contains("Datasource list --interactive requires --input-dir"));
 }
 
 #[test]

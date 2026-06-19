@@ -11,6 +11,7 @@ from scripts.tui_inventory_report import (
     check_registry,
     load_registry,
     build_inventory,
+    build_surface_summary,
 )
 
 
@@ -57,9 +58,7 @@ pub(crate) fn control_line(items: &[(&str, Color, &str)]) -> Line<'static> {
     def test_check_registry_finds_no_critical_errors_in_live_data(self) -> None:
         items = build_inventory()
         findings = check_registry(items)
-        # All findings should be advisory kinds (no fatal errors expected)
-        for f in findings:
-            self.assertIn(f.kind, {"missing-doc", "missing-doc-zh-TW", "undocumented-surface", "missing-code"})
+        self.assertEqual([], findings)
 
     def test_scan_roots_include_zh_tw(self) -> None:
         root_strs = [root.as_posix() for root in SCAN_ROOTS]
@@ -77,9 +76,40 @@ pub(crate) fn control_line(items: &[(&str, Color, &str)]) -> Line<'static> {
         for entry in registry["surfaces"]:
             with self.subTest(command=entry["command"]):
                 self.assertIsInstance(entry["command"], str)
+                self.assertIsInstance(entry["owner"], str)
+                self.assertIn(entry["entrypoint_kind"], {"flag", "output-format", "implicit"})
                 self.assertIn(entry["tier"], {2, 3, 4})
+                self.assertIsInstance(entry["validation"], str)
                 self.assertIsInstance(entry["has_tests"], bool)
                 self.assertIn(entry["feature_gate"], {"tui", "browser"})
+
+    def test_registry_surfaces_record_operator_friendliness(self) -> None:
+        registry = load_registry()
+        for entry in registry["surfaces"]:
+            with self.subTest(command=entry["command"]):
+                friendliness = entry["operator_friendliness"]
+                self.assertIsInstance(friendliness["summary"], str)
+                self.assertIsInstance(friendliness["search"], str)
+                self.assertIsInstance(friendliness["detail_scroll"], str)
+                self.assertIsInstance(friendliness["footer"], str)
+                self.assertIsInstance(friendliness["confirmation"], str)
+                self.assertIsInstance(friendliness["secret_redaction"], str)
+                self.assertIsInstance(friendliness["blockers"], str)
+
+    def test_surface_summary_reports_registry_coverage(self) -> None:
+        registry = load_registry()
+        items = build_inventory()
+        summary = build_surface_summary(registry, items)
+
+        commands = {entry["command"] for entry in registry["surfaces"]}
+        self.assertEqual(commands, {entry["command"] for entry in summary})
+        for entry in summary:
+            with self.subTest(command=entry["command"]):
+                self.assertIn("owner", entry)
+                self.assertIn("docsDetected", entry)
+                self.assertIn("codeDetected", entry)
+                self.assertIn("operatorFriendliness", entry)
+                self.assertIn("validation", entry)
 
     def test_zh_tw_docs_are_scanned(self) -> None:
         items = build_inventory()

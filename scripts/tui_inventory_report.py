@@ -30,8 +30,21 @@ SKIP_FILES = {
 TUI_RE = re.compile(
     r"ratatui|crossterm|tui_shell|TerminalSession|feature = \"tui\"|"
     r"--interactive|output-format interactive|browse interactively|"
-    r"interactive terminal|terminal UI|Terminal UI|TUI",
+    r"interactive terminal|terminal UI|Terminal UI|TUI|"
+    r"互動式終端機|互動式清單視圖",
 )
+PUBLIC_TUI_DOC_RE = re.compile(
+    r"--interactive|--output-format\s+interactive|output-format interactive|"
+    r"interactive terminal|terminal UI|Terminal UI|"
+    r"互動式終端機|互動式清單視圖",
+)
+NAMESPACE_COMMAND_DOCS = {
+    "docs/commands/en/access.md",
+    "docs/commands/en/dashboard.md",
+    "docs/commands/en/datasource.md",
+    "docs/commands/en/snapshot.md",
+    "docs/commands/en/status.md",
+}
 HELPER_DRIFT_RE = re.compile(
     r"^\s*fn\s+"
     r"(?P<helper>detail_line|fact_line|build_info_lines|build_review_lines|"
@@ -179,8 +192,87 @@ class RegistryFinding:
     message: str
 
 
+DEFAULT_OPERATOR_FRIENDLINESS = {
+    "summary": "Registry-owned support notes; verify screen copy, navigation, fallback, and safety in the owning surface tests.",
+    "search": "Supports / search or documents a surface-specific deviation.",
+    "detail_scroll": "Detail panes clamp scrolling to rendered content where scrollable.",
+    "footer": "Footer copy advertises only active controls and uses compact exit language.",
+    "confirmation": "Mutation-capable surfaces separate confirm and cancel controls; read-only surfaces mark confirmation not applicable.",
+    "secret_redaction": "Secret-like values must not render in detail, diff, or confirmation panes.",
+    "blockers": "Mutation review surfaces keep blockers visible before apply; read-only surfaces mark blockers not applicable.",
+}
+
+
+def infer_entrypoint_kind(command: str) -> str:
+    if "--output-format interactive" in command:
+        return "output-format"
+    if "--interactive" in command:
+        return "flag"
+    return "implicit"
+
+
+def normalize_registry_entry(entry: dict) -> dict:
+    normalized = dict(entry)
+    domain = normalized.get("domain", "")
+    normalized.setdefault("owner", f"rust/src/commands/{domain}")
+    normalized.setdefault("entrypoint_kind", infer_entrypoint_kind(normalized["command"]))
+    normalized.setdefault("validation", "python3 -m unittest -v scripts/test_tui_inventory_report.py")
+    friendliness = dict(DEFAULT_OPERATOR_FRIENDLINESS)
+    friendliness.update(normalized.get("operator_friendliness", {}))
+    normalized["operator_friendliness"] = friendliness
+    return normalized
+
+
 def load_registry() -> dict:
-    return json.loads(REGISTRY_PATH.read_text(encoding="utf-8"))
+    registry = json.loads(REGISTRY_PATH.read_text(encoding="utf-8"))
+    registry["surfaces"] = [
+        normalize_registry_entry(entry) for entry in registry.get("surfaces", [])
+    ]
+    return registry
+
+
+def matching_code_paths(entry: dict, detected_rust_paths: set[str]) -> list[str]:
+    domain = entry.get("domain", "")
+    matching_rust = [
+        p for p in detected_rust_paths if p.startswith(f"rust/src/commands/{domain}/")
+    ]
+    matching_infra = [
+        p
+        for p in detected_rust_paths
+        if domain in p and p.startswith("rust/src/common/")
+    ]
+    return sorted(matching_rust + matching_infra)
+
+
+def build_surface_summary(registry: dict, items: list[InventoryItem]) -> list[dict]:
+    detected_doc_paths = {item.path for item in items if item.kind == "docs"}
+    detected_rust_paths = {item.path for item in items if item.kind != "docs"}
+
+    summary: list[dict] = []
+    for entry in registry.get("surfaces", []):
+        docs = [
+            path
+            for path in (entry.get("docs_en"), entry.get("docs_zh_TW"))
+            if path is not None
+        ]
+        code_paths = matching_code_paths(entry, detected_rust_paths)
+        summary.append(
+            {
+                "command": entry["command"],
+                "owner": entry["owner"],
+                "tier": entry["tier"],
+                "entrypointKind": entry["entrypoint_kind"],
+                "mode": entry.get("mode", []),
+                "behavior": entry.get("behavior"),
+                "docsDetected": {path: path in detected_doc_paths for path in docs},
+                "codeDetected": bool(code_paths),
+                "codeSignals": code_paths[:5],
+                "fallback": entry.get("fallback"),
+                "operatorFriendliness": entry["operator_friendliness"],
+                "validation": entry["validation"],
+            }
+        )
+    return summary
 
 
 def check_registry(items: list[InventoryItem]) -> list[RegistryFinding]:
@@ -219,26 +311,15 @@ def check_registry(items: list[InventoryItem]) -> list[RegistryFinding]:
 
         # Check that at least one matching Rust file is detected for this surface
         domain = entry.get("domain", "")
-        matching_rust = [
-            p
-            for p in detected_rust_paths
-            if p.startswith(f"rust/src/commands/{domain}/")
-        ]
+        matching_rust = matching_code_paths(entry, detected_rust_paths)
         if not matching_rust:
-            # Also check infrastructure paths
-            matching_infra = [
-                p
-                for p in detected_rust_paths
-                if domain in p and p.startswith("rust/src/common/")
-            ]
-            if not matching_infra:
-                findings.append(
-                    RegistryFinding(
-                        kind="missing-code",
-                        surface=command,
-                        message=f"no Rust file detected under `rust/src/commands/{domain}/` matching TUI signals",
-                    )
+            findings.append(
+                RegistryFinding(
+                    kind="missing-code",
+                    surface=command,
+                    message=f"no Rust file detected under `rust/src/commands/{domain}/` matching TUI signals",
                 )
+            )
 
     # Check for undocumented surfaces: English command docs with TUI signals not in registry
     registry_doc_paths = {
@@ -249,7 +330,12 @@ def check_registry(items: list[InventoryItem]) -> list[RegistryFinding]:
     for doc_path in sorted(detected_doc_paths):
         if not doc_path.startswith("docs/commands/en/"):
             continue
+        if doc_path in NAMESPACE_COMMAND_DOCS:
+            continue
         if doc_path in registry_doc_paths:
+            continue
+        doc_text = (REPO_ROOT / doc_path).read_text(encoding="utf-8")
+        if not PUBLIC_TUI_DOC_RE.search(doc_text):
             continue
         findings.append(
             RegistryFinding(
@@ -266,6 +352,7 @@ def print_text_report(
     items: list[InventoryItem],
     helper_drift: list[HelperDriftItem],
     registry_findings: list[RegistryFinding] | None = None,
+    surface_summary: list[dict] | None = None,
 ) -> None:
     by_kind: dict[str, list[InventoryItem]] = {}
     for item in items:
@@ -303,6 +390,19 @@ def print_text_report(
                 print(f"      {finding.message}")
         print()
 
+    if surface_summary is not None:
+        print(f"surface summary ({len(surface_summary)})")
+        for surface in surface_summary:
+            docs = surface["docsDetected"]
+            detected_docs = sum(1 for detected in docs.values() if detected)
+            print(f"  - {surface['command']}")
+            print(f"    owner: {surface['owner']}")
+            print(f"    tier: {surface['tier']} / {surface['entrypointKind']}")
+            print(f"    docs: {detected_docs}/{len(docs)} detected")
+            print(f"    code: {'detected' if surface['codeDetected'] else 'missing'}")
+            print(f"    validation: {surface['validation']}")
+        print()
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -318,8 +418,11 @@ def main() -> int:
     helper_drift = build_helper_drift()
 
     registry_findings: list[RegistryFinding] = []
+    surface_summary: list[dict] = []
     if args.registry_check:
+        registry = load_registry()
         registry_findings = check_registry(items)
+        surface_summary = build_surface_summary(registry, items)
 
     if args.json:
         output: dict[str, object] = {
@@ -328,9 +431,10 @@ def main() -> int:
         }
         if args.registry_check:
             output["registryFindings"] = [asdict(f) for f in registry_findings]
+            output["surfaceSummary"] = surface_summary
         print(json.dumps(output, indent=2, sort_keys=True))
     else:
-        print_text_report(items, helper_drift, registry_findings)
+        print_text_report(items, helper_drift, registry_findings, surface_summary)
     return 0
 
 

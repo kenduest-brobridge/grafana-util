@@ -53,6 +53,8 @@ fn list_help_explains_org_scope_flags() {
     assert!(help.contains("--csv"));
     assert!(help.contains("--json"));
     assert!(help.contains("--yaml"));
+    assert!(help.contains("--interactive"));
+    assert!(help.contains("For --input-dir only"));
     assert!(help.contains("--output-columns"));
     assert!(help.contains("--list-columns"));
 }

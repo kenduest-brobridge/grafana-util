@@ -115,10 +115,10 @@
       "behavior": "read-only",
       "feature_gate": "tui",
       "fallback": "error: requires the 'tui' feature",
-      "docs_en": null,
-      "docs_zh_TW": null,
+      "docs_en": "docs/commands/en/datasource-list.md",
+      "docs_zh_TW": "docs/commands/zh-TW/datasource-list.md",
       "has_tests": true,
-      "notes": "Local datasource list interactive review. Command doc exists but does not yet mention --interactive."
+      "notes": "Local datasource list interactive workbench for export/provisioning inspection."
     },
     {
       "command": "datasource plan --output-format interactive",

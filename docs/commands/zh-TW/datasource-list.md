@@ -11,6 +11,7 @@
 - `--input-format`：當本地路徑可能同時對應多種來源形狀時，選擇 `inventory` 或 `provisioning`。
 - `--org-id`：列出指定的 Grafana org。
 - `--all-orgs`：彙整所有可見 org 的 datasource inventory。需要 Basic auth。
+- `--interactive`：開啟本地 datasource inventory 互動式瀏覽畫面。此模式僅限本地使用，必須搭配 `--input-dir`。
 - `--output-format`、`--text`、`--table`、`--csv`、`--json`、`--yaml`：輸出模式控制。
 - `--output-columns`：選擇要顯示的 datasource 欄位。可用 `all` 展開目前資料集中所有可發現欄位。常見欄位包含 `uid`、`name`、`type`、`access`、`url`、`is_default`、`database`、`org`、`org_id`，也支援像 `jsonData.organization`、`jsonData.defaultBucket`、`secureJsonFields.basicAuthPassword` 這種巢狀路徑。
 - `--list-columns`：列出常見的 `--output-columns` 欄位 id 與路徑模式後直接結束。
@@ -42,6 +43,11 @@ grafana-util datasource list --url http://localhost:3000 --basic-user admin --pr
 grafana-util datasource list --input-dir ./datasources --json
 ```
 
+```bash
+# 用互動式清單檢視本地 datasource 匯出 bundle。
+grafana-util datasource list --input-dir ./datasources --interactive
+```
+
 ## 採用前後對照
 
 - **採用前**：想看 datasource inventory 時，常常要在 Grafana UI、export bundle 或零散 API 呼叫之間來回切換。
@@ -60,6 +66,7 @@ grafana-util datasource list --input-dir ./datasources --json
 - 如果 `--all-orgs` 失敗，先改用 Basic auth，並檢查 token 是否只看得到單一 org
 - 如果本地 bundle 讀取失敗，先確認 `--input-dir` 與 `--input-format`
 - 如果欄位看起來不對，先跑 `--list-columns`，再確認輸出格式與指定欄位是否一致
+- 如果要做線上 live 的互動式瀏覽，請改用 `grafana-util datasource browse`
 
 ## 相關指令
 - [datasource browse](./datasource-browse.md)

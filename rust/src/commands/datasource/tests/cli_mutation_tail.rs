@@ -3,6 +3,7 @@
 use super::*;
 use crate::dashboard::SimpleOutputFormat;
 use crate::datasource::DatasourceGroupCommand;
+use std::path::Path;
 
 #[test]
 fn delete_help_explains_live_mutation_flags() {
@@ -104,6 +105,44 @@ fn parse_datasource_list_supports_output_format_text_and_yaml() {
             assert!(!inner.text);
             assert!(!inner.table);
             assert!(!inner.csv);
+            assert!(!inner.json);
+        }
+        _ => panic!("expected datasource list"),
+    }
+}
+
+#[test]
+fn parse_datasource_list_rejects_interactive_with_output_formats() {
+    let error = DatasourceCliArgs::try_parse_from([
+        "grafana-util",
+        "list",
+        "--input-dir",
+        "./datasources",
+        "--interactive",
+        "--table",
+    ])
+    .unwrap_err();
+
+    let message = error.to_string();
+
+    assert!(message.contains("--interactive"));
+    assert!(message.contains("--table"));
+}
+
+#[test]
+fn parse_datasource_list_accepts_interactive_with_input_dir() {
+    let args = DatasourceCliArgs::parse_from([
+        "grafana-util datasource",
+        "list",
+        "--input-dir",
+        "./datasources",
+        "--interactive",
+    ]);
+
+    match args.command {
+        DatasourceGroupCommand::List(inner) => {
+            assert!(inner.interactive);
+            assert_eq!(inner.input_dir.as_deref(), Some(Path::new("./datasources")));
             assert!(!inner.json);
         }
         _ => panic!("expected datasource list"),

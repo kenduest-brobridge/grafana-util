@@ -11,6 +11,8 @@ Use this when you need a non-interactive datasource read path. Live JSON and YAM
 - `--input-format`: choose `inventory` or `provisioning` when the local path can mean either source shape.
 - `--org-id`: list one explicit Grafana org.
 - `--all-orgs`: aggregate datasource inventory across visible orgs. Requires Basic auth.
+- `--interactive`: open the local inventory workbench for review and navigation.
+  This mode is local-only and requires `--input-dir`.
 - `--output-format`, `--text`, `--table`, `--csv`, `--json`, `--yaml`: output mode controls.
 - `--output-columns`: choose which datasource fields to display. Use `all` to expand every discovered field in human-readable output. Common ids include `uid`, `name`, `type`, `access`, `url`, `is_default`, `database`, `org`, `org_id`, and nested paths such as `jsonData.organization`, `jsonData.defaultBucket`, or `secureJsonFields.basicAuthPassword`.
 - `--list-columns`: print the common `--output-columns` ids and path patterns, then exit.
@@ -37,6 +39,11 @@ grafana-util datasource list --url http://localhost:3000 --basic-user admin --pr
 grafana-util datasource list --input-dir ./datasources --json
 ```
 
+```bash
+# Review a local datasource bundle in the interactive workbench.
+grafana-util datasource list --input-dir ./datasources --interactive
+```
+
 ## Before / After
 
 - **Before**: datasource inventory was easy to read only after jumping between Grafana UI, export bundles, or ad hoc API calls.
@@ -55,6 +62,7 @@ grafana-util datasource list --input-dir ./datasources --json
 - if `--all-orgs` fails, fall back to Basic auth and check whether the token is limited to one org
 - if a local bundle does not read correctly, confirm `--input-dir` and `--input-format`
 - if column selection looks wrong, run `--list-columns` first and confirm the output format and requested columns together
+- if you need live datasource review instead of local workbench review, use `grafana-util datasource browse`
 
 ## Related commands
 - [datasource browse](./datasource-browse.md)
