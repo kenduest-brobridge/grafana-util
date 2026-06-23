@@ -9,6 +9,8 @@
 ## 重點旗標
 - `--input-dir`：讀取本地 datasource 匯出 bundle 或 provisioning tree。
 - `--input-format`：當本地路徑可能同時對應多種來源形狀時，選擇 `inventory` 或 `provisioning`。
+- `--local`：未指定 `--input-dir` 時，改從 artifact workspace 讀取 datasource inventory，而不是讀取 live Grafana。
+- `--run`、`--run-id`：搭配 `--local` 使用，選擇 latest / timestamp run，或指定單一 artifact run ID。
 - `--org-id`：列出指定的 Grafana org。
 - `--all-orgs`：彙整所有可見 org 的 datasource inventory。需要 Basic auth。
 - `--interactive`：開啟本地 datasource inventory 互動式瀏覽畫面。此模式僅限本地使用，必須搭配 `--input-dir`。
@@ -44,6 +46,11 @@ grafana-util datasource list --input-dir ./datasources --json
 ```
 
 ```bash
+# 從 artifact workspace 最新 run 列出 datasource inventory。
+grafana-util datasource list --profile prod --local --run latest --table
+```
+
+```bash
 # 用互動式清單檢視本地 datasource 匯出 bundle。
 grafana-util datasource list --input-dir ./datasources --interactive
 ```
@@ -65,6 +72,7 @@ grafana-util datasource list --input-dir ./datasources --interactive
 - 如果 inventory 是空的，先確認 org 範圍與驗證資訊是否真的看得到目標 org
 - 如果 `--all-orgs` 失敗，先改用 Basic auth，並檢查 token 是否只看得到單一 org
 - 如果本地 bundle 讀取失敗，先確認 `--input-dir` 與 `--input-format`
+- 如果 artifact workspace 找不到資料，先確認 `--local`、`--run` / `--run-id`、profile 與 `artifact_root`
 - 如果欄位看起來不對，先跑 `--list-columns`，再確認輸出格式與指定欄位是否一致
 - 如果要做線上 live 的互動式瀏覽，請改用 `grafana-util datasource browse`
 

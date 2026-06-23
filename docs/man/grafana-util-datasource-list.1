@@ -21,11 +21,20 @@ read a local datasource export bundle or provisioning tree.
 .B \-\-input\-format
 choose inventory or provisioning when the local path can mean either source shape.
 .TP
+.B \-\-local
+read datasource inventory from the artifact workspace instead of live Grafana when \-\-input\-dir is omitted.
+.TP
+.B \-\-run, \-\-run\-id
+with \-\-local, select the latest/timestamp run or one explicit artifact run ID.
+.TP
 .B \-\-org\-id
 list one explicit Grafana org.
 .TP
 .B \-\-all\-orgs
 aggregate datasource inventory across visible orgs. Requires Basic auth.
+.TP
+.B \-\-interactive
+open the local inventory workbench for review and navigation.
 .TP
 .B \-\-output\-format, \-\-text, \-\-table, \-\-csv, \-\-json, \-\-yaml
 output mode controls.
@@ -55,7 +64,11 @@ if \-\-all\-orgs fails, fall back to Basic auth and check whether the token is l
 .IP \(bu 2
 if a local bundle does not read correctly, confirm \-\-input\-dir and \-\-input\-format
 .IP \(bu 2
+if artifact workspace lookup does not find data, confirm \-\-local, \-\-run/\-\-run\-id, profile, and artifact_root
+.IP \(bu 2
 if column selection looks wrong, run \-\-list\-columns first and confirm the output format and requested columns together
+.IP \(bu 2
+if you need live datasource review instead of local workbench review, use grafana\-util datasource browse
 .SH EXAMPLES
 .PP
 List datasource inventory from live Grafana or a local export bundle.

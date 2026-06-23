@@ -956,7 +956,9 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="目前支援的-kinds">目前支援的 kinds</h2>
 <ul><li><code>dashboards</code></li><li><code>folders</code></li><li><code>datasources</code></li><li><code>alert-rules</code></li><li><code>orgs</code></li></ul>
 <h2 id="輸出">輸出</h2>
-<ul><li><code>kinds</code> 支援 <code>text</code>、<code>table</code>、<code>json</code>、<code>yaml</code></li><li><code>list</code> 支援 <code>text</code>、<code>table</code>、<code>json</code>、<code>yaml</code></li><li><code>get</code> 支援 <code>text</code>、<code>table</code>、<code>json</code>、<code>yaml</code></li></ul>
+<ul><li><code>kinds</code> 支援 <code>text</code>、<code>table</code>、<code>json</code>、<code>yaml</code></li><li><code>list</code> 支援 <code>text</code>、<code>table</code>、<code>json</code>、<code>yaml</code></li><li><code>get</code> 支援 <code>text</code>、<code>table</code>、<code>json</code>、<code>yaml</code></li><li><code>list</code> / <code>get</code> 的 <code>--api-mode</code> 預設為 <code>auto</code>；對 datasource <code>get</code> 來說，<code>auto</code> 會先嘗試 UID endpoint，404 時改走 legacy 數字 ID endpoint。</li></ul>
+<h2 id="建議模式">建議模式</h2>
+<ul><li>混合版本環境優先用預設 <code>auto</code>；確認 datasource 查詢需要舊版數字 ID endpoint 時才使用 <code>--api-mode legacy</code>。</li></ul>
 <h2 id="範例">範例</h2>
 <pre><code># 說明目前支援的 live resource kinds 與 selector 格式。
 grafana-util status resource describe</code></pre>
@@ -966,6 +968,8 @@ grafana-util status resource kinds</code></pre>
 grafana-util status resource list dashboards --url http://localhost:3000 --basic-user admin --basic-password admin</code></pre>
 <pre><code># 以 YAML 取得單一 datasource payload。
 grafana-util status resource get datasources/prom-main --profile prod --output-format yaml</code></pre>
+<pre><code># 有需要時，強制 legacy 相容模式。
+grafana-util status resource get datasources/10 --api-mode legacy</code></pre>
 <h2 id="相關指令">相關指令</h2>
 <ul><li><a href="resource-describe.html">resource describe</a></li><li><a href="resource-kinds.html">resource kinds</a></li><li><a href="resource-list.html">resource list</a></li><li><a href="resource-get.html">resource get</a></li><li><a href="dashboard.html">dashboard</a></li></ul>
 
@@ -973,7 +977,7 @@ grafana-util status resource get datasources/prom-main --profile prod --output-f
 <aside class="sidebar">
   <button class="sidebar-toggle sidebar-toggle-right" type="button" aria-expanded="true" aria-label="Toggle page sidebar">▶</button>
   <div class="sidebar-content">
-    <section class="sidebar-section"><h2>本頁內容</h2><ul class="toc-list"><li class="toc-level-2"><a href="#用途"><span class="toc-label">用途</span></a></li><li class="toc-level-2"><a href="#何時使用"><span class="toc-label">何時使用</span></a></li><li class="toc-level-2"><a href="#說明"><span class="toc-label">說明</span></a></li><li class="toc-level-2"><a href="#使用方式"><span class="toc-label">使用方式</span></a></li><li class="toc-level-2"><a href="#目前支援的-kinds"><span class="toc-label">目前支援的 kinds</span></a></li><li class="toc-level-2"><a href="#輸出"><span class="toc-label">輸出</span></a></li><li class="toc-level-2"><a href="#範例"><span class="toc-label">範例</span></a></li><li class="toc-level-2"><a href="#相關指令"><span class="toc-label">相關指令</span></a></li></ul></section><section class="sidebar-section"><h2>相關頁面</h2><ul class="sidebar-meta-list"><li><a href="status.html" class="sidebar-meta-link">上層命令: status</a></li><li><a href="snapshot.html" class="sidebar-meta-link">同層命令: status snapshot</a></li></ul></section><section class="sidebar-section"><h2>版本</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>語言</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/resource.html" class="sidebar-meta-link">Switch to English</a></li></ul></section>
+    <section class="sidebar-section"><h2>本頁內容</h2><ul class="toc-list"><li class="toc-level-2"><a href="#用途"><span class="toc-label">用途</span></a></li><li class="toc-level-2"><a href="#何時使用"><span class="toc-label">何時使用</span></a></li><li class="toc-level-2"><a href="#說明"><span class="toc-label">說明</span></a></li><li class="toc-level-2"><a href="#使用方式"><span class="toc-label">使用方式</span></a></li><li class="toc-level-2"><a href="#目前支援的-kinds"><span class="toc-label">目前支援的 kinds</span></a></li><li class="toc-level-2"><a href="#輸出"><span class="toc-label">輸出</span></a></li><li class="toc-level-2"><a href="#建議模式"><span class="toc-label">建議模式</span></a></li><li class="toc-level-2"><a href="#範例"><span class="toc-label">範例</span></a></li><li class="toc-level-2"><a href="#相關指令"><span class="toc-label">相關指令</span></a></li></ul></section><section class="sidebar-section"><h2>相關頁面</h2><ul class="sidebar-meta-list"><li><a href="status.html" class="sidebar-meta-link">上層命令: status</a></li><li><a href="snapshot.html" class="sidebar-meta-link">同層命令: status snapshot</a></li></ul></section><section class="sidebar-section"><h2>版本</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>語言</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/resource.html" class="sidebar-meta-link">Switch to English</a></li></ul></section>
   </div>
 </aside>
 

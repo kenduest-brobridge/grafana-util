@@ -950,7 +950,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="何時使用">何時使用</h2>
 <p>當你需要某一種支援資源的唯讀 live inventory，但還不需要進入更高階的 domain workflow 時，使用這個指令。</p>
 <h2 id="重點旗標">重點旗標</h2>
-<ul><li>位置參數 <code>KIND</code>：例如 <code>dashboards</code>、<code>folders</code>、<code>datasources</code>、<code>alert-rules</code>、<code>orgs</code></li><li><code>--profile</code>、<code>--url</code>、<code>--token</code>、<code>--basic-user</code>、<code>--basic-password</code>：live Grafana 連線設定</li><li><code>--output-format</code>：選擇 <code>text</code>、<code>table</code>、<code>json</code> 或 <code>yaml</code></li></ul>
+<ul><li>位置參數 <code>KIND</code>：例如 <code>dashboards</code>、<code>folders</code>、<code>datasources</code>、<code>alert-rules</code>、<code>orgs</code></li><li><code>--profile</code>、<code>--url</code>、<code>--token</code>、<code>--basic-user</code>、<code>--basic-password</code>：live Grafana 連線設定</li><li><code>--output-format</code>：選擇 <code>text</code>、<code>table</code>、<code>json</code> 或 <code>yaml</code></li><li><code>--api-mode</code>：有 alternate endpoint path 的 kind 會使用的相容偏好（預設 <code>auto</code>）</li></ul>
 <h2 id="範例">範例</h2>
 <pre><code># 從本機 Grafana 以表格列出 dashboards。
 grafana-util status resource list dashboards --url http://localhost:3000 --basic-user admin --basic-password admin</code></pre>

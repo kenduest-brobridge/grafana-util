@@ -9,6 +9,8 @@ Use this when you need a non-interactive datasource read path. Live JSON and YAM
 ## Key flags
 - `--input-dir`: read a local datasource export bundle or provisioning tree.
 - `--input-format`: choose `inventory` or `provisioning` when the local path can mean either source shape.
+- `--local`: read datasource inventory from the artifact workspace instead of live Grafana when `--input-dir` is omitted.
+- `--run`, `--run-id`: with `--local`, select the latest/timestamp run or one explicit artifact run ID.
 - `--org-id`: list one explicit Grafana org.
 - `--all-orgs`: aggregate datasource inventory across visible orgs. Requires Basic auth.
 - `--interactive`: open the local inventory workbench for review and navigation.
@@ -40,6 +42,11 @@ grafana-util datasource list --input-dir ./datasources --json
 ```
 
 ```bash
+# List datasource inventory from the latest artifact workspace run.
+grafana-util datasource list --profile prod --local --run latest --table
+```
+
+```bash
 # Review a local datasource bundle in the interactive workbench.
 grafana-util datasource list --input-dir ./datasources --interactive
 ```
@@ -61,6 +68,7 @@ grafana-util datasource list --input-dir ./datasources --interactive
 - if the inventory is empty, confirm the org scope and whether the credentials can see the target org
 - if `--all-orgs` fails, fall back to Basic auth and check whether the token is limited to one org
 - if a local bundle does not read correctly, confirm `--input-dir` and `--input-format`
+- if artifact workspace lookup does not find data, confirm `--local`, `--run`/`--run-id`, profile, and `artifact_root`
 - if column selection looks wrong, run `--list-columns` first and confirm the output format and requested columns together
 - if you need live datasource review instead of local workbench review, use `grafana-util datasource browse`
 

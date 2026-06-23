@@ -950,7 +950,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="when-to-use">When to use</h2>
 <p>Use this when you need the live payload for one supported resource item and want a simpler generic query than building a full export or inspect workflow.</p>
 <h2 id="key-flags">Key flags</h2>
-<ul><li>positional <code>SELECTOR</code>: required <code>&lt;kind&gt;/&lt;identity&gt;</code> selector, for example <code>dashboards/cpu-main</code> or <code>datasources/prom-main</code></li><li><code>--profile</code>, <code>--url</code>, <code>--token</code>, <code>--basic-user</code>, <code>--basic-password</code>: live Grafana connection settings</li><li><code>--output-format</code>: choose <code>text</code>, <code>table</code>, <code>json</code>, or <code>yaml</code></li></ul>
+<ul><li>positional <code>SELECTOR</code>: required <code>&lt;kind&gt;/&lt;identity&gt;</code> selector, for example <code>dashboards/cpu-main</code> or <code>datasources/prom-main</code></li><li><code>--profile</code>, <code>--url</code>, <code>--token</code>, <code>--basic-user</code>, <code>--basic-password</code>: live Grafana connection settings</li><li><code>--output-format</code>: choose <code>text</code>, <code>table</code>, <code>json</code>, or <code>yaml</code></li><li><code>--api-mode</code>: compatibility preference (<code>auto</code> default; datasource <code>get</code> falls back from UID path to legacy numeric-ID path on 404)</li></ul>
 <h2 id="notes">Notes</h2>
 <ul><li>The selector kind must currently be one of <code>dashboards</code>, <code>folders</code>, <code>datasources</code>, <code>alert-rules</code>, or <code>orgs</code>.</li><li><code>text</code> and <code>table</code> outputs summarize the fetched object. Use <code>json</code> or <code>yaml</code> when you need the full payload.</li></ul>
 <h2 id="examples">Examples</h2>
@@ -960,6 +960,8 @@ grafana-util status resource get dashboards/cpu-main --url http://localhost:3000
 grafana-util status resource get datasources/prom-main --profile prod --output-format yaml</code></pre>
 <pre><code># Fetch one org payload by numeric ID.
 grafana-util status resource get orgs/1 --profile prod --output-format json</code></pre>
+<pre><code># Prefer the legacy datasource numeric-ID path.
+grafana-util status resource get datasources/10 --api-mode legacy --url http://localhost:3000</code></pre>
 <h2 id="related-commands">Related commands</h2>
 <ul><li><a href="resource.html">resource</a></li><li><a href="resource-describe.html">resource describe</a></li><li><a href="resource-kinds.html">resource kinds</a></li><li><a href="resource-list.html">resource list</a></li></ul>
 

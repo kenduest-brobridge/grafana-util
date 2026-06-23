@@ -950,7 +950,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="何時使用">何時使用</h2>
 <p>當你需要某一筆支援資源的 live payload，且想用比完整 export 或 inspect workflow 更簡單的逃生入口時，使用這個指令。</p>
 <h2 id="重點旗標">重點旗標</h2>
-<ul><li>位置參數 <code>SELECTOR</code>：必填 <code>&lt;kind&gt;/&lt;identity&gt;</code>，例如 <code>dashboards/cpu-main</code> 或 <code>datasources/prom-main</code></li><li><code>--profile</code>、<code>--url</code>、<code>--token</code>、<code>--basic-user</code>、<code>--basic-password</code>：live Grafana 連線設定</li><li><code>--output-format</code>：選擇 <code>text</code>、<code>table</code>、<code>json</code> 或 <code>yaml</code></li></ul>
+<ul><li>位置參數 <code>SELECTOR</code>：必填 <code>&lt;kind&gt;/&lt;identity&gt;</code>，例如 <code>dashboards/cpu-main</code> 或 <code>datasources/prom-main</code></li><li><code>--profile</code>、<code>--url</code>、<code>--token</code>、<code>--basic-user</code>、<code>--basic-password</code>：live Grafana 連線設定</li><li><code>--output-format</code>：選擇 <code>text</code>、<code>table</code>、<code>json</code> 或 <code>yaml</code></li><li><code>--api-mode</code>：endpoint 相容偏好（預設 <code>auto</code>；datasource <code>get</code> 會在 UID path 404 時 fallback 到 legacy 數字 ID path）</li></ul>
 <h2 id="補充說明">補充說明</h2>
 <ul><li>selector 的 kind 目前必須是 <code>dashboards</code>、<code>folders</code>、<code>datasources</code>、<code>alert-rules</code>、<code>orgs</code> 之一。</li><li><code>text</code> 和 <code>table</code> 只會摘要顯示主要欄位；需要完整 payload 時請用 <code>json</code> 或 <code>yaml</code>。</li></ul>
 <h2 id="範例">範例</h2>
@@ -960,6 +960,8 @@ grafana-util status resource get dashboards/cpu-main --url http://localhost:3000
 grafana-util status resource get datasources/prom-main --profile prod --output-format yaml</code></pre>
 <pre><code># 依數字 ID 取得單一 org payload。
 grafana-util status resource get orgs/1 --profile prod --output-format json</code></pre>
+<pre><code># 偏好 legacy datasource 數字 ID path。
+grafana-util status resource get datasources/10 --api-mode legacy --url http://localhost:3000</code></pre>
 <h2 id="相關指令">相關指令</h2>
 <ul><li><a href="resource.html">resource</a></li><li><a href="resource-describe.html">resource describe</a></li><li><a href="resource-kinds.html">resource kinds</a></li><li><a href="resource-list.html">resource list</a></li></ul>
 
