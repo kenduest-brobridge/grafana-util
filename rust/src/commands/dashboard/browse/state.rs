@@ -315,12 +315,6 @@ impl BrowserState {
         self.detail_scroll = self.max_detail_scroll().min(u16::MAX as usize) as u16;
     }
 
-    #[cfg(test)]
-    pub(crate) fn clamp_detail_scroll(&mut self) {
-        let max_scroll = self.max_detail_scroll().min(u16::MAX as usize) as u16;
-        self.detail_scroll = self.detail_scroll.min(max_scroll);
-    }
-
     pub(crate) fn selected_position_summary(&self) -> String {
         match (self.list_state.selected(), self.document.nodes.len()) {
             (Some(index), total) if total > 0 => {
