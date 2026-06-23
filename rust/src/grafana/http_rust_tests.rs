@@ -23,6 +23,60 @@ fn client_builder_accepts_basic_config() {
 }
 
 #[test]
+fn build_url_reports_ipv4_like_dns_host_as_unknown_host() {
+    let client = JsonHttpClient::new(JsonHttpClientConfig {
+        base_url: "https://hostx.0.2.120:3000".to_string(),
+        headers: Vec::new(),
+        timeout_secs: 30,
+        verify_ssl: false,
+    })
+    .unwrap();
+
+    let url = client.build_url(
+        "/api/org",
+        &[("query".to_string(), "alerting rules".to_string())],
+    );
+
+    assert_eq!(
+        url.unwrap_err().to_string(),
+        "Unknown host hostx.0.2.120 for request path /api/org"
+    );
+}
+
+#[test]
+fn build_url_reports_numeric_suffix_dns_host_as_unknown_host() {
+    let client = JsonHttpClient::new(JsonHttpClientConfig {
+        base_url: "https://grafana.prod.1:3000".to_string(),
+        headers: Vec::new(),
+        timeout_secs: 30,
+        verify_ssl: false,
+    })
+    .unwrap();
+
+    let url = client.build_url("/api/org", &[]);
+
+    assert_eq!(
+        url.unwrap_err().to_string(),
+        "Unknown host grafana.prod.1 for request path /api/org"
+    );
+}
+
+#[test]
+fn build_url_accepts_real_ipv4_host() {
+    let client = JsonHttpClient::new(JsonHttpClientConfig {
+        base_url: "https://192.0.2.10:3000".to_string(),
+        headers: Vec::new(),
+        timeout_secs: 30,
+        verify_ssl: false,
+    })
+    .unwrap();
+
+    let url = client.build_url("/api/org", &[]);
+
+    assert_eq!(url.unwrap().as_str(), "https://192.0.2.10:3000/api/org");
+}
+
+#[test]
 fn client_builder_rejects_invalid_header_name_with_typed_error() {
     let result = JsonHttpClient::new(JsonHttpClientConfig {
         base_url: "http://127.0.0.1:3000".to_string(),

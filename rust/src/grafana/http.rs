@@ -7,7 +7,9 @@ use reqwest::header::{HeaderMap, HeaderName, HeaderValue, ACCEPT, CONTENT_TYPE};
 use reqwest::{Certificate, Method, StatusCode, Url};
 use serde_json::Value;
 
-use crate::common::{api_response, invalid_header_name, invalid_header_value, invalid_url, Result};
+use crate::common::{
+    api_response, invalid_header_name, invalid_header_value, invalid_url, message, Result,
+};
 
 /// Struct definition for JsonHttpClientConfig.
 #[derive(Debug, Clone)]
@@ -98,8 +100,9 @@ impl JsonHttpClient {
 
     // Keep URL assembly consistent across callers.
     fn build_url(&self, path: &str, params: &[(String, String)]) -> Result<Url> {
-        let mut url = Url::parse(&format!("{}{}", self.base_url, path))
-            .map_err(|error| invalid_url(format!("request path {path}"), error))?;
+        let context = format!("request path {path}");
+        let url_text = format!("{}{}", self.base_url, path);
+        let mut url = parse_request_url(&url_text, &context)?;
         if !params.is_empty() {
             let mut pairs = url.query_pairs_mut();
             for (key, value) in params {
@@ -108,6 +111,71 @@ impl JsonHttpClient {
         }
         Ok(url)
     }
+}
+
+fn parse_request_url(url_text: &str, context: &str) -> Result<Url> {
+    match Url::parse(url_text) {
+        Ok(url) => Ok(url),
+        Err(error) if error.to_string() == "invalid IPv4 address" => {
+            let Some(host) = numeric_suffix_dns_host(url_text) else {
+                return Err(invalid_url(context, error));
+            };
+            Err(message(format!("Unknown host {host} for {context}")))
+        }
+        Err(error) => Err(invalid_url(context, error)),
+    }
+}
+
+fn numeric_suffix_dns_host(url_text: &str) -> Option<&str> {
+    let scheme_end = url_text.find("://")?;
+    let authority_start = scheme_end + 3;
+    let authority_tail = &url_text[authority_start..];
+    let authority_len = authority_tail
+        .find(['/', '?', '#'])
+        .unwrap_or(authority_tail.len());
+    let authority_end = authority_start + authority_len;
+    let authority = &url_text[authority_start..authority_end];
+    let host_start_offset = authority.rfind('@').map_or(0, |index| index + 1);
+    let host_port = &authority[host_start_offset..];
+    if host_port.starts_with('[') {
+        return None;
+    }
+
+    let host_len = match host_port.rfind(':') {
+        Some(index) if host_port[index + 1..].chars().all(|ch| ch.is_ascii_digit()) => index,
+        _ => host_port.len(),
+    };
+    let host = &host_port[..host_len];
+    if !is_numeric_suffix_dns_host(host) {
+        return None;
+    }
+
+    Some(host)
+}
+
+fn is_numeric_suffix_dns_host(host: &str) -> bool {
+    if host.ends_with('.') {
+        return false;
+    }
+    let labels = host.split('.').collect::<Vec<_>>();
+    let Some(last) = labels.last() else {
+        return false;
+    };
+    labels.len() >= 2
+        && last.chars().all(|ch| ch.is_ascii_digit())
+        && labels
+            .iter()
+            .any(|label| label.chars().any(|ch| ch.is_ascii_alphabetic()))
+        && labels.iter().all(|label| is_dns_label(label))
+}
+
+fn is_dns_label(label: &str) -> bool {
+    !label.is_empty()
+        && !label.starts_with('-')
+        && !label.ends_with('-')
+        && label
+            .chars()
+            .all(|ch| ch.is_ascii_alphanumeric() || ch == '-')
 }
 
 #[cfg(test)]
