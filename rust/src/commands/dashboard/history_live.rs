@@ -1,4 +1,6 @@
 use crate::common::{message, value_as_object, Result};
+use rayon::prelude::*;
+use rayon::ThreadPoolBuilder;
 use reqwest::Method;
 use serde_json::{Map, Value};
 
@@ -17,6 +19,8 @@ use super::{
     tool_version, write_json_document, HistoryExportArgs, HistoryListArgs, DEFAULT_DASHBOARD_TITLE,
     DEFAULT_FOLDER_UID, TOOL_SCHEMA_VERSION,
 };
+
+const HISTORY_VERSION_FETCH_CONCURRENCY: usize = 8;
 
 fn display_value(value: &Value) -> String {
     match value {
@@ -162,19 +166,24 @@ where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
     let current_payload = fetch_dashboard_with_request(&mut request_json, uid)?;
-    let current_object = value_as_object(
+    build_dashboard_history_export_document_from_current_with_request(
+        &mut request_json,
+        uid,
+        limit,
         &current_payload,
-        "Unexpected current dashboard payload for history export.",
-    )?;
-    let current_dashboard = current_object
-        .get("dashboard")
-        .and_then(Value::as_object)
-        .ok_or_else(|| message("Current dashboard payload did not include dashboard data."))?;
-    let current_version = current_dashboard
-        .get("version")
-        .and_then(Value::as_i64)
-        .unwrap_or_default();
-    let current_title = string_field(current_dashboard, "title", DEFAULT_DASHBOARD_TITLE);
+    )
+}
+
+pub(crate) fn build_dashboard_history_export_document_from_current_with_request<F>(
+    mut request_json: F,
+    uid: &str,
+    limit: usize,
+    current_payload: &Value,
+) -> Result<DashboardHistoryExportDocument>
+where
+    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
+{
+    let (current_version, current_title) = current_dashboard_export_metadata(current_payload)?;
     let versions = list_dashboard_history_versions_with_request(&mut request_json, uid, limit)?;
     let versions = versions
         .into_iter()
@@ -193,7 +202,124 @@ where
             })
         })
         .collect::<Result<Vec<_>>>()?;
-    Ok(DashboardHistoryExportDocument {
+    Ok(build_dashboard_history_export_document(
+        uid,
+        current_version,
+        current_title,
+        versions,
+    ))
+}
+
+pub(crate) fn build_dashboard_history_export_document_from_current_with_version_fetcher<F, G>(
+    mut request_json: F,
+    uid: &str,
+    limit: usize,
+    current_payload: &Value,
+    fetch_version: G,
+    concurrency: usize,
+) -> Result<DashboardHistoryExportDocument>
+where
+    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
+    G: Fn(i64) -> Result<Map<String, Value>> + Sync,
+{
+    let (current_version, current_title) = current_dashboard_export_metadata(current_payload)?;
+    let versions = list_dashboard_history_versions_with_request(&mut request_json, uid, limit)?;
+    let versions = build_dashboard_history_export_versions_with_fetcher(
+        versions,
+        &fetch_version,
+        concurrency,
+    )?;
+    Ok(build_dashboard_history_export_document(
+        uid,
+        current_version,
+        current_title,
+        versions,
+    ))
+}
+
+fn current_dashboard_export_metadata(current_payload: &Value) -> Result<(i64, String)> {
+    let current_object = value_as_object(
+        current_payload,
+        "Unexpected current dashboard payload for history export.",
+    )?;
+    let current_dashboard = current_object
+        .get("dashboard")
+        .and_then(Value::as_object)
+        .ok_or_else(|| message("Current dashboard payload did not include dashboard data."))?;
+    let current_version = current_dashboard
+        .get("version")
+        .and_then(Value::as_i64)
+        .unwrap_or_default();
+    let current_title = string_field(current_dashboard, "title", DEFAULT_DASHBOARD_TITLE);
+    Ok((current_version, current_title))
+}
+
+fn build_dashboard_history_export_versions_with_fetcher<F>(
+    versions: Vec<DashboardHistoryVersion>,
+    fetch_version: &F,
+    concurrency: usize,
+) -> Result<Vec<DashboardHistoryExportVersion>>
+where
+    F: Fn(i64) -> Result<Map<String, Value>> + Sync,
+{
+    if versions.is_empty() {
+        return Ok(Vec::new());
+    }
+    let worker_count = concurrency
+        .clamp(1, HISTORY_VERSION_FETCH_CONCURRENCY)
+        .min(versions.len());
+    if worker_count <= 1 {
+        return versions
+            .into_iter()
+            .map(|version| {
+                let dashboard = Value::Object(fetch_version(version.version)?);
+                Ok(DashboardHistoryExportVersion {
+                    version: version.version,
+                    created: version.created,
+                    created_by: version.created_by,
+                    message: version.message,
+                    dashboard,
+                })
+            })
+            .collect();
+    }
+
+    let pool = ThreadPoolBuilder::new()
+        .num_threads(worker_count)
+        .build()
+        .map_err(|error| {
+            message(format!(
+                "Failed to build dashboard history read worker pool: {error}"
+            ))
+        })?;
+    let reads = pool.install(|| {
+        versions
+            .par_iter()
+            .map(|version| (version.clone(), fetch_version(version.version)))
+            .collect::<Vec<_>>()
+    });
+
+    reads
+        .into_iter()
+        .map(|(version, dashboard)| {
+            Ok(DashboardHistoryExportVersion {
+                version: version.version,
+                created: version.created,
+                created_by: version.created_by,
+                message: version.message,
+                dashboard: Value::Object(dashboard?),
+            })
+        })
+        .collect()
+}
+
+fn build_dashboard_history_export_document(
+    uid: &str,
+    current_version: i64,
+    current_title: String,
+    versions: Vec<DashboardHistoryExportVersion>,
+) -> DashboardHistoryExportDocument {
+    DashboardHistoryExportDocument {
         kind: super::history_types::DASHBOARD_HISTORY_EXPORT_KIND.to_string(),
         schema_version: TOOL_SCHEMA_VERSION,
         tool_version: tool_version().to_string(),
@@ -202,7 +328,7 @@ where
         current_title,
         version_count: versions.len(),
         versions,
-    })
+    }
 }
 
 pub(crate) fn export_dashboard_history_with_request<F>(

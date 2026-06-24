@@ -3,6 +3,7 @@
 
 use super::history::{
     build_dashboard_history_diff_document_with_request,
+    build_dashboard_history_export_document_from_current_with_version_fetcher,
     build_dashboard_history_export_document_with_request,
     build_dashboard_history_list_document_with_request, export_dashboard_history_with_request,
     run_dashboard_history_restore,
@@ -16,6 +17,8 @@ use crate::common::DiffOutputFormat;
 use reqwest::Method;
 use serde_json::{json, Value};
 use std::fs;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::time::Duration;
 use tempfile::tempdir;
 
 fn make_history_common_args() -> CommonCliArgs {
@@ -205,6 +208,62 @@ fn dashboard_history_export_writes_json_artifact_with_dashboard_payloads() {
     assert_eq!(artifact["dashboardUid"], "cpu-main");
     assert_eq!(artifact["versionCount"], 2);
     assert_eq!(artifact["versions"][0]["dashboard"]["title"], "CPU Main");
+}
+
+#[test]
+fn dashboard_history_export_fetches_version_payloads_in_parallel_and_preserves_order() {
+    let current_payload = json!({
+        "dashboard": {"uid": "cpu-main", "title": "CPU Main", "version": 22}
+    });
+    let active_fetches = AtomicUsize::new(0);
+    let max_active_fetches = AtomicUsize::new(0);
+    let document = build_dashboard_history_export_document_from_current_with_version_fetcher(
+        |method, path, params, _payload| match (method.clone(), path) {
+            (Method::GET, "/api/dashboards/uid/cpu-main/versions") => {
+                assert_eq!(
+                    params,
+                    vec![("limit".to_string(), "3".to_string())].as_slice()
+                );
+                Ok(Some(json!([
+                    {"version": 22, "created": "2026-04-03T12:00:00Z", "createdBy": "ops", "message": "Tune CPU"},
+                    {"version": 21, "created": "2026-04-02T12:00:00Z", "createdBy": "sre", "message": "Add memory panel"},
+                    {"version": 20, "created": "2026-04-01T12:00:00Z", "createdBy": "ops", "message": "Initial dashboard"}
+                ])))
+            }
+            _ => Err(test_support::message(format!(
+                "unexpected request {method} {path}"
+            ))),
+        },
+        "cpu-main",
+        3,
+        &current_payload,
+        |version| {
+            let active = active_fetches.fetch_add(1, Ordering::SeqCst) + 1;
+            max_active_fetches.fetch_max(active, Ordering::SeqCst);
+            std::thread::sleep(Duration::from_millis(50));
+            active_fetches.fetch_sub(1, Ordering::SeqCst);
+            Ok(serde_json::Map::from_iter([
+                ("uid".to_string(), json!("cpu-main")),
+                ("title".to_string(), json!(format!("CPU Main v{version}"))),
+                ("version".to_string(), json!(version)),
+            ]))
+        },
+        3,
+    )
+    .unwrap();
+
+    assert!(max_active_fetches.load(Ordering::SeqCst) > 1);
+    assert_eq!(document.current_version, 22);
+    assert_eq!(document.current_title, "CPU Main");
+    assert_eq!(
+        document
+            .versions
+            .iter()
+            .map(|version| version.version)
+            .collect::<Vec<_>>(),
+        vec![22, 21, 20]
+    );
+    assert_eq!(document.versions[2].dashboard["title"], "CPU Main v20");
 }
 
 #[test]

@@ -36,14 +36,16 @@ pub(crate) use self::export_render::{format_export_progress_line, format_export_
 use self::export_root_bundle::write_all_orgs_root_export_bundle;
 #[allow(unused_imports)]
 pub(crate) use self::export_scope::{
-    export_dashboards_in_scope_with_permission_fetcher, export_dashboards_in_scope_with_request,
-    ScopeExportResult,
+    export_dashboards_in_scope_with_fetchers, export_dashboards_in_scope_with_permission_fetcher,
+    export_dashboards_in_scope_with_request, ScopeExportResult,
 };
 use self::export_support::{
     build_all_orgs_output_dir, build_permission_bundle_document, build_used_datasource_summaries,
     collect_library_panel_exports_with_request, collect_permission_export_documents,
     collect_permission_export_documents_with_fetcher, PermissionExportTarget,
 };
+
+const HISTORY_VERSION_FETCH_CONCURRENCY: usize = 8;
 
 pub(crate) fn export_dashboards_with_request<F>(
     mut request_json: F,
@@ -103,12 +105,17 @@ pub fn export_dashboards_with_client(client: &JsonHttpClient, args: &ExportArgs)
     let permission_fetcher = |target: &PermissionExportTarget| {
         fetch_permission_target_with_client(client, target, args.org_id)
     };
-    Ok(export_dashboards_in_scope_with_permission_fetcher(
+    let history_version_fetcher = |uid: &str, version: i64| {
+        fetch_history_version_with_client(client, uid, version, args.org_id)
+    };
+    Ok(export_dashboards_in_scope_with_fetchers(
         &mut |method, path, params, payload| client.request_json(method, path, params, payload),
         args,
         None,
         args.org_id,
         &permission_fetcher,
+        &history_version_fetcher,
+        HISTORY_VERSION_FETCH_CONCURRENCY,
     )?
     .exported_count)
 }
@@ -127,7 +134,10 @@ pub(crate) fn export_dashboards_with_org_clients(args: &ExportArgs) -> Result<us
             let permission_fetcher = |target: &PermissionExportTarget| {
                 fetch_permission_target_with_client(&org_client, target, None)
             };
-            let scope_result = export_dashboards_in_scope_with_permission_fetcher(
+            let history_version_fetcher = |uid: &str, version: i64| {
+                fetch_history_version_with_client(&org_client, uid, version, None)
+            };
+            let scope_result = export_dashboards_in_scope_with_fetchers(
                 &mut |method, path, params, payload| {
                     org_client.request_json(method, path, params, payload)
                 },
@@ -135,6 +145,8 @@ pub(crate) fn export_dashboards_with_org_clients(args: &ExportArgs) -> Result<us
                 Some(&org),
                 None,
                 &permission_fetcher,
+                &history_version_fetcher,
+                HISTORY_VERSION_FETCH_CONCURRENCY,
             )?;
             total += scope_result.exported_count;
             if let Some(root_index) = scope_result.root_index {
@@ -161,7 +173,10 @@ pub(crate) fn export_dashboards_with_org_clients(args: &ExportArgs) -> Result<us
         let permission_fetcher = |target: &PermissionExportTarget| {
             fetch_permission_target_with_client(&org_client, target, None)
         };
-        Ok(export_dashboards_in_scope_with_permission_fetcher(
+        let history_version_fetcher = |uid: &str, version: i64| {
+            fetch_history_version_with_client(&org_client, uid, version, None)
+        };
+        Ok(export_dashboards_in_scope_with_fetchers(
             &mut |method, path, params, payload| {
                 org_client.request_json(method, path, params, payload)
             },
@@ -169,6 +184,8 @@ pub(crate) fn export_dashboards_with_org_clients(args: &ExportArgs) -> Result<us
             None,
             None,
             &permission_fetcher,
+            &history_version_fetcher,
+            HISTORY_VERSION_FETCH_CONCURRENCY,
         )?
         .exported_count)
     } else {
@@ -178,15 +195,48 @@ pub(crate) fn export_dashboards_with_org_clients(args: &ExportArgs) -> Result<us
         let permission_fetcher = |target: &PermissionExportTarget| {
             fetch_permission_target_with_client(&client, target, None)
         };
-        Ok(export_dashboards_in_scope_with_permission_fetcher(
+        let history_version_fetcher = |uid: &str, version: i64| {
+            fetch_history_version_with_client(&client, uid, version, None)
+        };
+        Ok(export_dashboards_in_scope_with_fetchers(
             &mut |method, path, params, payload| client.request_json(method, path, params, payload),
             args,
             Some(&current_org),
             None,
             &permission_fetcher,
+            &history_version_fetcher,
+            HISTORY_VERSION_FETCH_CONCURRENCY,
         )?
         .exported_count)
     }
+}
+
+fn fetch_history_version_with_client(
+    client: &JsonHttpClient,
+    uid: &str,
+    version: i64,
+    org_id_override: Option<i64>,
+) -> Result<Map<String, Value>> {
+    let path = format!("/api/dashboards/uid/{uid}/versions/{version}");
+    let params = org_id_override
+        .map(|org_id| vec![("orgId".to_string(), org_id.to_string())])
+        .unwrap_or_default();
+    let version_payload = client
+        .request_json(Method::GET, &path, &params, None)?
+        .ok_or_else(|| {
+            message(format!(
+                "Dashboard history version {version} was not returned."
+            ))
+        })?;
+    let version_object = value_as_object(
+        &version_payload,
+        "Unexpected dashboard history version payload from Grafana.",
+    )?;
+    version_object
+        .get("data")
+        .and_then(Value::as_object)
+        .cloned()
+        .ok_or_else(|| message("Dashboard history version payload did not include dashboard data."))
 }
 
 fn fetch_permission_target_with_client(

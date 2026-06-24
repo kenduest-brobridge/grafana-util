@@ -7,7 +7,10 @@ use serde_json::{Map, Value};
 use crate::common::{message, string_field, Result};
 
 use super::super::export_prompt::build_external_export_document_with_library_panels;
-use super::super::history::build_dashboard_history_export_document_with_request;
+use super::super::history::{
+    build_dashboard_history_export_document_from_current_with_request,
+    build_dashboard_history_export_document_from_current_with_version_fetcher,
+};
 use super::super::list::{
     attach_dashboard_org_metadata, collect_dashboard_ownership_provenance,
     collect_dashboard_source_metadata, fetch_current_org_with_request,
@@ -54,12 +57,14 @@ pub(crate) fn export_dashboards_in_scope_with_request<F>(
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
-    export_dashboards_in_scope_with_optional_permission_fetcher(
+    export_dashboards_in_scope_with_optional_fetchers(
         request_json,
         args,
         org,
         org_id_override,
         Option::<&fn(&PermissionExportTarget) -> Result<Vec<Map<String, Value>>>>::None,
+        Option::<&fn(&str, i64) -> Result<Map<String, Value>>>::None,
+        1,
     )
 }
 
@@ -74,25 +79,55 @@ where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
     P: Fn(&PermissionExportTarget) -> Result<Vec<Map<String, Value>>> + Sync,
 {
-    export_dashboards_in_scope_with_optional_permission_fetcher(
+    export_dashboards_in_scope_with_optional_fetchers(
         request_json,
         args,
         org,
         org_id_override,
         Some(permission_fetcher),
+        Option::<&fn(&str, i64) -> Result<Map<String, Value>>>::None,
+        1,
     )
 }
 
-fn export_dashboards_in_scope_with_optional_permission_fetcher<F, P>(
+pub(crate) fn export_dashboards_in_scope_with_fetchers<F, P, H>(
+    request_json: &mut F,
+    args: &ExportArgs,
+    org: Option<&Map<String, Value>>,
+    org_id_override: Option<i64>,
+    permission_fetcher: &P,
+    history_version_fetcher: &H,
+    history_concurrency: usize,
+) -> Result<ScopeExportResult>
+where
+    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
+    P: Fn(&PermissionExportTarget) -> Result<Vec<Map<String, Value>>> + Sync,
+    H: Fn(&str, i64) -> Result<Map<String, Value>> + Sync,
+{
+    export_dashboards_in_scope_with_optional_fetchers(
+        request_json,
+        args,
+        org,
+        org_id_override,
+        Some(permission_fetcher),
+        Some(history_version_fetcher),
+        history_concurrency,
+    )
+}
+
+fn export_dashboards_in_scope_with_optional_fetchers<F, P, H>(
     request_json: &mut F,
     args: &ExportArgs,
     org: Option<&Map<String, Value>>,
     org_id_override: Option<i64>,
     permission_fetcher: Option<&P>,
+    history_version_fetcher: Option<&H>,
+    history_concurrency: usize,
 ) -> Result<ScopeExportResult>
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
     P: Fn(&PermissionExportTarget) -> Result<Vec<Map<String, Value>>> + Sync,
+    H: Fn(&str, i64) -> Result<Map<String, Value>> + Sync,
 {
     if args.without_dashboard_raw
         && args.without_dashboard_prompt
@@ -201,11 +236,24 @@ where
         used_source_names.extend(source_names);
         used_source_uids.extend(source_uids);
         if args.include_history {
-            let history_document = build_dashboard_history_export_document_with_request(
-                &mut scoped_request,
-                &uid,
-                20,
-            )?;
+            let history_document = match history_version_fetcher {
+                Some(fetcher) => {
+                    build_dashboard_history_export_document_from_current_with_version_fetcher(
+                        &mut scoped_request,
+                        &uid,
+                        20,
+                        &payload,
+                        |version| fetcher(&uid, version),
+                        history_concurrency,
+                    )?
+                }
+                None => build_dashboard_history_export_document_from_current_with_request(
+                    &mut scoped_request,
+                    &uid,
+                    20,
+                    &payload,
+                )?,
+            };
             let history_path = build_history_output_path(&history_dir, &uid);
             if !args.dry_run {
                 write_history_document(&history_document, &history_path, args.overwrite)?;

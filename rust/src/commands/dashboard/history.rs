@@ -113,6 +113,8 @@ pub(crate) use history_diff::{
     build_dashboard_history_diff_document_with_request, run_dashboard_history_diff,
 };
 pub(crate) use history_live::{
+    build_dashboard_history_export_document_from_current_with_request,
+    build_dashboard_history_export_document_from_current_with_version_fetcher,
     build_dashboard_history_export_document_with_request,
     build_dashboard_history_list_document_with_request,
     build_dashboard_restore_preview_with_request, export_dashboard_history_with_request,

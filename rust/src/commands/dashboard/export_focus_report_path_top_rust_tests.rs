@@ -6,6 +6,7 @@
 use super::test_support;
 use super::{export_dashboards_with_request, make_common_args, ExportArgs};
 use serde_json::{json, Value};
+use std::cell::Cell;
 use std::fs;
 use tempfile::tempdir;
 
@@ -412,6 +413,7 @@ fn export_dashboards_with_request_include_history_writes_scope_history_artifacts
     let current_temp = tempdir().unwrap();
     let current_args =
         make_history_only_export_args(current_temp.path().join("current"), None, false, true);
+    let current_dashboard_fetches = Cell::new(0usize);
 
     let current_count = export_dashboards_with_request(
         |_method, path, params, _payload| match path {
@@ -421,9 +423,12 @@ fn export_dashboards_with_request_include_history_writes_scope_history_artifacts
             ]))),
             "/api/datasources" => Ok(Some(json!([]))),
             "/api/folders/general" => Ok(Some(json!({"uid": "general", "title": "General"}))),
-            "/api/dashboards/uid/cpu-main" => Ok(Some(json!({
-                "dashboard": {"id": 7, "uid": "cpu-main", "title": "CPU Main", "version": 21}
-            }))),
+            "/api/dashboards/uid/cpu-main" => {
+                current_dashboard_fetches.set(current_dashboard_fetches.get() + 1);
+                Ok(Some(json!({
+                    "dashboard": {"id": 7, "uid": "cpu-main", "title": "CPU Main", "version": 21}
+                })))
+            }
             "/api/dashboards/uid/cpu-main/versions" => {
                 assert!(params
                     .iter()
@@ -449,6 +454,7 @@ fn export_dashboards_with_request_include_history_writes_scope_history_artifacts
     .unwrap();
 
     assert_eq!(current_count, 1);
+    assert_eq!(current_dashboard_fetches.get(), 1);
     let current_history = current_temp
         .path()
         .join("current/history/cpu-main.history.json");

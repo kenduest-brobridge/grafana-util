@@ -15,3 +15,7 @@
   HTTP URL classification so DNS-shaped hosts such as `hostx.0.2.120` report an
   unknown-host style error instead of an invalid URL error. Review follow-up
   also covers numeric-suffix DNS names such as `grafana.prod.1`.
+- [x] [Dashboard export history performance](2026-06-24-dashboard-export-history-performance.md) -
+  Reuse the already-fetched current dashboard payload for `dashboard export
+  --include-history` and add bounded parallel history-version fetching for
+  client-backed exports. Focused history/export tests now pass.
