@@ -2,6 +2,31 @@
 
 ## Active
 
+- [x] [Rust maintainability refactor backlog](2026-06-25-rust-maintainability-refactor-backlog.md) -
+  Track necessary larger refactor candidates from the current architecture
+  audit. Active order: close confirmed lint cleanup; plan and split
+  `review_contract.rs`; plan and split `common/browser/session.rs`; plan and
+  split `datasource/browse/render.rs`; inventory dashboard/access/sync before
+  any broader domain refactor.
+- [x] [Domain maintainability inventory](2026-06-25-domain-maintainability-inventory.md) -
+  Document dashboard/access/sync hotspot evidence and defer broader refactors
+  until a narrower behavior or ownership trigger appears.
+- [x] [Review contract split](2026-06-25-review-contract-split.md) -
+  Split the shared review contract into actions, model, detail, and envelope
+  modules while keeping the existing `crate::review_contract` facade stable.
+- [x] [Browser session split](2026-06-25-browser-session-split.md) -
+  Split the shared interactive browser session into model, search, render, and
+  runtime modules while keeping `crate::interactive_browser` stable.
+- [x] [Datasource browse render split](2026-06-25-datasource-browse-render-split.md) -
+  Split datasource browse rendering into summary, list, and detail helper
+  modules while keeping the frame renderer entrypoint stable.
+- [x] [Project maintainability audit](2026-06-25-project-maintainability-audit.md) -
+  Assess whether the Rust-first project structure remains maintainable, with
+  emphasis on over-decomposition, architecture boundaries, Rust/Python
+  ownership, CLI/docs coupling, and test coverage risk. Current audit finds
+  the project still within maintainable range, with a concrete lint blocker in
+  dashboard export cleanup and ongoing hotspot risk in dashboard/access/sync
+  domain size.
 - [x] [Doc and CLI parameter sync audit](2026-06-24-doc-cli-parameter-sync-audit.md) -
   Check whether Markdown docs, handbook/manual content, generated references,
   and Rust-supported CLI parameters are synchronized. Confirmed generated
