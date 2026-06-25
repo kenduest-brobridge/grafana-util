@@ -11,7 +11,7 @@ use crate::common::{
     api_response, invalid_header_name, invalid_header_value, invalid_url, message, Result,
 };
 
-/// Struct definition for JsonHttpClientConfig.
+/// Configuration for the shared blocking JSON HTTP client.
 #[derive(Debug, Clone)]
 pub struct JsonHttpClientConfig {
     pub base_url: String,
@@ -20,7 +20,7 @@ pub struct JsonHttpClientConfig {
     pub verify_ssl: bool,
 }
 
-/// Struct definition for JsonHttpClient.
+/// Shared blocking JSON HTTP client used by live Grafana operations.
 #[derive(Clone)]
 pub struct JsonHttpClient {
     base_url: String,

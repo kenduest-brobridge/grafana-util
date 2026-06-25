@@ -68,28 +68,6 @@ where
     )
 }
 
-pub(crate) fn export_dashboards_in_scope_with_permission_fetcher<F, P>(
-    request_json: &mut F,
-    args: &ExportArgs,
-    org: Option<&Map<String, Value>>,
-    org_id_override: Option<i64>,
-    permission_fetcher: &P,
-) -> Result<ScopeExportResult>
-where
-    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
-    P: Fn(&PermissionExportTarget) -> Result<Vec<Map<String, Value>>> + Sync,
-{
-    export_dashboards_in_scope_with_optional_fetchers(
-        request_json,
-        args,
-        org,
-        org_id_override,
-        Some(permission_fetcher),
-        Option::<&fn(&str, i64) -> Result<Map<String, Value>>>::None,
-        1,
-    )
-}
-
 pub(crate) fn export_dashboards_in_scope_with_fetchers<F, P, H>(
     request_json: &mut F,
     args: &ExportArgs,

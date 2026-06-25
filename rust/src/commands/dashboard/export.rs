@@ -36,8 +36,8 @@ pub(crate) use self::export_render::{format_export_progress_line, format_export_
 use self::export_root_bundle::write_all_orgs_root_export_bundle;
 #[allow(unused_imports)]
 pub(crate) use self::export_scope::{
-    export_dashboards_in_scope_with_fetchers, export_dashboards_in_scope_with_permission_fetcher,
-    export_dashboards_in_scope_with_request, ScopeExportResult,
+    export_dashboards_in_scope_with_fetchers, export_dashboards_in_scope_with_request,
+    ScopeExportResult,
 };
 use self::export_support::{
     build_all_orgs_output_dir, build_permission_bundle_document, build_used_datasource_summaries,
