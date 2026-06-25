@@ -1,6 +1,8 @@
+#[cfg(feature = "tui")]
+use super::detail_title;
 use super::{
     append_browser_detail_section, browser_detail_aligned_fact, browser_detail_fact,
-    browser_detail_fallback_fact, build_search_state, detail_title, find_match_in_visible,
+    browser_detail_fallback_fact, build_search_state, find_match_in_visible,
     matching_visible_indexes, BrowserItem, BrowserSearchController, SearchDirection,
 };
 
@@ -149,6 +151,7 @@ fn search_uses_only_active_filter_visible_indexes() {
     assert_eq!(selected, Some(0));
 }
 
+#[cfg(feature = "tui")]
 #[test]
 fn detail_title_uses_filtered_visible_position_and_total() {
     let items = sample_items();
