@@ -1,19 +1,27 @@
 #![cfg(feature = "tui")]
 
-use crate::interactive_browser::{
-    browser_detail_info_lines as build_info_lines, browser_review_empty_line,
-    browser_review_info_lines,
-};
 use crate::tui_shell;
 use crate::tui_shell::pane_block;
 use ratatui::layout::{Constraint, Direction, Layout};
 use ratatui::style::{Color, Modifier, Style};
-use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, Borders, List, ListItem, Paragraph};
+use ratatui::text::Line;
+use ratatui::widgets::List;
 
 use super::datasource_browse_render_chrome::{control_lines, render_search_prompt};
 use super::datasource_browse_state::{BrowserState, PaneFocus};
-use super::datasource_browse_support::{detail_lines, review_lines, DatasourceBrowseItem};
+
+#[path = "render_detail.rs"]
+mod render_detail;
+#[path = "render_list.rs"]
+mod render_list;
+#[path = "render_summary.rs"]
+mod render_summary;
+
+#[cfg(test)]
+use render_detail::datasource_review_panel_lines;
+use render_detail::{detail_text, detail_title, render_detail_panel};
+use render_list::build_list_items;
+use render_summary::summary_lines;
 
 pub(crate) fn render_datasource_browser_frame(
     frame: &mut ratatui::Frame,
@@ -85,452 +93,26 @@ pub(crate) fn render_datasource_browser_frame(
     }
 }
 
-fn summary_lines(state: &BrowserState) -> Vec<Line<'static>> {
-    let document = &state.document;
-    vec![
-        if document.org_count > 1 {
-            tui_shell::summary_line(&[
-                tui_shell::summary_cell(
-                    "Scope",
-                    blank_dash(&document.scope_label),
-                    Color::LightBlue,
-                ),
-                tui_shell::summary_cell("Orgs", document.org_count.to_string(), Color::White),
-                tui_shell::summary_cell(
-                    "Datasources",
-                    document.datasource_count.to_string(),
-                    Color::White,
-                ),
-            ])
-        } else {
-            tui_shell::summary_line(&[
-                tui_shell::summary_cell("Org", blank_dash(&document.org), Color::LightBlue),
-                tui_shell::summary_cell("Id", blank_dash(&document.org_id), Color::White),
-                tui_shell::summary_cell(
-                    "Datasources",
-                    document.datasource_count.to_string(),
-                    Color::White,
-                ),
-            ])
-        },
-        Line::from(vec![
-            tui_shell::label("Mode "),
-            tui_shell::accent(
-                if state.pending_delete.is_some() {
-                    "confirm-delete"
-                } else if state.pending_edit.is_some() {
-                    "edit"
-                } else if state.pending_search.is_some() {
-                    "search"
-                } else {
-                    "browse"
-                },
-                if state.pending_delete.is_some() {
-                    Color::LightRed
-                } else if state.pending_edit.is_some() || state.pending_search.is_some() {
-                    Color::Yellow
-                } else {
-                    Color::Green
-                },
-            ),
-            Span::raw("  "),
-            tui_shell::focus_label("Focus "),
-            tui_shell::key_chip(state.focus_label(), Color::Blue),
-            Span::raw("  "),
-            tui_shell::label("Row "),
-            tui_shell::accent(state.selected_position_summary(), Color::White),
-            Span::raw("  "),
-            tui_shell::label("Kind "),
-            tui_shell::accent(state.selected_kind_summary(), Color::Yellow),
-            Span::raw("  "),
-            tui_shell::label("Search "),
-            tui_shell::accent(state.search_summary(), Color::LightMagenta),
-        ]),
-    ]
-}
-
-fn build_list_items(items: &[DatasourceBrowseItem]) -> Vec<ListItem<'_>> {
-    let mut rendered = Vec::new();
-    for (index, item) in items.iter().enumerate() {
-        if item.is_org_row() {
-            let line = Line::from(vec![
-                Span::styled(
-                    " ORG ",
-                    Style::default()
-                        .fg(Color::White)
-                        .bg(Color::Rgb(46, 66, 98))
-                        .add_modifier(Modifier::BOLD),
-                ),
-                Span::raw(" "),
-                Span::styled(
-                    format!("{} ", item.org),
-                    Style::default()
-                        .fg(Color::LightCyan)
-                        .add_modifier(Modifier::BOLD),
-                ),
-                Span::styled(
-                    format!(
-                        "│ id={} │ {} datasource(s)",
-                        item.org_id, item.datasource_count
-                    ),
-                    Style::default().fg(Color::Gray),
-                ),
-            ]);
-            if index > 0 {
-                rendered.push(ListItem::new(vec![Line::from(Span::raw(" ")), line]));
-            } else {
-                rendered.push(ListItem::new(line));
-            }
-            continue;
-        }
-        let badge_color = if item.is_default {
-            Color::Green
-        } else {
-            Color::DarkGray
-        };
-        let branch = datasource_tree_branch(items, index);
-        let line = Line::from(vec![
-            Span::styled("     ", Style::default().fg(Color::DarkGray)),
-            Span::styled(branch, Style::default().fg(Color::DarkGray)),
-            Span::raw(" "),
-            Span::styled(
-                if item.is_default { "[*]" } else { "[ ]" },
-                Style::default().fg(Color::White).bg(badge_color),
-            ),
-            Span::raw(" "),
-            Span::styled(
-                item.name.clone(),
-                Style::default()
-                    .fg(Color::Yellow)
-                    .add_modifier(Modifier::BOLD),
-            ),
-            Span::styled(
-                format!(
-                    "  │  {}  │  {}",
-                    blank_dash(&item.datasource_type),
-                    blank_dash(&item.uid)
-                ),
-                Style::default().fg(Color::DarkGray),
-            ),
-        ]);
-        rendered.push(ListItem::new(line));
-    }
-    rendered
-}
-
-fn datasource_tree_branch(items: &[DatasourceBrowseItem], index: usize) -> &'static str {
-    let has_next_datasource_in_same_group = items
-        .get(index + 1)
-        .map(|next| !next.is_org_row())
-        .unwrap_or(false);
-    if has_next_datasource_in_same_group {
-        "├─"
-    } else {
-        "└─"
-    }
-}
-
-fn detail_title(state: &BrowserState) -> String {
-    if let Some(pending_delete) = state.pending_delete.as_ref() {
-        format!("Delete {} ({})", pending_delete.name, pending_delete.uid)
-    } else {
-        "Detail".to_string()
-    }
-}
-
-fn detail_text(state: &BrowserState) -> String {
-    if let Some(pending_delete) = state.pending_delete.as_ref() {
-        return [
-            format!("Delete datasource {}", blank_dash(&pending_delete.name)),
-            format!("UID: {}", blank_dash(&pending_delete.uid)),
-            format!("ID: {}", pending_delete.id),
-            String::new(),
-            "Confirm: y".to_string(),
-            "Cancel: n/Esc/q".to_string(),
-        ]
-        .join("\n");
-    }
-    state
-        .selected_item()
-        .map(|item| {
-            if item.is_org_row() {
-                return [
-                    format!("Org: {}", blank_dash(&item.org)),
-                    format!("Org ID: {}", blank_dash(&item.org_id)),
-                    format!("Datasources: {}", item.datasource_count),
-                    String::new(),
-                    "Org rows are scope headers for all-org browsing.".to_string(),
-                    "Select a datasource row to edit or delete.".to_string(),
-                ]
-                .join("\n");
-            }
-            let mut lines = vec![
-                format!("Name: {}", blank_dash(&item.name)),
-                format!("Type: {}", blank_dash(&item.datasource_type)),
-                format!("UID: {}", blank_dash(&item.uid)),
-                format!(
-                    "Org: {} ({})",
-                    blank_dash(&item.org),
-                    blank_dash(&item.org_id)
-                ),
-                String::new(),
-            ];
-            lines.extend(detail_lines(item));
-            lines.join("\n")
-        })
-        .unwrap_or_else(|| "No datasource selected.".to_string())
-}
-
-fn render_detail_panel(
-    frame: &mut ratatui::Frame,
-    area: ratatui::layout::Rect,
-    state: &BrowserState,
-) {
-    let Some(item) = state.selected_item() else {
-        let empty = Paragraph::new("No datasource selected.")
-            .block(Block::default().borders(Borders::ALL).title("Detail"));
-        frame.render_widget(empty, area);
-        return;
-    };
-
-    let sections = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(5),
-            Constraint::Min(7),
-            Constraint::Length(5),
-            Constraint::Length(4),
-        ])
-        .split(area);
-
-    let hero_lines = if item.is_org_row() {
-        vec![
-            Line::from(vec![
-                Span::styled(
-                    " ORG ",
-                    Style::default()
-                        .fg(Color::White)
-                        .bg(Color::Rgb(53, 79, 122))
-                        .add_modifier(Modifier::BOLD),
-                ),
-                Span::raw(" "),
-                Span::styled(
-                    item.org.clone(),
-                    Style::default()
-                        .fg(Color::White)
-                        .add_modifier(Modifier::BOLD),
-                ),
-            ]),
-            Line::from(Span::styled(
-                format!(
-                    "Org {}   {} datasource(s)",
-                    blank_dash(&item.org_id),
-                    item.datasource_count
-                ),
-                Style::default().fg(Color::Cyan),
-            )),
-            Line::from(vec![
-                tui_shell::muted("SCOPE "),
-                tui_shell::boxed("all-org browse header", Color::Rgb(40, 49, 61)),
-            ]),
-        ]
-    } else {
-        vec![
-            Line::from(vec![
-                Span::styled(
-                    if item.is_default {
-                        " DEFAULT "
-                    } else {
-                        " DATASOURCE "
-                    },
-                    Style::default()
-                        .fg(Color::White)
-                        .bg(if item.is_default {
-                            Color::Rgb(18, 110, 52)
-                        } else {
-                            Color::Rgb(16, 92, 122)
-                        })
-                        .add_modifier(Modifier::BOLD),
-                ),
-                Span::raw(" "),
-                Span::styled(
-                    item.name.clone(),
-                    Style::default()
-                        .fg(Color::White)
-                        .add_modifier(Modifier::BOLD),
-                ),
-            ]),
-            Line::from(Span::styled(
-                format!(
-                    "{}   {}",
-                    blank_dash(&item.datasource_type),
-                    blank_dash(&item.uid)
-                ),
-                Style::default().fg(Color::Cyan),
-            )),
-            Line::from(vec![
-                tui_shell::muted("URL "),
-                tui_shell::boxed(blank_dash(&item.url), Color::Rgb(40, 49, 61)),
-                Span::raw("   "),
-                tui_shell::muted("ORG "),
-                tui_shell::plain(format!(
-                    "{} ({})",
-                    blank_dash(&item.org),
-                    blank_dash(&item.org_id)
-                )),
-            ]),
-        ]
-    };
-    render_focusable_lines(
-        frame,
-        sections[0],
-        hero_lines,
-        pane_block("Overview", false, Color::LightBlue, Color::Rgb(18, 24, 33)).title("Overview"),
-        false,
-        state.detail_scroll,
-    );
-
-    render_focusable_lines(
-        frame,
-        sections[1],
-        build_info_lines(&detail_lines(item)),
-        pane_block(
-            "Facts",
-            state.focus == PaneFocus::Facts,
-            Color::LightCyan,
-            Color::Rgb(16, 20, 27),
-        ),
-        state.focus == PaneFocus::Facts,
-        state.detail_scroll,
-    );
-
-    render_focusable_lines(
-        frame,
-        sections[2],
-        datasource_review_panel_lines(item),
-        pane_block(
-            "Review",
-            state.focus == PaneFocus::Review,
-            Color::Yellow,
-            Color::Rgb(28, 24, 16),
-        ),
-        state.focus == PaneFocus::Review,
-        state.detail_scroll,
-    );
-
-    let shortcut_lines = if item.is_org_row() {
-        vec![
-            Line::from(vec![
-                tui_shell::key_chip("Up/Down", Color::Blue),
-                tui_shell::plain(" select org or datasource row"),
-            ]),
-            Line::from(vec![
-                tui_shell::key_chip("l", Color::Cyan),
-                tui_shell::plain(" refresh all visible orgs"),
-                Span::raw("   "),
-                tui_shell::key_chip("e/d", Color::DarkGray),
-                tui_shell::plain(" datasource rows only"),
-            ]),
-        ]
-    } else {
-        vec![
-            Line::from(vec![
-                tui_shell::key_chip("e", Color::Green),
-                tui_shell::plain(" edit datasource"),
-            ]),
-            Line::from(vec![
-                tui_shell::key_chip("d", Color::Red),
-                tui_shell::plain(" delete datasource"),
-                Span::raw("   "),
-                tui_shell::key_chip("l", Color::Cyan),
-                tui_shell::plain(" refresh live data"),
-            ]),
-        ]
-    };
-    render_focusable_lines(
-        frame,
-        sections[3],
-        shortcut_lines,
-        pane_block(
-            "Actions",
-            false,
-            Color::LightMagenta,
-            Color::Rgb(22, 18, 30),
-        )
-        .title("Actions"),
-        false,
-        state.detail_scroll,
-    );
-}
-
-fn datasource_review_panel_lines(item: &DatasourceBrowseItem) -> Vec<Line<'static>> {
-    if item.is_org_row() {
-        return vec![browser_review_empty_line(
-            "Select a datasource row to inspect review evidence.",
-        )];
-    }
-    let lines = review_lines(item);
-    if lines.is_empty() {
-        return vec![browser_review_empty_line(
-            "No secret placeholder or review-required evidence.",
-        )];
-    }
-    browser_review_info_lines(&lines)
-}
-
-fn render_focusable_lines(
-    frame: &mut ratatui::Frame,
-    area: ratatui::layout::Rect,
-    lines: Vec<Line<'static>>,
-    block: Block<'static>,
-    focused: bool,
-    scroll: u16,
-) {
-    let lines = if lines.is_empty() {
-        vec![Line::from("-")]
-    } else {
-        lines
-    };
-    let items = lines.into_iter().map(ListItem::new).collect::<Vec<_>>();
-    if focused {
-        let mut state = ratatui::widgets::ListState::default();
-        state.select(Some((scroll as usize).min(items.len().saturating_sub(1))));
-        let list = List::new(items)
-            .block(block)
-            .highlight_symbol("▌ ")
-            .repeat_highlight_symbol(true)
-            .highlight_style(
-                Style::default()
-                    .fg(Color::White)
-                    .bg(Color::Blue)
-                    .add_modifier(Modifier::BOLD),
-            );
-        frame.render_stateful_widget(list, area, &mut state);
-    } else {
-        let list = List::new(items).block(block);
-        frame.render_widget(list, area);
-    }
-}
-
-fn blank_dash(value: &str) -> &str {
-    let trimmed = value.trim();
-    if trimmed.is_empty() {
-        "-"
-    } else {
-        trimmed
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use super::super::datasource_browse_support::DatasourceBrowseDocument;
+    use super::super::datasource_browse_support::{DatasourceBrowseDocument, DatasourceBrowseItem};
     use super::*;
     use ratatui::backend::TestBackend;
     use ratatui::Terminal;
 
+    fn render_sources() -> String {
+        [
+            include_str!("render.rs"),
+            include_str!("render_detail.rs"),
+            include_str!("render_list.rs"),
+            include_str!("render_summary.rs"),
+        ]
+        .join("\n")
+    }
+
     #[test]
     fn datasource_browse_render_does_not_wrap_muted_shell_span() {
-        let source = include_str!("render.rs");
+        let source = render_sources();
         let wrapper_signature = format!("{}{}(", "fn ", "muted");
         assert!(
             !source.contains(&wrapper_signature),
@@ -541,7 +123,7 @@ mod tests {
 
     #[test]
     fn datasource_browse_render_does_not_wrap_boxed_shell_span() {
-        let source = include_str!("render.rs");
+        let source = render_sources();
         let wrapper_signature = format!("{}{}(", "fn ", "plain_boxed");
         assert!(
             !source.contains(&wrapper_signature),
@@ -552,7 +134,7 @@ mod tests {
 
     #[test]
     fn datasource_browse_render_does_not_wrap_control_line_shell_rows() {
-        let source = include_str!("render.rs");
+        let source = render_sources();
         let wrapper_signature = format!("{}{}(", "fn ", "control_line");
         assert!(
             !source.contains(&wrapper_signature),
@@ -841,7 +423,7 @@ mod tests {
 
     #[test]
     fn datasource_review_panel_does_not_keep_generic_build_review_wrapper() {
-        let source = include_str!("render.rs");
+        let source = render_sources();
         let wrapper_signature = format!("{}{}(", "fn ", "build_review_lines");
         assert!(
             !source.contains(&wrapper_signature),
