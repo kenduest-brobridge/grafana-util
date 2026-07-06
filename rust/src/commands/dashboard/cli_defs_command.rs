@@ -33,7 +33,8 @@ mod cli_defs_command_local;
 mod cli_defs_command_plan;
 
 pub use cli_defs_command_export::{
-    ExportArgs, ExportLayoutArgs, ExportLayoutOutputFormat, ExportLayoutVariant, RawToPromptArgs,
+    DashboardResourceFormat, ExportArgs, ExportLayoutArgs, ExportLayoutOutputFormat,
+    ExportLayoutVariant, RawToPromptArgs,
 };
 pub use cli_defs_command_history::{
     DashboardHistoryArgs, DashboardHistorySubcommand, HistoryDiffArgs, HistoryExportArgs,

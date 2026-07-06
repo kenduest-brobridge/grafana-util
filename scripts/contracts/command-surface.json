@@ -17,6 +17,16 @@
     "access",
     "workspace"
   ],
+  "public_flags": {
+    "dashboard export": {
+      "--resource-format": [
+        "none",
+        "v1",
+        "v2",
+        "all"
+      ]
+    }
+  },
   "removed_public_command_paths": [
     "dashboard analyze",
     "dashboard-analyze-"

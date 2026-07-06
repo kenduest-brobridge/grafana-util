@@ -137,6 +137,9 @@ pub(crate) fn build_export_metadata(
         dashboard_count: dashboard_count as u64,
         index_file: "index.json".to_string(),
         format: format_name.map(str::to_owned),
+        resource_api_version: None,
+        serialization: None,
+        ui_import_compatible: None,
         folders_file: folders_file.map(str::to_owned),
         datasources_file: datasources_file.map(str::to_owned),
         permissions_file: permissions_file.map(str::to_owned),
@@ -446,6 +449,8 @@ pub(crate) fn build_dashboard_index_item(
         raw_path: None,
         prompt_path: None,
         provisioning_path: None,
+        resource_v1_path: None,
+        resource_v2_path: None,
     }
 }
 
@@ -483,6 +488,27 @@ pub(crate) fn build_root_export_index(
     provisioning_index_path: Option<&Path>,
     folders: &[FolderInventoryItem],
 ) -> RootExportIndex {
+    build_root_export_index_with_resources(
+        items,
+        raw_index_path,
+        prompt_index_path,
+        provisioning_index_path,
+        None,
+        None,
+        folders,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn build_root_export_index_with_resources(
+    items: &[DashboardIndexItem],
+    raw_index_path: Option<&Path>,
+    prompt_index_path: Option<&Path>,
+    provisioning_index_path: Option<&Path>,
+    resource_v1_index_path: Option<&Path>,
+    resource_v2_index_path: Option<&Path>,
+    folders: &[FolderInventoryItem],
+) -> RootExportIndex {
     RootExportIndex {
         schema_version: TOOL_SCHEMA_VERSION,
         tool_version: Some(tool_version().to_string()),
@@ -492,6 +518,8 @@ pub(crate) fn build_root_export_index(
             raw: raw_index_path.map(|path| path.display().to_string()),
             prompt: prompt_index_path.map(|path| path.display().to_string()),
             provisioning: provisioning_index_path.map(|path| path.display().to_string()),
+            resource_v1: resource_v1_index_path.map(|path| path.display().to_string()),
+            resource_v2: resource_v2_index_path.map(|path| path.display().to_string()),
         },
         folders: folders.to_vec(),
     }

@@ -4,9 +4,10 @@ pub(crate) mod pub_exports {
         normalize_dashboard_cli_args, parse_cli_from, BrowseArgs, CloneLiveArgs, CommonCliArgs,
         DashboardAuthContext, DashboardCliArgs, DashboardCommand, DashboardHistoryArgs,
         DashboardHistorySubcommand, DashboardImportInputFormat, DashboardPlanOutputFormat,
-        DashboardServeScriptFormat, DeleteArgs, DiffArgs, EditLiveArgs, ExportArgs,
-        ExportLayoutArgs, ExportLayoutOutputFormat, ExportLayoutVariant, FolderPermissionMatchMode,
-        GetArgs, GovernanceGateArgs, GovernanceGateOutputFormat, GovernancePolicySource,
+        DashboardResourceFormat, DashboardServeScriptFormat, DeleteArgs, DiffArgs, EditLiveArgs,
+        ExportArgs, ExportLayoutArgs, ExportLayoutOutputFormat, ExportLayoutVariant,
+        FolderPermissionMatchMode, GetArgs, GovernanceGateArgs, GovernanceGateOutputFormat,
+        GovernancePolicySource,
         HistoryDiffArgs, HistoryExportArgs, HistoryListArgs, HistoryOutputFormat,
         HistoryRestoreArgs, ImpactArgs, ImpactOutputFormat, ImportArgs, InspectExportArgs,
         InspectExportInputType, InspectExportReportFormat, InspectLiveArgs, InspectOutputFormat,
@@ -77,9 +78,10 @@ pub(crate) mod crate_exports {
     #[allow(unused_imports)]
     pub(crate) use super::super::files::{
         build_dashboard_index_item, build_export_metadata, build_import_payload,
-        build_preserved_web_import_document, build_root_export_index, build_variant_index,
-        discover_dashboard_files, extract_dashboard_object, is_dashboard_v2_resource,
-        load_datasource_inventory, load_export_metadata, load_folder_inventory, load_json_file,
+        build_preserved_web_import_document, build_root_export_index,
+        build_root_export_index_with_resources, build_variant_index, discover_dashboard_files,
+        extract_dashboard_object, is_dashboard_v2_resource, load_datasource_inventory,
+        load_export_metadata, load_folder_inventory, load_json_file,
         resolve_dashboard_import_source, write_dashboard, write_json_document,
         DashboardRepoLayoutKind, DashboardSourceKind, ResolvedDashboardImportSource,
     };
@@ -91,8 +93,9 @@ pub(crate) mod crate_exports {
     };
     pub(crate) use super::super::models::{
         DashboardExportRootManifest, DashboardExportRootScopeKind, DashboardIndexItem,
-        DatasourceInventoryItem, ExportDatasourceUsageSummary, ExportMetadata, ExportOrgSummary,
-        FolderInventoryItem, RootExportIndex, RootExportVariants, VariantIndexEntry,
+        DashboardResourceIndexEntry, DatasourceInventoryItem, ExportDatasourceUsageSummary,
+        ExportMetadata, ExportOrgSummary, FolderInventoryItem, RootExportIndex, RootExportVariants,
+        VariantIndexEntry,
     };
     pub(crate) use super::super::project_status::build_dashboard_domain_status;
 }

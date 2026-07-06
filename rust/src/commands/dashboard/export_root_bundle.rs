@@ -29,6 +29,10 @@ struct RootExportVariantsView<'a> {
     raw: Option<&'a str>,
     prompt: Option<&'a str>,
     provisioning: Option<&'a str>,
+    #[serde(rename = "resource-v1", skip_serializing_if = "Option::is_none")]
+    resource_v1: Option<&'a str>,
+    #[serde(rename = "resource-v2", skip_serializing_if = "Option::is_none")]
+    resource_v2: Option<&'a str>,
 }
 
 fn write_json_document_streaming<T: Serialize>(payload: &T, output_path: &Path) -> Result<()> {
@@ -59,6 +63,8 @@ pub(super) fn write_all_orgs_root_export_bundle(
             raw: None,
             prompt: None,
             provisioning: None,
+            resource_v1: None,
+            resource_v2: None,
         },
         folders: root_folders,
     };
@@ -109,6 +115,8 @@ mod tests {
             raw_path: Some("/tmp/export/raw/CPU__cpu-main.json".to_string()),
             prompt_path: None,
             provisioning_path: None,
+            resource_v1_path: None,
+            resource_v2_path: None,
         }];
         let root_folders = vec![FolderInventoryItem {
             uid: "general".to_string(),

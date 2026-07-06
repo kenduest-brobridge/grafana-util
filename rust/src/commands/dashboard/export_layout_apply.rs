@@ -331,6 +331,8 @@ fn merge_variant_entries_into_root(
                 raw_path: None,
                 prompt_path: None,
                 provisioning_path: None,
+                resource_v1_path: None,
+                resource_v2_path: None,
             });
         if item.folder_title.is_empty() {
             item.folder_title = entry.folder_title;

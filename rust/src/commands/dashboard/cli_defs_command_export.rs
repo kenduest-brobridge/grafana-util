@@ -24,6 +24,14 @@ pub enum ExportLayoutOutputFormat {
     Yaml,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+pub enum DashboardResourceFormat {
+    None,
+    V1,
+    V2,
+    All,
+}
+
 /// Arguments for exporting dashboards into raw, prompt, and provisioning variants.
 #[derive(Debug, Clone, Args)]
 pub struct ExportArgs {
@@ -119,6 +127,14 @@ pub struct ExportArgs {
         help_heading = "Export Variant Options"
     )]
     pub include_history: bool,
+    #[arg(
+        long = "resource-format",
+        value_enum,
+        default_value_t = DashboardResourceFormat::None,
+        help = "Also export dashboard resource API objects. Use none, v1, v2, or all.",
+        help_heading = "Export Variant Options"
+    )]
+    pub resource_format: DashboardResourceFormat,
     #[arg(
         long = "provider-name",
         value_name = "NAME",

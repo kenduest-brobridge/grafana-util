@@ -83,6 +83,20 @@ pub(crate) struct ExportMetadata {
     pub index_file: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub format: Option<String>,
+    #[serde(
+        rename = "resourceApiVersion",
+        skip_serializing_if = "Option::is_none",
+        default
+    )]
+    pub resource_api_version: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub serialization: Option<String>,
+    #[serde(
+        rename = "uiImportCompatible",
+        skip_serializing_if = "Option::is_none",
+        default
+    )]
+    pub ui_import_compatible: Option<bool>,
     #[serde(rename = "foldersFile", skip_serializing_if = "Option::is_none")]
     pub folders_file: Option<String>,
     #[serde(rename = "datasourcesFile", skip_serializing_if = "Option::is_none")]
@@ -188,6 +202,31 @@ pub(crate) struct DashboardIndexItem {
     pub prompt_path: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub provisioning_path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub resource_v1_path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub resource_v2_path: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub(crate) struct DashboardResourceIndexEntry {
+    pub name: String,
+    pub title: String,
+    pub path: String,
+    pub format: String,
+    #[serde(rename = "apiVersion")]
+    pub api_version: String,
+    #[serde(
+        rename = "folderPath",
+        default,
+        skip_serializing_if = "String::is_empty"
+    )]
+    pub folder_path: String,
+    #[serde(default)]
+    pub org: String,
+    #[serde(rename = "orgId")]
+    #[serde(default)]
+    pub org_id: String,
 }
 
 /// Struct definition for VariantIndexEntry.
@@ -232,6 +271,10 @@ pub(crate) struct RootExportVariants {
     pub raw: Option<String>,
     pub prompt: Option<String>,
     pub provisioning: Option<String>,
+    #[serde(rename = "resource-v1", skip_serializing_if = "Option::is_none")]
+    pub resource_v1: Option<String>,
+    #[serde(rename = "resource-v2", skip_serializing_if = "Option::is_none")]
+    pub resource_v2: Option<String>,
 }
 
 /// Struct definition for FolderInventoryItem.

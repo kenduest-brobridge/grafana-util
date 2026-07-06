@@ -6,7 +6,7 @@ use crate::cli::{
 use crate::cli_completion::CompletionShell;
 use crate::dashboard::{
     parse_cli_from as parse_dashboard_cli_from, DashboardCliArgs, DashboardCommand,
-    SimpleOutputFormat,
+    DashboardResourceFormat, SimpleOutputFormat,
 };
 use crate::profile_cli::ProfileCommand;
 use crate::resource::{ResourceApiMode, ResourceCommand, ResourceKind, ResourceOutputFormat};
@@ -314,6 +314,98 @@ fn parse_cli_supports_task_first_export_surface() {
         },
         _ => panic!("expected export command"),
     }
+}
+
+#[test]
+fn parse_dashboard_export_defaults_resource_format_to_none() {
+    let args: CliArgs = parse_cli_from([
+        "grafana-util",
+        "dashboard",
+        "export",
+        "--output-dir",
+        "./dashboards",
+    ]);
+
+    match args.command {
+        UnifiedCommand::Dashboard { command } => match command {
+            DashboardRootCommand::Export(inner) => {
+                assert_eq!(inner.resource_format, DashboardResourceFormat::None);
+                assert!(!inner.without_dashboard_raw);
+                assert!(!inner.without_dashboard_prompt);
+                assert!(!inner.without_dashboard_provisioning);
+            }
+            _ => panic!("expected dashboard export"),
+        },
+        _ => panic!("expected dashboard command"),
+    }
+}
+
+#[test]
+fn parse_dashboard_export_accepts_resource_format_v2() {
+    let args: CliArgs = parse_cli_from([
+        "grafana-util",
+        "dashboard",
+        "export",
+        "--output-dir",
+        "./dashboards",
+        "--resource-format",
+        "v2",
+    ]);
+
+    match args.command {
+        UnifiedCommand::Dashboard { command } => match command {
+            DashboardRootCommand::Export(inner) => {
+                assert_eq!(inner.resource_format, DashboardResourceFormat::V2);
+            }
+            _ => panic!("expected dashboard export"),
+        },
+        _ => panic!("expected dashboard command"),
+    }
+}
+
+#[test]
+fn parse_dashboard_export_accepts_resource_only_selection() {
+    let args: CliArgs = parse_cli_from([
+        "grafana-util",
+        "dashboard",
+        "export",
+        "--output-dir",
+        "./dashboards",
+        "--without-raw",
+        "--without-prompt",
+        "--without-provisioning",
+        "--resource-format",
+        "v1",
+    ]);
+
+    match args.command {
+        UnifiedCommand::Dashboard { command } => match command {
+            DashboardRootCommand::Export(inner) => {
+                assert_eq!(inner.resource_format, DashboardResourceFormat::V1);
+                assert!(inner.without_dashboard_raw);
+                assert!(inner.without_dashboard_prompt);
+                assert!(inner.without_dashboard_provisioning);
+            }
+            _ => panic!("expected dashboard export"),
+        },
+        _ => panic!("expected dashboard command"),
+    }
+}
+
+#[test]
+fn parse_dashboard_export_rejects_invalid_resource_format() {
+    let error = CliArgs::try_parse_from([
+        "grafana-util",
+        "dashboard",
+        "export",
+        "--resource-format",
+        "yaml",
+    ])
+    .expect_err("unsupported resource export format should fail through clap");
+
+    let rendered = error.to_string();
+    assert!(rendered.contains("invalid value"));
+    assert!(rendered.contains("resource-format"));
 }
 
 #[test]

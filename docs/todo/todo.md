@@ -2,6 +2,12 @@
 
 ## Active
 
+- [ ] [Grafana 13 dashboard resource export](2026-06-26-dashboard-resource-api-export.md) -
+  Plan support for a family-oriented export layout: `classic/` contains
+  raw/prompt/provisioning/history, while native `dashboard.grafana.app` v1
+  resource API objects live under `resource-v1/objects`; keep `resource-v2/`
+  postponed until a public v2 HTTP endpoint is verified, with UI-import
+  compatibility kept classic-only.
 - [x] [Rust maintainability refactor backlog](2026-06-25-rust-maintainability-refactor-backlog.md) -
   Track necessary larger refactor candidates from the current architecture
   audit. Active order: close confirmed lint cleanup; plan and split

@@ -8,8 +8,8 @@ use std::time::Duration;
 use crate::grafana_api::connection::auth_mode_from_headers;
 use crate::grafana_api::{
     execute_sync_live_apply_with_client, fetch_sync_live_availability_with_client,
-    AccessResourceClient, AlertingResourceClient, AuthInputs, DatasourceResourceClient,
-    GrafanaApiClient, GrafanaConnection, SyncLiveClient,
+    AccessResourceClient, AlertingResourceClient, AuthInputs, DashboardResourceApiVersion,
+    DatasourceResourceClient, GrafanaApiClient, GrafanaConnection, SyncLiveClient,
 };
 use crate::profile_config::ConnectionMergeInput;
 use crate::sync::live::SyncApplyOperation;
@@ -536,6 +536,96 @@ fn dashboard_resource_client_builds_expected_dashboard_requests() {
     assert!(requests[12].contains("\"title\":\"Platform\""));
     assert!(requests[12].contains("\"parentUid\":\"ops\""));
     assert!(requests[13].starts_with("GET /api/datasources "));
+}
+
+#[test]
+fn dashboard_resource_client_lists_and_fetches_v1_dashboard_resources() {
+    let responses = vec![
+        http_response(
+            "200 OK",
+            r#"{"apiVersion":"dashboard.grafana.app/v1alpha1","kind":"DashboardList","items":[{"kind":"Dashboard","apiVersion":"dashboard.grafana.app/v1","metadata":{"name":"cpu-main","namespace":"default"},"spec":{"title":"CPU"}}],"metadata":{"continue":"next-page"}}"#,
+        ),
+        http_response(
+            "200 OK",
+            r#"{"kind":"Dashboard","apiVersion":"dashboard.grafana.app/v1","metadata":{"name":"cpu-main","namespace":"default"},"spec":{"title":"CPU"}}"#,
+        ),
+    ];
+    let (base_url, requests, handle) = sequence_server_or_skip!(responses);
+    let api = build_test_api(base_url);
+    let dashboard = api.dashboard();
+
+    let list = dashboard
+        .list_dashboard_resources(DashboardResourceApiVersion::V1, "default", Some(1), None)
+        .unwrap();
+    let resource = dashboard
+        .fetch_dashboard_resource(DashboardResourceApiVersion::V1, "default", "cpu-main")
+        .unwrap();
+
+    handle.join().unwrap();
+
+    assert_eq!(list["kind"], "DashboardList");
+    assert_eq!(list["items"][0]["metadata"]["name"], "cpu-main");
+    assert_eq!(resource["kind"], "Dashboard");
+    assert_eq!(resource["metadata"]["name"], "cpu-main");
+
+    let requests = requests.lock().unwrap().clone();
+    assert_eq!(requests.len(), 2);
+    assert!(requests[0]
+        .starts_with("GET /apis/dashboard.grafana.app/v1/namespaces/default/dashboards?limit=1 "));
+    assert!(requests[1]
+        .starts_with("GET /apis/dashboard.grafana.app/v1/namespaces/default/dashboards/cpu-main "));
+}
+
+#[test]
+fn dashboard_resource_client_returns_none_for_v1_resource_404() {
+    let responses = vec![
+        http_response("404 Not Found", r#"{"message":"not found"}"#),
+        http_response("404 Not Found", r#"{"message":"not found"}"#),
+    ];
+    let (base_url, requests, handle) = sequence_server_or_skip!(responses);
+    let api = build_test_api(base_url);
+    let dashboard = api.dashboard();
+
+    let list = dashboard
+        .list_dashboard_resources_if_supported(
+            DashboardResourceApiVersion::V1,
+            "default",
+            None,
+            None,
+        )
+        .unwrap();
+    let resource = dashboard
+        .fetch_dashboard_resource_if_exists(
+            DashboardResourceApiVersion::V1,
+            "default",
+            "missing-dashboard",
+        )
+        .unwrap();
+
+    handle.join().unwrap();
+
+    assert!(list.is_none());
+    assert!(resource.is_none());
+    let requests = requests.lock().unwrap().clone();
+    assert_eq!(requests.len(), 2);
+    assert!(requests[0]
+        .starts_with("GET /apis/dashboard.grafana.app/v1/namespaces/default/dashboards "));
+    assert!(requests[1].starts_with(
+        "GET /apis/dashboard.grafana.app/v1/namespaces/default/dashboards/missing-dashboard "
+    ));
+}
+
+#[test]
+fn dashboard_resource_client_rejects_v2_resource_api_before_transport() {
+    let api = build_test_api("http://127.0.0.1:9".to_string());
+    let dashboard = api.dashboard();
+
+    let error = dashboard
+        .list_dashboard_resources(DashboardResourceApiVersion::V2, "default", None, None)
+        .expect_err("v2 resource API should be rejected until a public endpoint is verified");
+
+    assert!(error.to_string().contains("dashboard.grafana.app/v2"));
+    assert!(error.to_string().contains("not verified"));
 }
 
 #[test]

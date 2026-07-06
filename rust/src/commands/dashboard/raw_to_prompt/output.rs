@@ -251,6 +251,8 @@ pub(crate) fn write_prompt_lane_metadata(
             raw_path: None,
             prompt_path: Some(output_path.display().to_string()),
             provisioning_path: None,
+            resource_v1_path: None,
+            resource_v2_path: None,
         });
     }
     write_json_document(

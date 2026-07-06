@@ -258,6 +258,63 @@
     }
   },
   {
+    "name": "resource-v1-envelope",
+    "grafanaSource": {
+      "area": "dashboard.grafana.app v1 resource",
+      "reference": "Grafana 13 Dashboard HTTP API get/list examples",
+      "note": "Native dashboard resource export must preserve the v1 envelope and keep metadata.name as the path identity."
+    },
+    "input": {
+      "kind": "Dashboard",
+      "apiVersion": "dashboard.grafana.app/v1",
+      "metadata": {
+        "name": "resource-v1-dash",
+        "namespace": "default",
+        "uid": "7a9f3c3a-7f42-4f7f-8a42-78c779cc51a1",
+        "annotations": {
+          "grafana.app/folder": "ops-folder"
+        },
+        "resourceVersion": "1740000000000000000",
+        "generation": 1,
+        "creationTimestamp": "2026-06-27T00:00:00Z"
+      },
+      "spec": {
+        "title": "resource v1 dashboard",
+        "schemaVersion": 41,
+        "tags": [
+          "resource-api"
+        ],
+        "timezone": "browser",
+        "panels": [
+          {
+            "id": 1,
+            "title": "Requests",
+            "type": "timeseries",
+            "gridPos": {
+              "h": 8,
+              "w": 12,
+              "x": 0,
+              "y": 0
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "rate(http_requests_total[5m])"
+              }
+            ]
+          }
+        ],
+        "templating": {
+          "list": []
+        },
+        "annotations": {
+          "list": []
+        }
+      },
+      "status": {}
+    }
+  },
+  {
     "name": "v2-elements",
     "grafanaSource": {
       "area": "dashboard.grafana.app v2 resource",

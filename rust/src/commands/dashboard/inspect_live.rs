@@ -57,6 +57,7 @@ pub(crate) fn build_review_live_export_args(
         without_dashboard_prompt: true,
         without_dashboard_provisioning: true,
         include_history: false,
+        resource_format: crate::dashboard::DashboardResourceFormat::None,
         provisioning_provider_name: "grafana-utils-dashboards".to_string(),
         provisioning_provider_org_id: None,
         provisioning_provider_path: None,

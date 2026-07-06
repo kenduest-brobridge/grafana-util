@@ -6,6 +6,23 @@ use serde_json::{Map, Value};
 use crate::common::{message, string_field, value_as_object, Result};
 use crate::http::JsonHttpClient;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum DashboardResourceApiVersion {
+    V1,
+    V2,
+}
+
+impl DashboardResourceApiVersion {
+    fn path_segment(self) -> Result<&'static str> {
+        match self {
+            Self::V1 => Ok("v1"),
+            Self::V2 => Err(message(
+                "dashboard.grafana.app/v2 resource HTTP API is not verified yet.",
+            )),
+        }
+    }
+}
+
 pub(crate) struct DashboardResourceClient<'a> {
     http: &'a JsonHttpClient,
 }
@@ -113,6 +130,86 @@ impl<'a> DashboardResourceClient<'a> {
             self.request_json(Method::GET, "/api/orgs", &[], None)?,
             "Unexpected org list payload from Grafana.",
         )
+    }
+
+    #[allow(dead_code)]
+    pub(crate) fn list_dashboard_resources(
+        &self,
+        version: DashboardResourceApiVersion,
+        namespace: &str,
+        limit: Option<usize>,
+        continue_token: Option<&str>,
+    ) -> Result<Value> {
+        let version = version.path_segment()?;
+        let path =
+            format!("/apis/dashboard.grafana.app/{version}/namespaces/{namespace}/dashboards");
+        let mut params = Vec::new();
+        if let Some(limit) = limit {
+            params.push(("limit".to_string(), limit.to_string()));
+        }
+        if let Some(continue_token) = continue_token.filter(|value| !value.is_empty()) {
+            params.push(("continue".to_string(), continue_token.to_string()));
+        }
+        match self.request_json(Method::GET, &path, &params, None)? {
+            Some(Value::Object(object)) => Ok(Value::Object(object)),
+            Some(_) => Err(message(format!(
+                "Unexpected dashboard resource list payload for namespace {namespace}."
+            ))),
+            None => Err(message(format!(
+                "Unexpected empty dashboard resource list payload for namespace {namespace}."
+            ))),
+        }
+    }
+
+    #[allow(dead_code)]
+    pub(crate) fn list_dashboard_resources_if_supported(
+        &self,
+        version: DashboardResourceApiVersion,
+        namespace: &str,
+        limit: Option<usize>,
+        continue_token: Option<&str>,
+    ) -> Result<Option<Value>> {
+        match self.list_dashboard_resources(version, namespace, limit, continue_token) {
+            Ok(value) => Ok(Some(value)),
+            Err(error) if error.status_code() == Some(404) => Ok(None),
+            Err(error) => Err(error),
+        }
+    }
+
+    #[allow(dead_code)]
+    pub(crate) fn fetch_dashboard_resource(
+        &self,
+        version: DashboardResourceApiVersion,
+        namespace: &str,
+        name: &str,
+    ) -> Result<Value> {
+        let version = version.path_segment()?;
+        let path = format!(
+            "/apis/dashboard.grafana.app/{version}/namespaces/{namespace}/dashboards/{name}"
+        );
+        match self.request_json(Method::GET, &path, &[], None)? {
+            Some(Value::Object(object)) => Ok(Value::Object(object)),
+            Some(_) => Err(message(format!(
+                "Unexpected dashboard resource payload for {namespace}/{name}."
+            ))),
+            None => Err(message(format!(
+                "Unexpected empty dashboard resource payload for {namespace}/{name}."
+            ))),
+        }
+    }
+
+    #[allow(dead_code)]
+    pub(crate) fn fetch_dashboard_resource_if_exists(
+        &self,
+        version: DashboardResourceApiVersion,
+        namespace: &str,
+        name: &str,
+    ) -> Result<Option<Value>> {
+        match self.fetch_dashboard_resource(version, namespace, name) {
+            Ok(value) => Ok(Some(value)),
+            Err(error) if error.status_code() == Some(404) => Ok(None),
+            Err(error) => Err(error),
+        }
     }
 
     pub(crate) fn fetch_folder_if_exists(&self, uid: &str) -> Result<Option<Map<String, Value>>> {

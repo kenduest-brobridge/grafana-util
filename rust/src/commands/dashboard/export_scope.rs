@@ -17,13 +17,15 @@ use super::super::list::{
 };
 use super::super::{
     build_dashboard_index_item, build_datasource_catalog, build_datasource_inventory_record,
-    build_export_metadata, build_preserved_web_import_document, build_root_export_index,
-    build_variant_index, collect_folder_inventory_with_request, fetch_dashboard_with_request,
+    build_export_metadata, build_preserved_web_import_document,
+    build_root_export_index_with_resources, build_variant_index,
+    collect_folder_inventory_with_request, fetch_dashboard_with_request,
     list_dashboard_summaries_with_request, list_datasources_with_request, write_dashboard,
-    write_json_document, ExportArgs, ExportOrgSummary, RootExportIndex,
+    write_json_document, ExportArgs, ExportOrgSummary, RootExportIndex, CLASSIC_EXPORT_SUBDIR,
     DASHBOARD_PERMISSION_BUNDLE_FILENAME, DATASOURCE_INVENTORY_FILENAME, DEFAULT_UNKNOWN_UID,
     EXPORT_METADATA_FILENAME, FOLDER_INVENTORY_FILENAME, PROMPT_EXPORT_SUBDIR,
-    PROVISIONING_EXPORT_SUBDIR, RAW_EXPORT_SUBDIR,
+    PROVISIONING_EXPORT_SUBDIR, RAW_EXPORT_SUBDIR, RESOURCE_OBJECTS_SUBDIR,
+    RESOURCE_V1_EXPORT_SUBDIR,
 };
 use super::export_paths::{
     build_export_variant_dirs, build_folder_paths_by_inventory_key, build_history_output_path,
@@ -41,6 +43,11 @@ use super::{
 mod document_write;
 
 use document_write::write_history_document;
+
+use super::export_resource::{
+    build_resource_export_metadata, build_resource_index_entry, build_resource_output_path,
+    dashboard_resource_namespace, fetch_dashboard_resource_with_request, selected_resource_lanes,
+};
 
 pub(crate) struct ScopeExportResult {
     pub(crate) exported_count: usize,
@@ -107,12 +114,13 @@ where
     P: Fn(&PermissionExportTarget) -> Result<Vec<Map<String, Value>>> + Sync,
     H: Fn(&str, i64) -> Result<Map<String, Value>> + Sync,
 {
-    if args.without_dashboard_raw
+    let resource_lanes = selected_resource_lanes(args.resource_format)?;
+    let has_classic_export = !(args.without_dashboard_raw
         && args.without_dashboard_prompt
-        && args.without_dashboard_provisioning
-    {
+        && args.without_dashboard_provisioning);
+    if !has_classic_export && resource_lanes.is_empty() {
         return Err(message(
-            "Nothing to export. Remove one of --without-raw, --without-prompt, or --without-provisioning.",
+            "Nothing to export. Remove one of --without-raw, --without-prompt, or --without-provisioning, or set --resource-format.",
         ));
     }
     let mut scoped_request = |method: Method,
@@ -140,8 +148,16 @@ where
     } else {
         args.output_dir.clone()
     };
-    let (raw_dir, prompt_dir, provisioning_dir) = build_export_variant_dirs(&scope_output_dir);
-    let history_dir = scope_output_dir.join("history");
+    let family_layout = !resource_lanes.is_empty();
+    let classic_output_dir = if family_layout {
+        scope_output_dir.join(CLASSIC_EXPORT_SUBDIR)
+    } else {
+        scope_output_dir.clone()
+    };
+    let (raw_dir, prompt_dir, provisioning_dir) = build_export_variant_dirs(&classic_output_dir);
+    let history_dir = classic_output_dir.join("history");
+    let resource_v1_dir = scope_output_dir.join(RESOURCE_V1_EXPORT_SUBDIR);
+    let resource_v1_objects_dir = resource_v1_dir.join(RESOURCE_OBJECTS_SUBDIR);
     let provisioning_dashboards_dir = provisioning_dir.join("dashboards");
     let provisioning_config_dir = provisioning_dir.join("provisioning");
     if !args.dry_run && !args.without_dashboard_raw {
@@ -156,6 +172,13 @@ where
     }
     if !args.dry_run && args.include_history {
         fs::create_dir_all(&history_dir)?;
+    }
+    if !args.dry_run
+        && resource_lanes
+            .iter()
+            .any(|lane| lane.dir_name == RESOURCE_V1_EXPORT_SUBDIR)
+    {
+        fs::create_dir_all(&resource_v1_objects_dir)?;
     }
     let datasource_list = list_datasources_with_request(&mut scoped_request)?;
     let datasource_inventory = datasource_list
@@ -189,6 +212,7 @@ where
 
     let mut exported_count = 0;
     let mut index_items = Vec::new();
+    let mut resource_v1_index_items = Vec::new();
     let mut used_source_names = BTreeSet::new();
     let mut used_source_uids = BTreeSet::new();
     let total = summaries.len();
@@ -308,6 +332,51 @@ where
                 );
             }
             item.provisioning_path = Some(provisioning_path.display().to_string());
+        }
+        if !resource_lanes.is_empty() {
+            let namespace = dashboard_resource_namespace(&current_org_id);
+            for lane in resource_lanes.iter().copied() {
+                let resource = fetch_dashboard_resource_with_request(
+                    &mut scoped_request,
+                    lane,
+                    &namespace,
+                    &uid,
+                )?;
+                let (resource_path, resource_name, resource_title, resource_folder_path) =
+                    build_resource_output_path(
+                        &resource_v1_objects_dir,
+                        &resource,
+                        &uid,
+                        &folder_paths_by_key,
+                        &current_org_id,
+                    );
+                if !args.dry_run {
+                    write_dashboard(&resource, &resource_path, args.overwrite)?;
+                }
+                if args.verbose {
+                    println!(
+                        "{}",
+                        format_export_verbose_line(
+                            lane.dir_name,
+                            &uid,
+                            &resource_path,
+                            args.dry_run
+                        )
+                    );
+                }
+                if lane.dir_name == RESOURCE_V1_EXPORT_SUBDIR {
+                    item.resource_v1_path = Some(resource_path.display().to_string());
+                    resource_v1_index_items.push(build_resource_index_entry(
+                        lane,
+                        resource_name,
+                        resource_title,
+                        &resource_path,
+                        resource_folder_path,
+                        &current_org_name,
+                        &current_org_id,
+                    ));
+                }
+            }
         }
         exported_count += 1;
         index_items.push(item);
@@ -459,11 +528,39 @@ where
         }
         provisioning_index_path = Some(index_path);
     }
-    let root_index = build_root_export_index(
+    let mut resource_v1_index_path = None;
+    if let Some(lane) = resource_lanes
+        .iter()
+        .copied()
+        .find(|lane| lane.dir_name == RESOURCE_V1_EXPORT_SUBDIR)
+    {
+        let index_path = resource_v1_dir.join("index.json");
+        let metadata_path = resource_v1_dir.join(EXPORT_METADATA_FILENAME);
+        if !args.dry_run {
+            write_json_document(&resource_v1_index_items, &index_path)?;
+            write_json_document(
+                &build_resource_export_metadata(
+                    lane,
+                    resource_v1_index_items.len(),
+                    &current_org_name,
+                    &current_org_id,
+                    &args.common.url,
+                    args.common.profile.as_deref(),
+                    resource_v1_dir.as_path(),
+                    &metadata_path,
+                ),
+                &metadata_path,
+            )?;
+        }
+        resource_v1_index_path = Some(index_path);
+    }
+    let root_index = build_root_export_index_with_resources(
         &index_items,
         raw_index_path.as_deref(),
         prompt_index_path.as_deref(),
         provisioning_index_path.as_deref(),
+        resource_v1_index_path.as_deref(),
+        None,
         &folder_inventory,
     );
     let used_datasources = build_used_datasource_summaries(

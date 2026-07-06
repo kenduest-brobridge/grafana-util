@@ -34,6 +34,7 @@ fn inspect_live_dashboards_with_request_all_orgs_matches_export_root_governance_
         without_dashboard_prompt: true,
         without_dashboard_provisioning: true,
         include_history: false,
+        resource_format: crate::dashboard::DashboardResourceFormat::None,
         provisioning_provider_name: "grafana-utils-dashboards".to_string(),
         provisioning_provider_org_id: None,
         provisioning_provider_path: None,
