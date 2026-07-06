@@ -1,11 +1,18 @@
 //! CLI definitions for live dashboard fetch, clone, browse, delete, and diff workflows.
 
-use clap::Args;
+use clap::{Args, ValueEnum};
 use std::path::PathBuf;
 
 use super::super::super::{DEFAULT_IMPORT_MESSAGE, DEFAULT_PAGE_SIZE};
 use super::super::cli_defs_shared::{CommonCliArgs, DryRunOutputFormat};
 use crate::common::DiffOutputFormat;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+pub enum CloneFolderOutputFormat {
+    Text,
+    Table,
+    Json,
+}
 
 /// Arguments for editing one live dashboard through an external editor.
 #[derive(Debug, Clone, Args)]
@@ -81,6 +88,133 @@ pub struct CloneLiveArgs {
         help = "Override the cloned dashboard folder UID in the preserved Grafana metadata."
     )]
     pub folder_uid: Option<String>,
+}
+
+/// Arguments for cloning dashboards from one live folder into another.
+#[derive(Debug, Clone, Args)]
+pub struct CloneFolderArgs {
+    #[command(flatten)]
+    pub common: CommonCliArgs,
+    #[arg(
+        long,
+        default_value_t = DEFAULT_PAGE_SIZE,
+        help = "Dashboard search page size used to resolve source folder dashboards."
+    )]
+    pub page_size: usize,
+    #[arg(
+        long = "source-folder-uid",
+        conflicts_with = "source_path",
+        help = "Source Grafana folder UID to duplicate dashboards from."
+    )]
+    pub source_folder_uid: Option<String>,
+    #[arg(
+        long = "source-path",
+        conflicts_with = "source_folder_uid",
+        help = "Source Grafana folder path to duplicate dashboards from, for example 'Platform / Infra'."
+    )]
+    pub source_path: Option<String>,
+    #[arg(
+        long = "target-folder-uid",
+        help = "Destination Grafana folder UID for copied dashboards."
+    )]
+    pub target_folder_uid: String,
+    #[arg(
+        long = "target-folder-title",
+        requires = "create_target_folder",
+        help = "Destination folder title to use when --create-target-folder creates the target root folder."
+    )]
+    pub target_folder_title: Option<String>,
+    #[arg(
+        long = "target-parent-folder-uid",
+        help = "Parent folder UID to use when --create-target-folder creates the target root folder."
+    )]
+    pub target_parent_folder_uid: Option<String>,
+    #[arg(
+        long = "create-target-folder",
+        default_value_t = false,
+        help = "Create missing destination folders before importing cloned dashboards."
+    )]
+    pub create_target_folder: bool,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Also clone dashboards from child folders, creating a matching target subtree."
+    )]
+    pub recursive: bool,
+    #[arg(
+        long = "uid-prefix",
+        allow_hyphen_values = true,
+        help = "Prefix to add to every cloned dashboard UID."
+    )]
+    pub uid_prefix: Option<String>,
+    #[arg(
+        long = "uid-suffix",
+        default_value = "-copy",
+        allow_hyphen_values = true,
+        help = "Suffix to add to every cloned dashboard UID."
+    )]
+    pub uid_suffix: String,
+    #[arg(
+        long = "title-prefix",
+        allow_hyphen_values = true,
+        help = "Prefix to add to every cloned dashboard title."
+    )]
+    pub title_prefix: Option<String>,
+    #[arg(
+        long = "title-suffix",
+        allow_hyphen_values = true,
+        help = "Suffix to add to every cloned dashboard title."
+    )]
+    pub title_suffix: Option<String>,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Overwrite existing target dashboard UIDs instead of blocking the clone."
+    )]
+    pub replace_existing: bool,
+    #[arg(
+        long,
+        default_value = "Cloned by grafana-utils dashboard clone-folder",
+        help = "Revision message to use when writing cloned dashboards."
+    )]
+    pub message: String,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Acknowledge the live folder clone. Required unless --dry-run is set."
+    )]
+    pub yes: bool,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Preview the folder clone without changing Grafana."
+    )]
+    pub dry_run: bool,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "For --dry-run only, render a compact table instead of plain text."
+    )]
+    pub table: bool,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "For --dry-run only, render one JSON document."
+    )]
+    pub json: bool,
+    #[arg(
+        long,
+        value_enum,
+        conflicts_with_all = ["table", "json"],
+        help = "Alternative single-flag output selector for clone-folder dry-run output."
+    )]
+    pub output_format: Option<CloneFolderOutputFormat>,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "For table output, omit the table header row."
+    )]
+    pub no_header: bool,
 }
 
 /// Arguments for deleting live dashboards by UID or folder path.

@@ -147,6 +147,7 @@ grafana-util dashboard summary --url http://localhost:3000 --basic-user admin --
 
 - [dashboard get](./dashboard-get.md)
 - [dashboard clone](./dashboard-clone.md)
+- [dashboard clone-folder](./dashboard-clone-folder.md)
 - [dashboard patch](./dashboard-patch.md)
 - [dashboard serve](./dashboard-serve.md)
 - [dashboard edit-live](./dashboard-edit-live.md)

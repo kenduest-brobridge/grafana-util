@@ -150,6 +150,7 @@ grafana-util dashboard edit-live --profile prod --dashboard-uid cpu-main --outpu
 
 - [dashboard get](./dashboard-get.md)
 - [dashboard clone](./dashboard-clone.md)
+- [dashboard clone-folder](./dashboard-clone-folder.md)
 - [dashboard patch](./dashboard-patch.md)
 - [dashboard serve](./dashboard-serve.md)
 - [dashboard edit-live](./dashboard-edit-live.md)

@@ -415,6 +415,40 @@ fn parse_cli_supports_dashboard_get_and_clone_live_commands() {
 }
 
 #[test]
+fn parse_cli_supports_dashboard_clone_folder_command() {
+    let args = parse_cli_from([
+        "grafana-util",
+        "clone-folder",
+        "--source-folder-uid",
+        "infra",
+        "--target-folder-uid",
+        "staging-infra",
+        "--target-folder-title",
+        "Staging Infra",
+        "--create-target-folder",
+        "--recursive",
+        "--uid-suffix",
+        "-staging",
+        "--dry-run",
+        "--json",
+    ]);
+
+    match args.command {
+        DashboardCommand::CloneFolder(args) => {
+            assert_eq!(args.source_folder_uid.as_deref(), Some("infra"));
+            assert_eq!(args.target_folder_uid, "staging-infra");
+            assert_eq!(args.target_folder_title.as_deref(), Some("Staging Infra"));
+            assert!(args.create_target_folder);
+            assert!(args.recursive);
+            assert_eq!(args.uid_suffix, "-staging");
+            assert!(args.dry_run);
+            assert!(args.json);
+        }
+        _ => panic!("expected clone-folder command"),
+    }
+}
+
+#[test]
 fn dashboard_fetch_live_help_mentions_local_draft_and_output_path() {
     let help = render_dashboard_subcommand_help("get");
     assert!(help.contains("API-safe local JSON draft"));
@@ -434,6 +468,19 @@ fn dashboard_clone_live_help_mentions_override_flags() {
     assert!(help.contains("--name"));
     assert!(help.contains("--uid"));
     assert!(help.contains("--folder-uid"));
+}
+
+#[test]
+fn dashboard_clone_folder_help_mentions_folder_copy_controls() {
+    let help = render_dashboard_subcommand_help("clone-folder");
+    assert!(help.contains("duplicate dashboards from one live folder"));
+    assert!(help.contains("--source-folder-uid"));
+    assert!(help.contains("--source-path"));
+    assert!(help.contains("--target-folder-uid"));
+    assert!(help.contains("--create-target-folder"));
+    assert!(help.contains("--recursive"));
+    assert!(help.contains("--dry-run"));
+    assert!(help.contains("--yes"));
 }
 
 #[test]

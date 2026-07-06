@@ -8,9 +8,9 @@ use super::cli_defs_inspect::{
     ScreenshotArgs, SummaryArgs, TopologyArgs, ValidateExportArgs,
 };
 use super::{
-    DASHBOARD_BROWSE_AFTER_HELP, DASHBOARD_CLI_AFTER_HELP, DASHBOARD_CLONE_LIVE_AFTER_HELP,
-    DASHBOARD_DELETE_AFTER_HELP, DASHBOARD_DIFF_AFTER_HELP, DASHBOARD_EDIT_LIVE_AFTER_HELP,
-    DASHBOARD_EXPORT_AFTER_HELP, DASHBOARD_FETCH_LIVE_AFTER_HELP,
+    DASHBOARD_BROWSE_AFTER_HELP, DASHBOARD_CLI_AFTER_HELP, DASHBOARD_CLONE_FOLDER_AFTER_HELP,
+    DASHBOARD_CLONE_LIVE_AFTER_HELP, DASHBOARD_DELETE_AFTER_HELP, DASHBOARD_DIFF_AFTER_HELP,
+    DASHBOARD_EDIT_LIVE_AFTER_HELP, DASHBOARD_EXPORT_AFTER_HELP, DASHBOARD_FETCH_LIVE_AFTER_HELP,
     DASHBOARD_GOVERNANCE_GATE_AFTER_HELP, DASHBOARD_IMPACT_AFTER_HELP, DASHBOARD_IMPORT_AFTER_HELP,
     DASHBOARD_LIST_AFTER_HELP, DASHBOARD_LIST_VARS_AFTER_HELP, DASHBOARD_PATCH_FILE_AFTER_HELP,
     DASHBOARD_PLAN_AFTER_HELP, DASHBOARD_PUBLISH_AFTER_HELP, DASHBOARD_REVIEW_AFTER_HELP,
@@ -42,7 +42,8 @@ pub use cli_defs_command_history::{
 };
 pub use cli_defs_command_list::ListArgs;
 pub use cli_defs_command_live::{
-    BrowseArgs, CloneLiveArgs, DeleteArgs, DiffArgs, EditLiveArgs, GetArgs,
+    BrowseArgs, CloneFolderArgs, CloneFolderOutputFormat, CloneLiveArgs, DeleteArgs, DiffArgs,
+    EditLiveArgs, GetArgs,
 };
 pub use cli_defs_command_local::{ImportArgs, PatchFileArgs, PublishArgs, ReviewArgs, ServeArgs};
 pub use cli_defs_command_plan::{DashboardPlanOutputFormat, FolderPermissionMatchMode, PlanArgs};
@@ -87,6 +88,12 @@ pub enum DashboardCommand {
         after_help = DASHBOARD_CLONE_LIVE_AFTER_HELP
     )]
     CloneLive(CloneLiveArgs),
+    #[command(
+        name = "clone-folder",
+        about = "Duplicate dashboards from one live Grafana folder into another.",
+        after_help = DASHBOARD_CLONE_FOLDER_AFTER_HELP
+    )]
+    CloneFolder(CloneFolderArgs),
     #[command(
         name = "serve",
         about = "Serve dashboard drafts through a local preview server.",

@@ -45,6 +45,9 @@ pub(super) use dashboard_rust_tests_support::{
 #[cfg(test)]
 #[path = "dashboard_authoring_rust_tests.rs"]
 mod dashboard_authoring_rust_tests;
+#[cfg(test)]
+#[path = "dashboard_clone_folder_rust_tests.rs"]
+mod dashboard_clone_folder_rust_tests;
 #[cfg(all(test, feature = "tui"))]
 #[path = "export_diff_rust_tests.rs"]
 mod export_diff_rust_tests;

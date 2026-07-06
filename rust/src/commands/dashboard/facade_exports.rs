@@ -1,13 +1,13 @@
 pub(crate) mod pub_exports {
     pub use super::super::cli_defs::{
         build_auth_context, build_http_client, build_http_client_for_org,
-        normalize_dashboard_cli_args, parse_cli_from, BrowseArgs, CloneLiveArgs, CommonCliArgs,
-        DashboardAuthContext, DashboardCliArgs, DashboardCommand, DashboardHistoryArgs,
-        DashboardHistorySubcommand, DashboardImportInputFormat, DashboardPlanOutputFormat,
-        DashboardResourceFormat, DashboardServeScriptFormat, DeleteArgs, DiffArgs, EditLiveArgs,
-        ExportArgs, ExportLayoutArgs, ExportLayoutOutputFormat, ExportLayoutVariant,
-        FolderPermissionMatchMode, GetArgs, GovernanceGateArgs, GovernanceGateOutputFormat,
-        GovernancePolicySource,
+        normalize_dashboard_cli_args, parse_cli_from, BrowseArgs, CloneFolderArgs,
+        CloneFolderOutputFormat, CloneLiveArgs, CommonCliArgs, DashboardAuthContext,
+        DashboardCliArgs, DashboardCommand, DashboardHistoryArgs, DashboardHistorySubcommand,
+        DashboardImportInputFormat, DashboardPlanOutputFormat, DashboardResourceFormat,
+        DashboardServeScriptFormat, DeleteArgs, DiffArgs, EditLiveArgs, ExportArgs,
+        ExportLayoutArgs, ExportLayoutOutputFormat, ExportLayoutVariant, FolderPermissionMatchMode,
+        GetArgs, GovernanceGateArgs, GovernanceGateOutputFormat, GovernancePolicySource,
         HistoryDiffArgs, HistoryExportArgs, HistoryListArgs, HistoryOutputFormat,
         HistoryRestoreArgs, ImpactArgs, ImpactOutputFormat, ImportArgs, InspectExportArgs,
         InspectExportInputType, InspectExportReportFormat, InspectLiveArgs, InspectOutputFormat,
@@ -48,6 +48,11 @@ pub(crate) mod crate_exports {
     };
     pub(crate) use super::super::cli_defs::materialize_dashboard_common_auth;
     pub(crate) use super::super::cli_defs::{build_api_client, build_http_client_for_org_from_api};
+    #[cfg(test)]
+    pub(crate) use super::super::clone_folder::run_clone_folder_with_request;
+    pub(crate) use super::super::clone_folder::{
+        render_clone_folder_report, run_clone_folder_with_client,
+    };
     pub(crate) use super::super::export_layout::run_export_layout_repair;
     pub(crate) use super::super::plan::run_dashboard_plan;
     pub(crate) use super::super::raw_to_prompt::run_raw_to_prompt;

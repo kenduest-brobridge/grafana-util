@@ -25,6 +25,13 @@
         "v2",
         "all"
       ]
+    },
+    "dashboard clone-folder": {
+      "--output-format": [
+        "text",
+        "table",
+        "json"
+      ]
     }
   },
   "removed_public_command_paths": [

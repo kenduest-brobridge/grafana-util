@@ -248,6 +248,7 @@ This chapter helps you choose the workflow. Once you know which command you need
 - [dashboard browse](../../commands/en/dashboard-browse.md)
 - [dashboard get](../../commands/en/dashboard-get.md)
 - [dashboard clone](../../commands/en/dashboard-clone.md)
+- [dashboard clone-folder](../../commands/en/dashboard-clone-folder.md)
 - [dashboard list](../../commands/en/dashboard-list.md)
 - [dashboard export](../../commands/en/dashboard-export.md)
 - [dashboard import](../../commands/en/dashboard-import.md)
@@ -285,6 +286,7 @@ This chapter helps you choose the workflow. Once you know which command you need
 | **Patch** | `grafana-util dashboard patch --input <FILE> --name "New Title" --output <FILE>` |
 | **Publish** | `grafana-util dashboard publish --input <FILE> --url <URL> --basic-user admin --basic-password admin` |
 | **Clone** | `grafana-util dashboard clone --source-uid <UID> --output <FILE> --url <URL>` |
+| **Clone Folder** | `grafana-util dashboard clone-folder --source-folder-uid <UID> --target-folder-uid <UID> --dry-run --table --url <URL>` |
 
 ---
 

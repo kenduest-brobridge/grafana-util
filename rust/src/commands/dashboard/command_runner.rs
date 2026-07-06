@@ -248,6 +248,13 @@ pub fn run_dashboard_cli_with_client(
         DashboardCommand::CloneLive(clone_args) => {
             super::clone_live_dashboard_to_file_with_client(client, &clone_args)
         }
+        DashboardCommand::CloneFolder(clone_folder_args) => {
+            let report = super::run_clone_folder_with_client(client, &clone_folder_args)?;
+            for line in super::render_clone_folder_report(&report, &clone_folder_args)? {
+                println!("{line}");
+            }
+            Ok(())
+        }
         DashboardCommand::Serve(serve_args) => run_dashboard_serve(&serve_args),
         DashboardCommand::EditLive(edit_live_args) => {
             run_dashboard_edit_live(Some(client), &edit_live_args)
@@ -403,6 +410,14 @@ pub fn run_dashboard_cli(args: DashboardCliArgs) -> Result<()> {
         DashboardCommand::CloneLive(clone_args) => {
             let client = build_http_client(&clone_args.common)?;
             super::clone_live_dashboard_to_file_with_client(&client, &clone_args)
+        }
+        DashboardCommand::CloneFolder(clone_folder_args) => {
+            let client = build_http_client(&clone_folder_args.common)?;
+            let report = super::run_clone_folder_with_client(&client, &clone_folder_args)?;
+            for line in super::render_clone_folder_report(&report, &clone_folder_args)? {
+                println!("{line}");
+            }
+            Ok(())
         }
         DashboardCommand::Serve(serve_args) => run_dashboard_serve(&serve_args),
         DashboardCommand::EditLive(edit_live_args) => {

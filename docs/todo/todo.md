@@ -2,6 +2,11 @@
 
 ## Active
 
+- [x] [Dashboard clone-folder](2026-07-07-dashboard-clone-folder.md) -
+  Add `grafana-util dashboard clone-folder` to duplicate dashboards from one
+  live Grafana folder into another, with deterministic copied UIDs, optional
+  target folder creation, recursive subtree support, dry-run output, and a
+  `--yes` gate for live writes.
 - [ ] [Grafana 13 dashboard resource export](2026-06-26-dashboard-resource-api-export.md) -
   Plan support for a family-oriented export layout: `classic/` contains
   raw/prompt/provisioning/history, while native `dashboard.grafana.app` v1

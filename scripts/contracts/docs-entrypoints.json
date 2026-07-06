@@ -81,6 +81,7 @@
         "title_zh_tw": "草稿、發布與刪除",
         "links": [
           { "command": "grafana-util dashboard clone", "target": "dashboard-clone.html" },
+          { "command": "grafana-util dashboard clone-folder", "target": "dashboard-clone-folder.html" },
           { "command": "grafana-util dashboard patch", "target": "dashboard-patch.html" },
           { "command": "grafana-util dashboard serve", "target": "dashboard-serve.html" },
           { "command": "grafana-util dashboard edit-live", "target": "dashboard-edit-live.html" },

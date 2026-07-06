@@ -54,6 +54,26 @@ Examples:
   Clone a live dashboard with a new title, UID, and folder UID:
     grafana-util dashboard clone --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --source-uid cpu-main --name 'CPU Clone' --uid cpu-main-clone --folder-uid infra --output ./cpu-main-clone.json"#;
 
+pub(crate) const DASHBOARD_CLONE_FOLDER_AFTER_HELP: &str = r#"What it does:
+  duplicate dashboards from one live folder into another live folder without changing the source dashboards.
+
+When to use:
+  - Prepare staging or review copies of all dashboards in one folder.
+  - Copy a folder subtree with deterministic dashboard UIDs before promoting it elsewhere.
+
+Notes:
+  - By default only direct dashboards in the source folder are copied.
+  - Use --recursive to include child folders and their dashboards.
+  - Use --dry-run first; live writes require --yes.
+
+Examples:
+
+  Preview direct dashboard copies into an existing target folder:
+    grafana-util dashboard clone-folder --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --source-folder-uid infra --target-folder-uid staging-infra --dry-run --table
+
+  Create the target folder and copy a folder subtree:
+    grafana-util dashboard clone-folder --url http://localhost:3000 --basic-user admin --basic-password admin --source-path 'Platform / Infra' --target-folder-uid staging-infra --target-folder-title 'Staging Infra' --create-target-folder --recursive --uid-suffix '-staging' --yes"#;
+
 pub(crate) const DASHBOARD_SERVE_AFTER_HELP: &str = r#"Examples:
 
   Serve one local draft file and open the browser:

@@ -22,6 +22,9 @@ pub(crate) fn materialize_dashboard_command_auth(args: &mut DashboardCliArgs) ->
         DashboardCommand::CloneLive(inner) => {
             inner.common = materialize_dashboard_common_auth(inner.common.clone())?
         }
+        DashboardCommand::CloneFolder(inner) => {
+            inner.common = materialize_dashboard_common_auth(inner.common.clone())?
+        }
         DashboardCommand::EditLive(inner) => {
             inner.common = materialize_dashboard_common_auth(inner.common.clone())?
         }

@@ -248,6 +248,7 @@ Dashboard 工作常常從一個模糊線索開始：某個畫面、某個 folder
 - [dashboard browse](../../commands/zh-TW/dashboard-browse.md)
 - [dashboard get](../../commands/zh-TW/dashboard-get.md)
 - [dashboard clone](../../commands/zh-TW/dashboard-clone.md)
+- [dashboard clone-folder](../../commands/zh-TW/dashboard-clone-folder.md)
 - [dashboard list](../../commands/zh-TW/dashboard-list.md)
 - [dashboard export](../../commands/zh-TW/dashboard-export.md)
 - [dashboard import](../../commands/zh-TW/dashboard-import.md)
@@ -285,6 +286,7 @@ Dashboard 工作常常從一個模糊線索開始：某個畫面、某個 folder
 | **檔案修正 (Patch)** | `grafana-util dashboard patch --input <FILE> --name "New Title" --output <FILE>` |
 | **釋出 (Publish)** | `grafana-util dashboard publish --input <FILE> --url <URL> --basic-user admin --basic-password admin` |
 | **複製 (Clone)** | `grafana-util dashboard clone --source-uid <UID> --output <FILE> --url <URL>` |
+| **複製 Folder (Clone Folder)** | `grafana-util dashboard clone-folder --source-folder-uid <UID> --target-folder-uid <UID> --dry-run --table --url <URL>` |
 
 ---
 

@@ -12,6 +12,7 @@ use serde_json::Value;
 mod authoring;
 mod browse;
 mod cli_defs;
+mod clone_folder;
 mod command_artifacts;
 mod command_runner;
 mod delete;
