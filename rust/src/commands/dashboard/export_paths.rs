@@ -6,19 +6,14 @@ use serde_json::{Map, Value};
 use crate::common::{sanitize_path_component, string_field};
 
 use super::super::{
-    FolderInventoryItem, DEFAULT_DASHBOARD_TITLE, DEFAULT_FOLDER_TITLE, DEFAULT_ORG_ID,
-    DEFAULT_UNKNOWN_UID, PROMPT_EXPORT_SUBDIR, PROVISIONING_EXPORT_SUBDIR, RAW_EXPORT_SUBDIR,
+    FolderInventoryItem, DEFAULT_FOLDER_TITLE, DEFAULT_ORG_ID, DEFAULT_UNKNOWN_UID,
+    PROMPT_EXPORT_SUBDIR, PROVISIONING_EXPORT_SUBDIR, RAW_EXPORT_SUBDIR,
 };
 
 pub fn build_output_path(output_dir: &Path, summary: &Map<String, Value>, flat: bool) -> PathBuf {
     let folder_title = string_field(summary, "folderTitle", DEFAULT_FOLDER_TITLE);
-    let title = string_field(summary, "title", DEFAULT_DASHBOARD_TITLE);
     let uid = string_field(summary, "uid", DEFAULT_UNKNOWN_UID);
-    let file_name = format!(
-        "{}__{}.json",
-        sanitize_path_component(&title),
-        sanitize_path_component(&uid)
-    );
+    let file_name = format!("{}.json", sanitize_path_component(&uid));
 
     if flat {
         output_dir.join(file_name)
@@ -39,13 +34,8 @@ pub(crate) fn build_output_path_with_folder_path(
         return build_output_path(output_dir, summary, true);
     }
 
-    let title = string_field(summary, "title", DEFAULT_DASHBOARD_TITLE);
     let uid = string_field(summary, "uid", DEFAULT_UNKNOWN_UID);
-    let file_name = format!(
-        "{}__{}.json",
-        sanitize_path_component(&title),
-        sanitize_path_component(&uid)
-    );
+    let file_name = format!("{}.json", sanitize_path_component(&uid));
     let Some(folder_path) = folder_path.filter(|path| !path.trim().is_empty()) else {
         return build_output_path(output_dir, summary, false);
     };
@@ -96,6 +86,12 @@ pub fn build_export_variant_dirs(output_dir: &Path) -> (PathBuf, PathBuf, PathBu
     )
 }
 
-pub(crate) fn build_history_output_path(history_dir: &Path, uid: &str) -> PathBuf {
-    history_dir.join(format!("{}.history.json", sanitize_path_component(uid)))
+pub(crate) fn build_history_version_output_path(
+    history_dir: &Path,
+    uid: &str,
+    version: i64,
+) -> PathBuf {
+    history_dir
+        .join(sanitize_path_component(uid))
+        .join(format!("v{version}.history.json"))
 }

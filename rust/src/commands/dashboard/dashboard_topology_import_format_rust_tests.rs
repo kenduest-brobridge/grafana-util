@@ -149,8 +149,8 @@ fn snapshot_live_dashboard_export_with_fetcher_writes_dashboards_in_parallel() {
     .unwrap();
 
     assert_eq!(count, 2);
-    assert!(raw_dir.join("Infra/CPU_Main__cpu-main.json").is_file());
-    assert!(raw_dir.join("Ops/Logs_Main__logs-main.json").is_file());
+    assert!(raw_dir.join("Infra/cpu-main.json").is_file());
+    assert!(raw_dir.join("Ops/logs-main.json").is_file());
 }
 
 #[test]

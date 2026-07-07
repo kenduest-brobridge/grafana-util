@@ -110,7 +110,8 @@ pub(crate) const DASHBOARD_EXPORT_AFTER_HELP: &str = r#"Notes:
   - Use Basic auth with --all-orgs.
   - Non-flat raw/ and prompt/ exports mirror Grafana folder paths.
   - Use --flat for files directly under each variant directory.
-  - Use --include-history to add history/ under each exported org scope.
+  - Dashboard files use stable UID filenames for Git-friendly diffs.
+  - Use --include-history to add per-version history/<uid>/vN.history.json artifacts under each exported org scope.
   - The provider file is provisioning/provisioning/dashboards.yaml.
   - Keep raw/ for API import or diff, prompt/ for UI import, and provisioning/ for file provisioning.
 

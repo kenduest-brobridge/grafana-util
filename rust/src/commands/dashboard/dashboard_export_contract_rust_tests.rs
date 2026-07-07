@@ -226,5 +226,5 @@ fn build_output_path_keeps_folder_structure() {
         "uid": "abc",
     });
     let path = build_output_path(Path::new("out"), summary.as_object().unwrap(), false);
-    assert_eq!(path, Path::new("out/Infra_Team/Cluster_Health__abc.json"));
+    assert_eq!(path, Path::new("out/Infra_Team/abc.json"));
 }

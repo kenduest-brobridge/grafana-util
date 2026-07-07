@@ -130,7 +130,7 @@ fn export_dashboards_with_request_all_orgs_aggregates_results() {
     assert_eq!(count, 2);
     assert!(args
         .output_dir
-        .join("org_1_Main_Org/raw/Infra/CPU__abc.json")
+        .join("org_1_Main_Org/raw/Infra/abc.json")
         .is_file());
     assert!(args
         .output_dir
@@ -154,7 +154,7 @@ fn export_dashboards_with_request_all_orgs_aggregates_results() {
         .is_file());
     assert!(args
         .output_dir
-        .join("org_2_Ops_Org/raw/Ops/Logs__xyz.json")
+        .join("org_2_Ops_Org/raw/Ops/xyz.json")
         .is_file());
     assert!(args
         .output_dir
@@ -212,7 +212,7 @@ fn export_dashboards_with_request_all_orgs_aggregates_results() {
         aggregate_root_index["items"][0]["raw_path"],
         Value::String(
             args.output_dir
-                .join("org_1_Main_Org/raw/Infra/CPU__abc.json")
+                .join("org_1_Main_Org/raw/Infra/abc.json")
                 .display()
                 .to_string()
         )
@@ -221,7 +221,7 @@ fn export_dashboards_with_request_all_orgs_aggregates_results() {
         aggregate_root_index["items"][1]["raw_path"],
         Value::String(
             args.output_dir
-                .join("org_2_Ops_Org/raw/Ops/Logs__xyz.json")
+                .join("org_2_Ops_Org/raw/Ops/xyz.json")
                 .display()
                 .to_string()
         )
@@ -517,27 +517,27 @@ fn export_dashboards_mirrors_nested_folder_paths_for_raw_and_prompt() {
     assert_eq!(count, 2);
     assert!(args
         .output_dir
-        .join("raw/Platform/Team_A/Infra/CPU__cpu-main.json")
+        .join("raw/Platform/Team_A/Infra/cpu-main.json")
         .is_file());
     assert!(args
         .output_dir
-        .join("prompt/Platform/Team_A/Infra/CPU__cpu-main.json")
+        .join("prompt/Platform/Team_A/Infra/cpu-main.json")
         .is_file());
     assert!(args
         .output_dir
-        .join("raw/Apps/Team_B/Infra/API__api-main.json")
+        .join("raw/Apps/Team_B/Infra/api-main.json")
         .is_file());
     assert!(args
         .output_dir
-        .join("prompt/Apps/Team_B/Infra/API__api-main.json")
+        .join("prompt/Apps/Team_B/Infra/api-main.json")
         .is_file());
     assert!(args
         .output_dir
-        .join("provisioning/dashboards/Infra/CPU__cpu-main.json")
+        .join("provisioning/dashboards/Infra/cpu-main.json")
         .is_file());
     assert!(args
         .output_dir
-        .join("provisioning/dashboards/Infra/API__api-main.json")
+        .join("provisioning/dashboards/Infra/api-main.json")
         .is_file());
 }
 
@@ -590,8 +590,12 @@ fn export_dashboards_with_request_include_history_writes_scope_history_artifacts
     assert_eq!(current_dashboard_fetches.get(), 1);
     let current_history = current_temp
         .path()
-        .join("current/history/cpu-main.history.json");
+        .join("current/history/cpu-main/v21.history.json");
     assert!(current_history.is_file());
+    assert!(!current_temp
+        .path()
+        .join("current/history/cpu-main.history.json")
+        .exists());
     let current_document: Value =
         serde_json::from_str(&fs::read_to_string(&current_history).unwrap()).unwrap();
     assert_eq!(
@@ -603,6 +607,10 @@ fn export_dashboards_with_request_include_history_writes_scope_history_artifacts
         Value::String("cpu-main".to_string())
     );
     assert_eq!(current_document["versionCount"], Value::Number(1.into()));
+    assert_eq!(
+        current_document["versions"][0]["version"],
+        Value::Number(21.into())
+    );
 
     let org_temp = tempdir().unwrap();
     let org_args = make_history_only_export_args(org_temp.path().join("org"), Some(2), false, true);
@@ -648,8 +656,12 @@ fn export_dashboards_with_request_include_history_writes_scope_history_artifacts
     .unwrap();
 
     assert_eq!(org_count, 1);
-    let org_history = org_temp.path().join("org/history/ops-main.history.json");
+    let org_history = org_temp.path().join("org/history/ops-main/v4.history.json");
     assert!(org_history.is_file());
+    assert!(!org_temp
+        .path()
+        .join("org/history/ops-main.history.json")
+        .exists());
     let org_document: Value =
         serde_json::from_str(&fs::read_to_string(&org_history).unwrap()).unwrap();
     assert_eq!(
@@ -659,6 +671,11 @@ fn export_dashboards_with_request_include_history_writes_scope_history_artifacts
     assert_eq!(
         org_document["dashboardUid"],
         Value::String("ops-main".to_string())
+    );
+    assert_eq!(org_document["versionCount"], Value::Number(1.into()));
+    assert_eq!(
+        org_document["versions"][0]["version"],
+        Value::Number(4.into())
     );
 }
 
@@ -756,21 +773,25 @@ fn export_dashboards_with_request_include_history_writes_all_org_history_artifac
     assert_eq!(count, 2);
     assert!(temp
         .path()
-        .join("all-orgs/org_1_Main_Org/history/cpu-main.history.json")
+        .join("all-orgs/org_1_Main_Org/history/cpu-main/v21.history.json")
         .is_file());
     assert!(temp
         .path()
-        .join("all-orgs/org_2_Ops_Org/history/ops-main.history.json")
+        .join("all-orgs/org_2_Ops_Org/history/ops-main/v4.history.json")
         .is_file());
+    assert!(!temp
+        .path()
+        .join("all-orgs/org_1_Main_Org/history/cpu-main.history.json")
+        .exists());
 }
 
 #[test]
 fn export_dashboards_with_request_include_history_respects_overwrite() {
     let temp = tempdir().unwrap();
     let output_dir = temp.path().join("current");
-    fs::create_dir_all(output_dir.join("history")).unwrap();
+    fs::create_dir_all(output_dir.join("history/cpu-main")).unwrap();
     fs::write(
-        output_dir.join("history/cpu-main.history.json"),
+        output_dir.join("history/cpu-main/v21.history.json"),
         "{\"kind\":\"existing\"}\n",
     )
     .unwrap();
@@ -809,6 +830,59 @@ fn export_dashboards_with_request_include_history_respects_overwrite() {
     assert!(error
         .to_string()
         .contains("Refusing to overwrite existing file"));
+}
+
+#[test]
+fn export_dashboards_with_request_include_history_overwrite_removes_stale_version_files() {
+    let temp = tempdir().unwrap();
+    let output_dir = temp.path().join("current");
+    fs::create_dir_all(output_dir.join("history/cpu-main")).unwrap();
+    fs::write(
+        output_dir.join("history/cpu-main/v20.history.json"),
+        "{\"kind\":\"stale\"}\n",
+    )
+    .unwrap();
+    fs::write(output_dir.join("history/cpu-main/notes.txt"), "keep\n").unwrap();
+    let args = make_history_only_export_args(output_dir.clone(), None, false, true);
+
+    let count = export_dashboards_with_request(
+        |_method, path, _params, _payload| match path {
+            "/api/org" => Ok(Some(json!({"id": 1, "name": "Main Org"}))),
+            "/api/search" => Ok(Some(json!([
+                { "uid": "cpu-main", "title": "CPU Main", "folderTitle": "General" }
+            ]))),
+            "/api/datasources" => Ok(Some(json!([]))),
+            "/api/folders/general" => Ok(Some(json!({"uid": "general", "title": "General"}))),
+            "/api/dashboards/uid/cpu-main" => Ok(Some(json!({
+                "dashboard": {"id": 7, "uid": "cpu-main", "title": "CPU Main", "version": 21}
+            }))),
+            "/api/dashboards/uid/cpu-main/versions" => Ok(Some(json!([
+                {
+                    "version": 21,
+                    "created": "2026-04-02T12:00:00Z",
+                    "createdBy": "ops",
+                    "message": "Tune thresholds"
+                }
+            ]))),
+            "/api/dashboards/uid/cpu-main/versions/21" => Ok(Some(json!({
+                "data": {"uid": "cpu-main", "title": "CPU Main", "version": 21}
+            }))),
+            "/api/dashboards/uid/cpu-main/permissions" => Ok(Some(json!([]))),
+            "/api/folders/general/permissions" => Ok(Some(json!([]))),
+            _ => Err(test_support::message(format!("unexpected path {path}"))),
+        },
+        &args,
+    )
+    .unwrap();
+
+    assert_eq!(count, 1);
+    assert!(!output_dir
+        .join("history/cpu-main/v20.history.json")
+        .exists());
+    assert!(output_dir
+        .join("history/cpu-main/v21.history.json")
+        .is_file());
+    assert!(output_dir.join("history/cpu-main/notes.txt").is_file());
 }
 
 #[test]
@@ -912,7 +986,7 @@ fn export_dashboards_writes_provisioning_artifacts_in_separate_lane() {
     assert_eq!(count, 1);
     assert!(args
         .output_dir
-        .join("provisioning/dashboards/Infra/CPU__cpu-main.json")
+        .join("provisioning/dashboards/Infra/cpu-main.json")
         .is_file());
     assert!(args.output_dir.join("provisioning/index.json").is_file());
     assert!(args
@@ -940,7 +1014,7 @@ fn export_dashboards_writes_provisioning_artifacts_in_separate_lane() {
         root_index["items"][0]["provisioning_path"],
         Value::String(
             args.output_dir
-                .join("provisioning/dashboards/Infra/CPU__cpu-main.json")
+                .join("provisioning/dashboards/Infra/cpu-main.json")
                 .display()
                 .to_string()
         )

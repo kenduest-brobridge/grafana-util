@@ -484,7 +484,7 @@ pub(crate) fn render_clone_folder_report(
     report: &CloneFolderReport,
     args: &CloneFolderArgs,
 ) -> Result<Vec<String>> {
-    let output = args.output_format.unwrap_or_else(|| {
+    let output = args.output_format.unwrap_or({
         if args.json {
             CloneFolderOutputFormat::Json
         } else if args.table {

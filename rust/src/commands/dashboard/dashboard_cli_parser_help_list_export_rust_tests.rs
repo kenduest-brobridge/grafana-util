@@ -354,7 +354,8 @@ fn export_help_explains_flat_layout() {
 fn export_help_mentions_history_artifacts() {
     let help = render_dashboard_subcommand_help("export");
     assert!(help.contains("history/"));
-    assert!(help.contains("Use --include-history to add history/"));
+    assert!(help.contains("history/<uid>/vN.history.json"));
+    assert!(help.contains("Dashboard files use stable UID filenames"));
     assert!(!help.contains("per-dashboard revision history"));
 }
 
@@ -365,7 +366,7 @@ fn export_help_keeps_option_summaries_short() {
     assert!(help.contains("Skip the raw/ export variant."));
     assert!(help.contains("Skip the prompt/ export variant."));
     assert!(help.contains("Skip the provisioning/ export variant."));
-    assert!(help.contains("Also write history/ artifacts for each exported org scope."));
+    assert!(help.contains("Also write per-version history artifacts under history/<uid>/"));
     assert!(
         !help.contains("Use this only when you do not need later API import or diff workflows.")
     );

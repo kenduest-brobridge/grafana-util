@@ -10,6 +10,7 @@ use super::super::export_prompt::build_external_export_document_with_library_pan
 use super::super::history::{
     build_dashboard_history_export_document_from_current_with_request,
     build_dashboard_history_export_document_from_current_with_version_fetcher,
+    DashboardHistoryExportDocument, DashboardHistoryExportVersion,
 };
 use super::super::list::{
     attach_dashboard_org_metadata, collect_dashboard_ownership_provenance,
@@ -28,8 +29,9 @@ use super::super::{
     RESOURCE_V1_EXPORT_SUBDIR,
 };
 use super::export_paths::{
-    build_export_variant_dirs, build_folder_paths_by_inventory_key, build_history_output_path,
-    build_output_path, build_output_path_with_folder_path, export_folder_inventory_key,
+    build_export_variant_dirs, build_folder_paths_by_inventory_key,
+    build_history_version_output_path, build_output_path, build_output_path_with_folder_path,
+    export_folder_inventory_key,
 };
 use super::export_render::{format_export_progress_line, format_export_verbose_line};
 use super::{
@@ -53,6 +55,43 @@ pub(crate) struct ScopeExportResult {
     pub(crate) exported_count: usize,
     pub(crate) root_index: Option<RootExportIndex>,
     pub(crate) org_summary: Option<ExportOrgSummary>,
+}
+
+fn single_version_history_document(
+    source: &DashboardHistoryExportDocument,
+    version: &DashboardHistoryExportVersion,
+) -> DashboardHistoryExportDocument {
+    DashboardHistoryExportDocument {
+        kind: source.kind.clone(),
+        schema_version: source.schema_version,
+        tool_version: source.tool_version.clone(),
+        dashboard_uid: source.dashboard_uid.clone(),
+        current_version: source.current_version,
+        current_title: source.current_title.clone(),
+        version_count: 1,
+        versions: vec![version.clone()],
+    }
+}
+
+fn clean_stale_history_version_files(history_dir: &std::path::Path, uid: &str) -> Result<()> {
+    let version_dir = history_dir.join(crate::common::sanitize_path_component(uid));
+    if !version_dir.is_dir() {
+        return Ok(());
+    }
+    for entry in fs::read_dir(version_dir)? {
+        let entry = entry?;
+        if !entry.file_type()?.is_file() {
+            continue;
+        }
+        let path = entry.path();
+        let Some(name) = path.file_name().and_then(|value| value.to_str()) else {
+            continue;
+        };
+        if name.starts_with('v') && name.ends_with(".history.json") {
+            fs::remove_file(path)?;
+        }
+    }
+    Ok(())
 }
 
 pub(crate) fn export_dashboards_in_scope_with_request<F>(
@@ -256,15 +295,27 @@ where
                     &payload,
                 )?,
             };
-            let history_path = build_history_output_path(&history_dir, &uid);
-            if !args.dry_run {
-                write_history_document(&history_document, &history_path, args.overwrite)?;
+            if !args.dry_run && args.overwrite {
+                clean_stale_history_version_files(&history_dir, &uid)?;
             }
-            if args.verbose {
-                println!(
-                    "{}",
-                    format_export_verbose_line("history", &uid, &history_path, args.dry_run)
-                );
+            for version in &history_document.versions {
+                let history_path =
+                    build_history_version_output_path(&history_dir, &uid, version.version);
+                let single_version_document =
+                    single_version_history_document(&history_document, version);
+                if !args.dry_run {
+                    write_history_document(
+                        &single_version_document,
+                        &history_path,
+                        args.overwrite,
+                    )?;
+                }
+                if args.verbose {
+                    println!(
+                        "{}",
+                        format_export_verbose_line("history", &uid, &history_path, args.dry_run)
+                    );
+                }
             }
         }
         let mut item = build_dashboard_index_item(&summary, &uid);

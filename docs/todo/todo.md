@@ -2,6 +2,10 @@
 
 ## Active
 
+- [x] [Dashboard export Git-friendly filenames and history](2026-07-07-dashboard-export-title-filenames.md) -
+  Make dashboard export output suitable for Git-managed repositories by using
+  stable UID/resource-name paths for dashboard JSON and per-version history
+  files under `history/<uid>/vN.history.json`.
 - [x] [Dashboard clone-folder](2026-07-07-dashboard-clone-folder.md) -
   Add `grafana-util dashboard clone-folder` to duplicate dashboards from one
   live Grafana folder into another, with deterministic copied UIDs, optional
@@ -13,6 +17,10 @@
   resource API objects live under `resource-v1/objects`; keep `resource-v2/`
   postponed until a public v2 HTTP endpoint is verified, with UI-import
   compatibility kept classic-only.
+- [ ] [Post-maintainability integration plan](2026-06-25-post-maintainability-integration.md) -
+  Treat the clean local `dev` branch, currently ahead of `origin/dev`, as an
+  integration candidate. Branch-level validation passed after fixing concrete
+  clippy/generated-doc drift; commit/push/PR handoff remains pending.
 - [x] [Rust maintainability refactor backlog](2026-06-25-rust-maintainability-refactor-backlog.md) -
   Track necessary larger refactor candidates from the current architecture
   audit. Active order: close confirmed lint cleanup; plan and split

@@ -423,9 +423,7 @@ mod export_tests {
         .unwrap();
 
         assert_eq!(count, 1);
-        let prompt_path = args
-            .output_dir
-            .join("prompt/General/CPU_Main__cpu-main.json");
+        let prompt_path = args.output_dir.join("prompt/General/cpu-main.json");
         assert!(prompt_path.is_file());
         let prompt: Value =
             serde_json::from_str(&fs::read_to_string(prompt_path).unwrap()).unwrap();

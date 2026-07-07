@@ -73,6 +73,16 @@ fn write_history_export_artifact(path: &std::path::Path, uid: &str, version: i64
     .unwrap();
 }
 
+fn write_single_version_history_export_artifact(
+    path: &std::path::Path,
+    uid: &str,
+    version: i64,
+    title: &str,
+) {
+    fs::create_dir_all(path.parent().unwrap()).unwrap();
+    write_history_export_artifact(path, uid, version, title);
+}
+
 #[test]
 fn dashboard_history_list_document_collects_recent_versions() {
     let document = build_dashboard_history_list_document_with_request(
@@ -590,6 +600,137 @@ fn dashboard_history_list_rejects_ambiguous_uid_in_export_tree() {
     assert!(error
         .to_string()
         .contains("Multiple dashboard history artifacts for UID cpu-main"));
+}
+
+#[test]
+fn dashboard_history_list_merges_per_version_files_for_same_uid_scope() {
+    let temp = tempdir().unwrap();
+    let input_dir = temp.path().join("dashboards");
+    write_single_version_history_export_artifact(
+        &input_dir.join("history/cpu-main/v21.history.json"),
+        "cpu-main",
+        21,
+        "CPU Main",
+    );
+    write_single_version_history_export_artifact(
+        &input_dir.join("history/cpu-main/v20.history.json"),
+        "cpu-main",
+        20,
+        "CPU Main",
+    );
+
+    let artifacts =
+        super::history::load_logical_history_artifacts_from_import_dir(&input_dir).unwrap();
+    assert_eq!(artifacts.len(), 1);
+    assert_eq!(artifacts[0].document.version_count, 2);
+    assert!(artifacts[0]
+        .path
+        .ends_with("history/cpu-main/v21.history.json"));
+    assert_eq!(artifacts[0].document.versions[0].version, 21);
+    assert_eq!(artifacts[0].document.versions[1].version, 20);
+
+    let args = HistoryListArgs {
+        common: make_history_common_args(),
+        dashboard_uid: Some("cpu-main".to_string()),
+        input: None,
+        input_dir: Some(input_dir),
+        limit: 20,
+        output_format: HistoryOutputFormat::Json,
+    };
+
+    super::history::run_dashboard_history_list(
+        |_method, _path, _params, _payload| Err(test_support::message("should not call Grafana")),
+        &args,
+    )
+    .unwrap();
+}
+
+#[test]
+fn dashboard_history_list_keeps_same_uid_per_version_files_separate_by_scope() {
+    let temp = tempdir().unwrap();
+    let input_dir = temp.path().join("dashboards");
+    write_single_version_history_export_artifact(
+        &input_dir.join("all-orgs/org_1_Main_Org/history/cpu-main/v21.history.json"),
+        "cpu-main",
+        21,
+        "CPU Main",
+    );
+    write_single_version_history_export_artifact(
+        &input_dir.join("all-orgs/org_2_Ops_Org/history/cpu-main/v4.history.json"),
+        "cpu-main",
+        4,
+        "CPU Main",
+    );
+
+    let artifacts =
+        super::history::load_logical_history_artifacts_from_import_dir(&input_dir).unwrap();
+    assert_eq!(artifacts.len(), 2);
+    assert_eq!(
+        artifacts
+            .iter()
+            .map(|artifact| artifact.scope.as_deref().unwrap_or(""))
+            .collect::<Vec<_>>(),
+        vec!["all-orgs/org_1_Main_Org", "all-orgs/org_2_Ops_Org"]
+    );
+
+    let args = HistoryListArgs {
+        common: make_history_common_args(),
+        dashboard_uid: Some("cpu-main".to_string()),
+        input: None,
+        input_dir: Some(input_dir),
+        limit: 20,
+        output_format: HistoryOutputFormat::Table,
+    };
+
+    let error = super::history::run_dashboard_history_list(
+        |_method, _path, _params, _payload| Err(test_support::message("should not call Grafana")),
+        &args,
+    )
+    .unwrap_err();
+
+    assert!(error
+        .to_string()
+        .contains("Multiple dashboard history artifacts for UID cpu-main"));
+}
+
+#[test]
+fn dashboard_history_diff_resolves_per_version_files_from_import_dir() {
+    let temp = tempdir().unwrap();
+    let input_dir = temp.path().join("dashboards");
+    write_single_version_history_export_artifact(
+        &input_dir.join("history/cpu-main/v21.history.json"),
+        "cpu-main",
+        21,
+        "CPU Main New",
+    );
+    write_single_version_history_export_artifact(
+        &input_dir.join("history/cpu-main/v20.history.json"),
+        "cpu-main",
+        20,
+        "CPU Main Old",
+    );
+
+    let args = HistoryDiffArgs {
+        common: make_history_common_args(),
+        base_dashboard_uid: Some("cpu-main".to_string()),
+        base_input: None,
+        base_input_dir: Some(input_dir.clone()),
+        base_version: 20,
+        new_dashboard_uid: Some("cpu-main".to_string()),
+        new_input: None,
+        new_input_dir: Some(input_dir),
+        new_version: 21,
+        context_lines: 3,
+        output_format: DiffOutputFormat::Json,
+    };
+
+    let changed = super::history::run_dashboard_history_diff(
+        |_method, _path, _params, _payload| Err(test_support::message("should not call Grafana")),
+        &args,
+    )
+    .unwrap();
+
+    assert_eq!(changed, 1);
 }
 
 #[test]

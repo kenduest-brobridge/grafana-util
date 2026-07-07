@@ -123,7 +123,7 @@ pub struct ExportArgs {
     #[arg(
         long,
         default_value_t = false,
-        help = "Also write history/ artifacts for each exported org scope.",
+        help = "Also write per-version history artifacts under history/<uid>/ for each exported org scope.",
         help_heading = "Export Variant Options"
     )]
     pub include_history: bool,

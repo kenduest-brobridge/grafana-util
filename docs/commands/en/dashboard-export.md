@@ -1,10 +1,10 @@
 # dashboard export
 
 ## Purpose
-Export dashboards to `raw/`, `prompt/`, and `provisioning/` files, with optional `history/` artifacts.
+Export dashboards to Git-friendly `raw/`, `prompt/`, and `provisioning/` files, with optional per-version `history/` artifacts.
 
 ## When to use
-Use this when you need a local export tree for later import, review, diff, or file-provisioning workflows. Add `--include-history` when you also need dashboard revision-history artifacts under each exported org scope. The `prompt/` lane is for Grafana UI import, not dashboard API import; use `dashboard convert raw-to-prompt` when you need to convert ordinary or raw dashboard JSON into prompt JSON.
+Use this when you need a local export tree for later import, review, diff, Git review, or file-provisioning workflows. Add `--include-history` when you also need dashboard revision-history artifacts under each exported org scope. The `prompt/` lane is for Grafana UI import, not dashboard API import; use `dashboard convert raw-to-prompt` when you need to convert ordinary or raw dashboard JSON into prompt JSON.
 
 ## Before / After
 - **Before**: export is a one-off action, and you only discover later whether the tree is reviewable or reusable.
@@ -17,7 +17,7 @@ Use this when you need a local export tree for later import, review, diff, or fi
 - `--flat`: write files directly into each export variant directory.
 - `--overwrite`: replace existing export files.
 - `--without-raw`, `--without-prompt`, `--without-provisioning`: skip a variant.
-- `--include-history`: write dashboard revision-history artifacts under a `history/` subdirectory for each exported org scope.
+- `--include-history`: write per-version dashboard revision-history artifacts under `history/<uid>/vN.history.json` for each exported org scope.
 - `--provider-name`, `--provider-org-id`, `--provider-path`: customize the generated provisioning provider file.
 - `--provider-disable-deletion`, `--provider-allow-ui-updates`, `--provider-update-interval-seconds`: tune provisioning behavior.
 - `--run`: write under an artifact workspace run when `--output-dir` is omitted. Use `timestamp` for a new timestamped run or `latest` to reuse the latest recorded run.
@@ -28,10 +28,11 @@ Use this when you need a local export tree for later import, review, diff, or fi
 - Writes `raw/`, `prompt/`, and `provisioning/` by default.
 - Use Basic auth with `--all-orgs`.
 - Non-flat `raw/` and `prompt/` exports mirror Grafana folder paths, for example `Platform / Team / Infra` becomes `raw/Platform/Team/Infra/`.
+- Dashboard JSON filenames use stable dashboard UIDs, for example `raw/Platform/Team/Infra/cpu-main.json`, so title edits change content without renaming files.
 - Export indexes record each dashboard's `folderUid`, `folderTitle`, and full `folderPath`, so later repair, review, and conversion workflows do not depend on dashboard JSON carrying `meta.folderUid`.
 - Older exports with leaf-folder-only `raw/` or `prompt/` layouts can be repaired with `dashboard convert export-layout`.
 - Use `--flat` for files directly under each variant directory.
-- Use `--include-history` to add `history/` under each exported org scope.
+- Use `--include-history` to add per-version `history/<uid>/vN.history.json` files under each exported org scope.
 - The provider file is `provisioning/provisioning/dashboards.yaml`.
 - Keep `raw/` for API import or diff, `prompt/` for UI import, and `provisioning/` for file provisioning.
 - For Grafana Git Sync targets, treat the Git repository as the deployment source. Use export output for evidence, review, or migration, then update the repo/PR path instead of replaying the dashboard through direct API import.
@@ -78,7 +79,7 @@ Common choices:
 ## What success looks like
 - a `raw/` tree exists for API replay and deeper inspection
 - a `prompt/` tree exists when you need a cleaner handoff for UI-style import
-- a `history/` tree exists under each exported org scope when you pass `--include-history`
+- a per-version `history/<uid>/vN.history.json` tree exists under each exported org scope when you pass `--include-history`
 - the export tree is stable enough to commit, diff, or inspect before mutation
 
 ## Failure checks

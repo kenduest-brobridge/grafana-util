@@ -261,8 +261,7 @@ fn snapshot_live_dashboard_export_with_fetcher_retries_rate_limited_dashboard_fe
 
     assert_eq!(count, 1);
     assert_eq!(attempts.load(Ordering::SeqCst), 3);
-    let staged =
-        fs::read_to_string(temp.path().join("General").join("CPU_Main__cpu-main.json")).unwrap();
+    let staged = fs::read_to_string(temp.path().join("General").join("cpu-main.json")).unwrap();
     assert!(staged.contains("\"uid\": \"cpu-main\""));
 }
 

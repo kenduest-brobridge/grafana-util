@@ -107,7 +107,7 @@ pub(crate) use history_artifacts::{
     build_dashboard_history_list_document_from_export_document,
     ensure_history_artifact_uid_matches, load_dashboard_history_export_document,
     load_history_artifact_for_uid, load_history_artifacts_from_import_dir,
-    run_dashboard_history_list_from_import_dir,
+    load_logical_history_artifacts_from_import_dir, run_dashboard_history_list_from_import_dir,
 };
 pub(crate) use history_diff::{
     build_dashboard_history_diff_document_with_request, run_dashboard_history_diff,

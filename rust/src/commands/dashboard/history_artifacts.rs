@@ -1,4 +1,5 @@
 use crate::common::{message, Result};
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -124,6 +125,69 @@ pub(crate) fn load_history_artifacts_from_import_dir(
     Ok(artifacts)
 }
 
+fn merge_history_artifact_group(mut group: Vec<LocalHistoryArtifact>) -> LocalHistoryArtifact {
+    group.sort_by(|left, right| left.path.cmp(&right.path));
+    let mut base = group
+        .iter()
+        .max_by(|left, right| {
+            left.document
+                .current_version
+                .cmp(&right.document.current_version)
+                .then_with(|| right.path.cmp(&left.path))
+        })
+        .expect("history artifact group should not be empty")
+        .clone();
+    let mut versions = BTreeMap::new();
+    let mut current_version = base.document.current_version;
+    let mut current_title = base.document.current_title.clone();
+    for artifact in group {
+        if artifact.document.current_version > current_version {
+            current_version = artifact.document.current_version;
+            current_title = artifact.document.current_title.clone();
+        }
+        for version in artifact.document.versions {
+            versions.insert(version.version, version);
+        }
+    }
+    let versions = versions
+        .into_iter()
+        .rev()
+        .map(|(_, version)| version)
+        .collect();
+    base.document.current_version = current_version;
+    base.document.current_title = current_title;
+    base.document.versions = versions;
+    base.document.version_count = base.document.versions.len();
+    base
+}
+
+fn merge_history_artifacts_by_scope_uid(
+    artifacts: Vec<LocalHistoryArtifact>,
+) -> Vec<LocalHistoryArtifact> {
+    let mut groups: BTreeMap<(Option<String>, String), Vec<LocalHistoryArtifact>> = BTreeMap::new();
+    for artifact in artifacts {
+        groups
+            .entry((
+                artifact.scope.clone(),
+                artifact.document.dashboard_uid.clone(),
+            ))
+            .or_default()
+            .push(artifact);
+    }
+    groups
+        .into_values()
+        .map(merge_history_artifact_group)
+        .collect()
+}
+
+pub(crate) fn load_logical_history_artifacts_from_import_dir(
+    input_dir: &Path,
+) -> Result<Vec<LocalHistoryArtifact>> {
+    Ok(merge_history_artifacts_by_scope_uid(
+        load_history_artifacts_from_import_dir(input_dir)?,
+    ))
+}
+
 pub(crate) fn build_dashboard_history_inventory_document(
     input_dir: &Path,
     artifacts: &[LocalHistoryArtifact],
@@ -156,7 +220,7 @@ pub(crate) fn load_history_artifact_for_uid(
     input_dir: &Path,
     dashboard_uid: &str,
 ) -> Result<LocalHistoryArtifact> {
-    let artifacts = load_history_artifacts_from_import_dir(input_dir)?;
+    let artifacts = load_logical_history_artifacts_from_import_dir(input_dir)?;
     if artifacts.is_empty() {
         return Err(message(format!(
             "No dashboard history artifacts found under {}. Export with `dashboard export --include-history` first.",
@@ -199,7 +263,7 @@ pub(crate) fn run_dashboard_history_list_from_import_dir(
     input_dir: &Path,
     args: &HistoryListArgs,
 ) -> Result<()> {
-    let artifacts = load_history_artifacts_from_import_dir(input_dir)?;
+    let artifacts = load_logical_history_artifacts_from_import_dir(input_dir)?;
     if artifacts.is_empty() {
         return Err(message(format!(
             "No dashboard history artifacts found under {}. Export with `dashboard export --include-history` first.",
